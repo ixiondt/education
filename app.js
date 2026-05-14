@@ -950,7 +950,10 @@
       animals:     $('screen-animals'),
       helpers:     $('screen-helpers'),
       // v5.1
-      sessionComplete: $('screen-session-complete')
+      sessionComplete: $('screen-session-complete'),
+      // v5.2
+      sightWords:  $('screen-sight-words'),
+      calmCorner:  $('screen-calm-corner')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1037,6 +1040,16 @@
     readingAddBtn:     $('reading-add-btn'),
     readingStats:      $('reading-stats'),
     readingClose:      $('reading-close'),
+
+    // v5.2 — sight words + calm corner
+    sightWordsPrompt:   $('sight-words-prompt'),
+    sightWordsChoices:  $('sight-words-choices'),
+    sightWordsReplay:   $('sight-words-replay'),
+
+    calmCornerBtn:     $('calm-corner-btn'),
+    calmStop:          $('calm-stop'),
+    calmText:          $('calm-text'),
+    calmCircle:        $('calm-circle'),
 
     // v5.1 — today's session
     todaySessionCard:  $('today-session-card'),
@@ -1357,6 +1370,8 @@
         case 'patterns':      showScreen('patterns'); startPatternsRound(); break;
         case 'animals':       showScreen('animals');  startAnimalsRound();  break;
         case 'helpers':       showScreen('helpers');  startHelpersRound();  break;
+        // v5.2
+        case 'sight-words':   showScreen('sightWords'); startSightWordsRound(); break;
       }
     };
 
@@ -2450,6 +2465,132 @@
     saveStorage();
     renderReading();
   });
+
+  // ============================================================
+  //  v5.2 — SIGHT WORDS (Dolch pre-primer; skolestart 5y+ band)
+  //  Shows one target word, child taps the matching word among
+  //  3 choices. Bridges from letter recognition to actual reading.
+  // ============================================================
+
+  async function saySightWord(word) {
+    const key = String(word).toLowerCase();
+    if (profileSettings().customAudio === 'auto') {
+      const ok = await tryAudio(`./audio/sight-words/${key}.mp3`);
+      if (ok) return;
+    }
+    VoiceEngine.speak([word]);
+  }
+
+  function startSightWordsRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'sight-words', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    el.sightWordsPrompt.textContent = skill.target;
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const distractorPool = (typeof SIGHT_WORDS !== 'undefined' ? SIGHT_WORDS : []).filter((w) => w !== skill.target);
+    const distractors = shuffle(distractorPool).slice(0, Math.max(1, count - 1));
+    const ordered = shuffle([skill.target, ...distractors]);
+
+    el.sightWordsChoices.innerHTML = '';
+    ordered.forEach((w) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice sight-word-choice';
+      btn.textContent = w;
+      btn.addEventListener('click', () => onSightWordsChoice(btn, w));
+      el.sightWordsChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => saySightWord(skill.target), 280);
+  }
+
+  function onSightWordsChoice(btn, word) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = word === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      spawnSparkles(btn);
+      advanceAfterSpeech(startSightWordsRound);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint(null, null, () => saySightWord(state.target));
+    }
+  }
+
+  el.sightWordsReplay?.addEventListener('click', () => {
+    if (state.advancing || !state.target) return;
+    clearHintTimer();
+    saySightWord(state.target);
+  });
+
+  // ============================================================
+  //  v5.2 — CALM CORNER (Rammeplan: omsorg / care)
+  //  60-second guided breathing for self-regulation. Especially
+  //  useful for ADHD-aware design — children can step away from
+  //  performance and just breathe with the app. No skills, no
+  //  tracking, no judgement.
+  // ============================================================
+
+  let calmTimer = null;
+  let calmPhaseTimer = null;
+
+  function startCalmCorner() {
+    showScreen('calmCorner');
+    if (el.calmCircle) {
+      el.calmCircle.classList.remove('inhaling', 'exhaling');
+      // force reflow so animation restarts cleanly
+      void el.calmCircle.offsetWidth;
+    }
+    let phase = 0; // 0 = inhale, 1 = exhale
+    const cycleMs = 4000; // 4 seconds per phase
+    const sessionMs = 60000; // 1 minute total
+
+    const setPhase = (p) => {
+      if (!el.calmCircle || !el.calmText) return;
+      el.calmCircle.classList.remove('inhaling', 'exhaling');
+      void el.calmCircle.offsetWidth;
+      if (p === 0) {
+        el.calmCircle.classList.add('inhaling');
+        el.calmText.textContent = 'Breathe in…';
+      } else {
+        el.calmCircle.classList.add('exhaling');
+        el.calmText.textContent = 'Breathe out…';
+      }
+    };
+
+    setPhase(0);
+    calmPhaseTimer = setInterval(() => {
+      phase = 1 - phase;
+      setPhase(phase);
+    }, cycleMs);
+
+    calmTimer = setTimeout(stopCalmCorner, sessionMs);
+  }
+
+  function stopCalmCorner() {
+    if (calmTimer) { clearTimeout(calmTimer); calmTimer = null; }
+    if (calmPhaseTimer) { clearInterval(calmPhaseTimer); calmPhaseTimer = null; }
+    if (el.calmCircle) el.calmCircle.classList.remove('inhaling', 'exhaling');
+    if (el.calmText) el.calmText.textContent = '';
+    goHome();
+  }
+
+  el.calmCornerBtn?.addEventListener('click', () => {
+    closeSettings();
+    startCalmCorner();
+  });
+  el.calmStop?.addEventListener('click', stopCalmCorner);
 
   // ============================================================
   //  PLAY MODE  (v3.2 — non-evaluative free exploration)

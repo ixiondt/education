@@ -122,6 +122,10 @@
           <div class="icon">🧩</div>
           <div class="label">Blend</div>
         </button>
+        <button class="mode-card phon sight-words" data-mode="sight-words">
+          <div class="icon">📖</div>
+          <div class="label">Sight words</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">Math &amp; shapes</h2>
@@ -280,6 +284,23 @@
       <div class="picture-choices" id="helpers-choices"></div>
     </section>
 
+    <!-- ============ SIGHT WORDS (v5.2) ============ -->
+    <section class="screen" id="screen-sight-words">
+      <div class="play-prompt"><span>Find this word</span></div>
+      <div class="sight-words-display" id="sight-words-prompt">the</div>
+      <div class="choices" id="sight-words-choices"></div>
+      <button class="btn btn-secondary btn-replay" id="sight-words-replay">🔊 Hear it again</button>
+    </section>
+
+    <!-- ============ CALM CORNER (v5.2) ============ -->
+    <section class="screen" id="screen-calm-corner">
+      <div class="calm-wrap">
+        <div class="calm-circle" id="calm-circle"></div>
+        <div class="calm-text" id="calm-text">Breathe in…</div>
+        <button class="btn btn-secondary" id="calm-stop">All done</button>
+      </div>
+    </section>
+
     <!-- ============ SESSION COMPLETE (v5.1) ============ -->
     <section class="screen" id="screen-session-complete">
       <div class="session-complete">
@@ -416,6 +437,7 @@
         <button class="btn btn-secondary" id="progress-btn">View progress</button>
       </div>
       <button class="btn btn-secondary" id="record-btn">🎙 Record your voice</button>
+      <button class="btn btn-secondary" id="calm-corner-btn">🌬️ Calm corner</button>
       <button class="btn btn-secondary" id="activities-btn">🌳 Off-screen activities</button>
       <button class="btn btn-secondary" id="reading-btn">📚 Reading log</button>
       <button class="btn btn-secondary" id="about-btn">📖 About our approach</button>

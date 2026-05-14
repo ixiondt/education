@@ -104,6 +104,22 @@ const CVC_WORDS = [
   { word: 'van', emoji: '🚐', phonemes: ['vuh', 'ah',  'nuh'], firstLetter: 'V' }
 ];
 
+/* ============================================================
+   v5.2 — Sight words (Dolch pre-primer list)
+   These are the highest-frequency words in English text — the
+   words a child needs to recognize on sight to read fluently
+   (because many cannot be sounded out phonetically: "the",
+   "said", "are"). For ages ~5+. Approximately the first 40 of
+   Dolch's classic list.
+   ============================================================ */
+const SIGHT_WORDS = [
+  'a', 'and', 'away', 'big', 'blue', 'can', 'come', 'down',
+  'find', 'for', 'funny', 'go', 'help', 'here', 'I', 'in',
+  'is', 'it', 'jump', 'little', 'look', 'make', 'me', 'my',
+  'not', 'one', 'play', 'red', 'run', 'said', 'see', 'the',
+  'three', 'to', 'two', 'up', 'we', 'where', 'yellow', 'you'
+];
+
 /* Picture-word categories mapped to Norwegian Rammeplan learning areas.
    Lets the Sounds mode (and themed Free play) rotate through one area at a
    time, addressing the Rammeplan's principle of integrated cross-area

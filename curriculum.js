@@ -52,6 +52,9 @@ const STANDARDS_REFERENCE = {
   'RAMMEPLAN-COMM-1.2':  'Norwegian Rammeplan — Communication, Language & Text: emergent writing and exploring letter forms',
   'RAMMEPLAN-COMM-1.3':  'Norwegian Rammeplan — Communication, Language & Text: vocabulary growth through everyday words and naming',
   'RAMMEPLAN-COMM-1.4':  'Norwegian Rammeplan — Communication, Language & Text: phonological awareness — playing with rhyme, syllables, and sounds',
+  'RAMMEPLAN-COMM-1.5':  'Norwegian Rammeplan — Communication, Language & Text: emergent reading — recognizing high-frequency words on sight',
+  'CCSS-RF.K.3c':         'Read common high-frequency words by sight (CCSS Kindergarten, Reading Foundations 3c)',
+  'NAEYC-LL-1.2':         'Emergent reading — recognizing familiar words in environmental print (NAEYC ELOF, Language & Literacy)',
   'RAMMEPLAN-QUANT-1.1': 'Norwegian Rammeplan — Quantities, Spaces & Shapes: number recognition and written numeral familiarity',
   'RAMMEPLAN-QUANT-1.2': 'Norwegian Rammeplan — Quantities, Spaces & Shapes: counting and one-to-one correspondence with concrete objects',
   'RAMMEPLAN-PRINCIPLE-CHILD-AGENCY': 'Norwegian Rammeplan — Foundational principle: children are competent, agentic learners who explore on their own initiative',
@@ -409,6 +412,27 @@ if (typeof CVC_WORDS !== 'undefined') {
   });
 }
 
+/* ---------- Sight words (Dolch pre-primer) — Skolestart band ---------- */
+if (typeof SIGHT_WORDS !== 'undefined') {
+  SIGHT_WORDS.forEach((w) => {
+    SKILLS.push({
+      id: `sight-${w.toLowerCase()}`,
+      category: 'sight-word',
+      mode: 'sight-words',
+      target: w,
+      label: w,
+      minAgeMonths: 60,  // skolestart band (5y+)
+      masteryThreshold: 4,
+      prereqs: [],
+      standards: [
+        'CCSS-RF.K.3c', 'NAEYC-LL-1.2',
+        'EU-ECEC-CURR-LANG',
+        'RAMMEPLAN-COMM-1.5'
+      ]
+    });
+  });
+}
+
 /* ---------- Counting (0 excluded — can't show zero objects) ---------- */
 NUMBERS.filter((n) => n !== '0').forEach((num) => {
   SKILLS.push({
@@ -646,7 +670,7 @@ function modeMinAge(mode) {
    so a "Today's session" includes one activity per area instead
    of three letter-recognition rounds in a row. */
 const MODE_AREAS = {
-  language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters'],
+  language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words'],
   math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors'],
   selfWorld: ['feelings', 'body', 'animals', 'helpers']
 };
@@ -679,7 +703,8 @@ const RAMMEPLAN_AREAS = [
       { label: 'Letter formation (tracing)',  category: 'letter-trace' },
       { label: 'First-sound identification',  category: 'first-sound' },
       { label: 'Rhyming',                     category: 'rhyme' },
-      { label: 'Blending sounds into words',  category: 'blend' }
+      { label: 'Blending sounds into words',  category: 'blend' },
+      { label: 'Sight words',                 category: 'sight-word' }
     ]
   },
   {

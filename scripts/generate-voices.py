@@ -150,6 +150,21 @@ HELPERS = {
     "mechanic": "mechanic", "mail": "mail carrier",
 }
 
+# Sight words (Dolch pre-primer) — 40 high-frequency reading words.
+# Keys are filename-safe (always lowercase) — Linux droplet is case-sensitive,
+# so the app requests audio/sight-words/<lowercase>.mp3.
+# Values are what TTS actually says (preserves "I" capitalization for natural reading).
+SIGHT = {
+    "a":"a", "and":"and", "away":"away", "big":"big", "blue":"blue",
+    "can":"can", "come":"come", "down":"down", "find":"find", "for":"for",
+    "funny":"funny", "go":"go", "help":"help", "here":"here", "i":"I",
+    "in":"in", "is":"is", "it":"it", "jump":"jump", "little":"little",
+    "look":"look", "make":"make", "me":"me", "my":"my", "not":"not",
+    "one":"one", "play":"play", "red":"red", "run":"run", "said":"said",
+    "see":"see", "the":"the", "three":"three", "to":"to", "two":"two",
+    "up":"up", "we":"we", "where":"where", "yellow":"yellow", "you":"you",
+}
+
 # Vocabulary words used in Rhyme + Blend + animals/helpers names spoken inline
 VOC = {
     "cat":"cat", "hat":"hat", "bat":"bat",
@@ -264,14 +279,15 @@ async def main():
             work.append((root / "numbers" / f"{N}.mp3", NUMBER_WORDS[N]))
     if args.only in ("concepts", "all"):
         for category, items in [
-            ("feelings", FEELINGS),
-            ("body",     BODY),
-            ("shapes",   SHAPES_LBL),
-            ("colors",   COLORS_LBL),
-            ("animals",  ANIMALS),
-            ("habitats", HABITATS),
-            ("helpers",  HELPERS),
-            ("voc",      VOC),
+            ("feelings",   FEELINGS),
+            ("body",       BODY),
+            ("shapes",     SHAPES_LBL),
+            ("colors",     COLORS_LBL),
+            ("animals",    ANIMALS),
+            ("habitats",   HABITATS),
+            ("helpers",    HELPERS),
+            ("voc",        VOC),
+            ("sight-words", SIGHT),
         ]:
             for key, text in items.items():
                 work.append((root / category / f"{key}.mp3", text))
