@@ -176,14 +176,25 @@ The script is safe to re-run; each step checks before acting. It also generates 
 
 Then append the Caddy block from `caddy-letters.conf` to `/opt/apps/shared/caddy/Caddyfile` (it must include both `handle /api/*` and the static `handle` block — see the file) and `sudo systemctl reload caddy`. Cloudflare DNS: A record `letters → 192.241.132.219` (Proxied), SSL/TLS Full (Strict).
 
-**Recurring deploys** (from your laptop)
+**Recurring deploys — CI auto-deploy (primary path)**
+
+Two GitHub Actions workflows under `.github/workflows/` deploy on every push to `main`:
+
+- `deploy-static.yml` — fires on changes to `index.html`, `*.js`, `*.css`, `sw.js`, `manifest.webmanifest`, `icons/**`, `tools/**`. rsync → droplet → Caddy reload → smoke-test. ~30s.
+- `deploy-api.yml` — fires on changes to `api/**` or `caddy-letters.conf`. CI gates (typecheck, build, Trivy HIGH/CRITICAL scan) → buildx → ghcr.io with two tags (`:<sha>` and `:latest`) → droplet pulls → `podman-compose up -d --no-build` → smoke-test. ~3–4 min.
+
+Both follow `~/.claude/CLAUDE.md` § CI/CD: build off-host, blocking gates, two image tags, image-based rollback.
+
+One-time setup (SSH key + GH secrets + ghcr public visibility) is in [`docs/CI-SETUP.md`](docs/CI-SETUP.md).
+
+**Manual deploys (fallback when CI is down, or for hot-fixes)**
 
 ```bash
-# Static PWA — typical release
+# Static PWA — same flow CI runs, just from your laptop
 npm run deploy                          # rsync + Caddy reload + smoke test
 DRY_RUN=1 bash scripts/deploy.sh        # dry-run first if you want
 
-# Backend API — when schema or routes change
+# Backend API — local podman build on the droplet (slower than CI's ghcr pull)
 bash scripts/deploy-api.sh              # rsync src → podman-compose build + up -d
 ```
 
@@ -198,6 +209,8 @@ bash scripts/deploy-api.sh              # rsync src → podman-compose build + u
 2. Writes a remote build script to `/tmp/lnum-api-build.sh` and runs it as `lnum-deploy`
 3. The remote script `podman-compose build`s and `up -d`s the `lnum-api` container
 4. Smoke-tests `https://letters.guardcybersolutionsllc.com/api/health`
+
+CI and manual deploys converge on identical droplet state — `api/podman-compose.yml` declares both `image:` (used by CI's pull flow) and `build:` (used by the manual flow). The `:latest` tag is what runs; both flows retag to it.
 
 The Caddy config (security headers, CSP, cache policy, `/api/*` reverse proxy) is in `caddy-letters.conf`. Schema migrations live under `api/drizzle/` and use idempotent `IF NOT EXISTS` clauses, applied as the `postgres` superuser by `setup-droplet-api.sh` per the multi-phase remediation rules in `~/.claude/CLAUDE.md`.
 

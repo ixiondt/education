@@ -1,8 +1,17 @@
 version: "3"
 
+# Two modes:
+#   1. CI/CD     — workflow pulls a SHA-tagged image from ghcr.io,
+#                  retags it as :latest, runs `up -d --no-build`.
+#   2. Manual    — `bash scripts/deploy-api.sh` builds locally
+#                  (`podman-compose build`) and runs `up -d`.
+# Both modes converge on the same `image:` reference; `build:` only
+# activates when `build` is explicitly called.
+
 services:
   api:
     container_name: lnum-api
+    image: ${API_IMAGE:-ghcr.io/ixiondt/letters-and-numbers-api:latest}
     build: .
     ports:
       # Bind 127.0.0.1 only — Caddy fronts everything, never expose direct

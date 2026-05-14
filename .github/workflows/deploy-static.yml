@@ -1,0 +1,132 @@
+# ============================================================
+#  Static PWA — CI auto-deploy
+#
+#  Triggers when any file that Caddy serves directly changes.
+#  Excludes api/, scripts/, docs (*.md), and the Caddy block
+#  (those live in deploy-api.yml or are doc-only).
+#
+#  Flow (~15s end-to-end):
+#    1. Checkout the commit
+#    2. Verify the service-worker version pin
+#    3. rsync to a staging dir on the droplet via SSH
+#    4. SSH and promote staging → /opt/apps/letters-and-numbers/
+#    5. Reload Caddy
+#    6. Smoke-test the live URL + sw.js version
+#
+#  Required repo secrets:
+#    DROPLET_SSH_KEY   private key (ed25519) for deploy@<droplet>
+#    DROPLET_HOST      droplet IP (e.g. 192.241.132.219)
+#
+#  See README "Production deployment" for the one-time setup.
+# ============================================================
+name: Deploy static PWA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'curriculum.js'
+      - 'letters.js'
+      - 'world.js'
+      - 'styles.css'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'icons/**'
+      - 'tools/**'
+      - '.github/workflows/deploy-static.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  # Only one static deploy at a time. New pushes cancel in-flight ones.
+  group: deploy-static
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sanity — service-worker version pin
+        run: |
+          SW_VERSION=$(grep -E "^const VERSION = " sw.js | sed -E "s/.*'(.*)'.*/\1/")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "sw.js  VERSION = $SW_VERSION"
+          echo "pkg    version = $PKG_VERSION"
+          # Soft check — these are allowed to differ (sw uses its own series)
+          # but both must be set.
+          test -n "$SW_VERSION" || { echo "::error::sw.js VERSION is empty"; exit 1; }
+          test -n "$PKG_VERSION" || { echo "::error::package.json version is empty"; exit 1; }
+          echo "SW_VERSION=$SW_VERSION" >> "$GITHUB_ENV"
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+      - name: Rsync to droplet (staging)
+        env:
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          ssh deploy@"$HOST" "mkdir -p /tmp/lnum-deploy-staging"
+          # Mirror the exclude list from scripts/deploy.sh so manual and
+          # CI flows produce identical droplet state.
+          rsync -avz --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.gitignore' \
+            --exclude='.claude/' \
+            --exclude='node_modules/' \
+            --exclude='scripts/' \
+            --exclude='api/' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='.DS_Store' \
+            --exclude='Thumbs.db' \
+            --exclude='audio/' \
+            --exclude='caddy-letters.conf' \
+            --exclude='*.md' \
+            ./ deploy@"$HOST":/tmp/lnum-deploy-staging/
+
+      - name: Promote to live + reload Caddy
+        env:
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          ssh deploy@"$HOST" 'bash -se' <<"EOF"
+          set -euo pipefail
+          # --exclude='audio/' protects the server-side voice-pack MP3s
+          # (gitignored, deployed separately) from --delete.
+          sudo rsync -a --delete --exclude='audio/' \
+            /tmp/lnum-deploy-staging/ /opt/apps/letters-and-numbers/
+          sudo chown -R lnum-deploy:lnum-deploy /opt/apps/letters-and-numbers
+          sudo find /opt/apps/letters-and-numbers -type f -exec chmod 644 {} \;
+          sudo find /opt/apps/letters-and-numbers -type d -exec chmod 755 {} \;
+          rm -rf /tmp/lnum-deploy-staging
+          sudo systemctl reload caddy
+          echo "✓ Caddy reloaded"
+          EOF
+
+      - name: Smoke test
+        run: |
+          DOMAIN=letters.guardcybersolutionsllc.com
+          CODE=$(curl -sk -o /dev/null -w "%{http_code}" "https://$DOMAIN/")
+          test "$CODE" = "200" || { echo "::error::root returned $CODE"; exit 1; }
+          echo "✓ https://$DOMAIN/ → 200"
+
+          # Confirm the live sw.js matches what we just shipped
+          LIVE_SW=$(curl -sk "https://$DOMAIN/sw.js?ts=$(date +%s)" \
+            | grep -E "^const VERSION = " | head -1 \
+            | sed -E "s/.*'(.*)'.*/\1/")
+          if [ "$LIVE_SW" = "$SW_VERSION" ]; then
+            echo "✓ live sw.js VERSION = $LIVE_SW"
+          else
+            echo "::warning::live sw.js VERSION is '$LIVE_SW', expected '$SW_VERSION' (Cloudflare may still be caching — retry in 60s)"
+          fi

@@ -148,10 +148,11 @@ Keeping events lets us replay/aggregate without losing the per-event detail. Old
 
 | Turn | Scope | Status |
 |---|---|---|
-| 1 | Tenant provisioning, schema, health probes | ✅ 2026-05-14 |
-| 2 | Magic-link auth (Resend), parent web dashboard route | Planned |
-| 3 | `/api/sync/push` + `/api/sync/pull`, IndexedDB outbox in client | Planned |
-| 4 | Aggregate dashboards (per-child, per-standard, per-day) + PDF export | Planned |
+| 1   | Tenant provisioning, schema, health probes | ✅ 2026-05-14 |
+| 1.5 | CI auto-deploy: GHA → typecheck/build/Trivy → ghcr.io → droplet pull, separate workflow for static rsync | ✅ 2026-05-14 |
+| 2   | Magic-link auth (Resend), parent web dashboard route | Planned |
+| 3   | `/api/sync/push` + `/api/sync/pull`, IndexedDB outbox in client | Planned |
+| 4   | Aggregate dashboards (per-child, per-standard, per-day) + PDF export | Planned |
 
 ### Infrastructure plan — slots into the existing GuardCyber droplet
 
