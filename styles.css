@@ -1180,6 +1180,230 @@ body {
 }
 
 /* ============================================================
+   v5 — Whole-child modes (Shapes, Colors, Patterns, Feelings,
+        Body, Animals, Helpers) + Parent resources
+   ============================================================ */
+
+.mode-card.whole .icon { color: var(--success); }
+.mode-card.shapes .icon, .mode-card.patterns .icon { color: var(--secondary); }
+.mode-card.colors .icon  { color: var(--warning); }
+.mode-card.feelings .icon{ color: var(--warning); }
+.mode-card.body .icon    { color: var(--accent); }
+.mode-card.animals .icon { color: var(--success); }
+.mode-card.helpers .icon { color: var(--secondary); }
+
+/* Shape SVG inside picture-choice */
+.pc-shape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.shape-svg {
+  width: 80%;
+  height: 80%;
+  display: block;
+}
+.shape-svg circle,
+.shape-svg rect,
+.shape-svg polygon,
+.shape-svg ellipse,
+.shape-svg path {
+  fill: var(--accent);
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.picture-choice:nth-child(2) .shape-svg :is(circle, rect, polygon, ellipse, path) { fill: var(--secondary); stroke: var(--secondary); }
+.picture-choice:nth-child(3) .shape-svg :is(circle, rect, polygon, ellipse, path) { fill: var(--success);   stroke: var(--success); }
+.picture-choice:nth-child(4) .shape-svg :is(circle, rect, polygon, ellipse, path) { fill: var(--warning);   stroke: var(--warning); }
+.picture-choice.correct .shape-svg :is(circle, rect, polygon, ellipse, path) { fill: white; stroke: white; }
+
+/* Color swatch */
+.pc-swatch {
+  display: inline-block;
+  width: clamp(56px, 9vw, 88px);
+  height: clamp(56px, 9vw, 88px);
+  border-radius: 50%;
+  border: 2px solid oklch(0.85 0.01 80);
+  box-shadow: inset 0 -4px 12px oklch(0.20 0.01 60 / 0.15);
+}
+
+/* Pattern display */
+.pattern-display {
+  display: flex;
+  gap: clamp(8px, 1.5vw, 14px);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 4px 0 12px;
+}
+.pattern-slot {
+  width: clamp(44px, 7vw, 68px);
+  height: clamp(44px, 7vw, 68px);
+  border-radius: 50%;
+  border: 2px solid oklch(0.85 0.01 80);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-soft);
+  background: var(--bg);
+}
+.pattern-slot.empty {
+  background: var(--surface);
+  border-style: dashed;
+  animation: pattern-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pattern-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); border-color: var(--accent); }
+}
+.picture-choice.pattern-choice {
+  background: var(--surface);
+}
+
+/* Animals cue (the prompt card showing the animal) */
+.animal-cue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 24px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.animal-cue .pc-emoji {
+  font-size: clamp(64px, 12vw, 96px);
+  line-height: 1;
+}
+.animal-cue .pc-word {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Parent activity cards */
+.activities-filters { flex-wrap: wrap; }
+.activities-filters button { padding: 10px 8px; font-size: 12px; min-width: 0; }
+.activities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.activity-card {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-left: 6px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.activity-card.area-language   { border-left-color: var(--accent); }
+.activity-card.area-math       { border-left-color: var(--secondary); }
+.activity-card.area-physical   { border-left-color: oklch(0.62 0.18 28); }
+.activity-card.area-art        { border-left-color: var(--warning); }
+.activity-card.area-nature     { border-left-color: var(--success); }
+.activity-card.area-social     { border-left-color: oklch(0.65 0.18 305); }
+.activity-card.area-community  { border-left-color: oklch(0.55 0.18 245); }
+.activity-area-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.activity-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* Reading log */
+.reading-stats {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--text);
+}
+.reading-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+.reading-add-form input[type="text"],
+.reading-add-form input[type="date"] {
+  padding: 11px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  min-width: 0;
+}
+.reading-add-form input:focus { outline: none; border-color: var(--accent); }
+.reading-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+.reading-add-row .btn { padding: 11px 16px; font-size: 14px; }
+.reading-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.reading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.reading-row-main { flex: 1; min-width: 0; }
+.reading-row-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reading-row-meta {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.reading-row-delete {
+  background: transparent;
+  border: none;
+  color: var(--text-soft);
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.reading-row-delete:hover { color: oklch(0.55 0.18 25); }
+
+/* ============================================================
    v4 — Phonemic awareness modes (First sound, Rhyme, Blend)
    ============================================================ */
 

@@ -654,7 +654,15 @@
       play:        $('screen-play'),
       'first-sound': $('screen-first-sound'),
       rhyme:       $('screen-rhyme'),
-      blend:       $('screen-blend')
+      blend:       $('screen-blend'),
+      // v5 — world / self / society
+      feelings:    $('screen-feelings'),
+      body:        $('screen-body'),
+      shapes:      $('screen-shapes'),
+      colors:      $('screen-colors'),
+      patterns:    $('screen-patterns'),
+      animals:     $('screen-animals'),
+      helpers:     $('screen-helpers')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -699,6 +707,48 @@
     blendPhonemes:     $('blend-phonemes'),
     blendChoices:      $('blend-choices'),
     blendReplay:       $('blend-replay'),
+
+    // v5 — whole-child mode elements
+    feelingsPrompt:    $('feelings-prompt'),
+    feelingsChoices:   $('feelings-choices'),
+
+    bodyPrompt:        $('body-prompt'),
+    bodyChoices:       $('body-choices'),
+
+    shapesPrompt:      $('shapes-prompt'),
+    shapesChoices:     $('shapes-choices'),
+
+    colorsPrompt:      $('colors-prompt'),
+    colorsChoices:     $('colors-choices'),
+
+    patternDisplay:    $('pattern-display'),
+    patternChoices:    $('pattern-choices'),
+
+    animalsCue:        $('animals-cue'),
+    animalsChoices:    $('animals-choices'),
+
+    helpersScenario:   $('helpers-scenario'),
+    helpersQuestion:   $('helpers-question'),
+    helpersChoices:    $('helpers-choices'),
+
+    // v5 — parent resource elements
+    activitiesBtn:     $('activities-btn'),
+    modalActivities:   $('modal-activities'),
+    activitiesList:    $('activities-list'),
+    activitiesRefresh: $('activities-refresh'),
+    activitiesClose:   $('activities-close'),
+    activitiesFilters: document.querySelectorAll('[data-activity-filter]'),
+
+    readingBtn:        $('reading-btn'),
+    modalReading:      $('modal-reading'),
+    readingList:       $('reading-list'),
+    readingAddForm:    $('reading-add-form'),
+    readingTitle:      $('reading-title'),
+    readingDate:       $('reading-date'),
+    readingReader:     $('reading-reader'),
+    readingAddBtn:     $('reading-add-btn'),
+    readingStats:      $('reading-stats'),
+    readingClose:      $('reading-close'),
 
     // v3.3 — agency picker + about/pedagogy modal
     modalAgency:    $('modal-agency'),
@@ -942,6 +992,14 @@
         case 'first-sound':   showScreen('first-sound'); startFirstSoundRound(); break;
         case 'rhyme':         showScreen('rhyme'); startRhymeRound();  break;
         case 'blend':         showScreen('blend'); startBlendRound();  break;
+        // v5 — whole-child modes
+        case 'feelings':      showScreen('feelings'); startFeelingsRound(); break;
+        case 'body':          showScreen('body');     startBodyRound();     break;
+        case 'shapes':        showScreen('shapes');   startShapesRound();   break;
+        case 'colors':        showScreen('colors');   startColorsRound();   break;
+        case 'patterns':      showScreen('patterns'); startPatternsRound(); break;
+        case 'animals':       showScreen('animals');  startAnimalsRound();  break;
+        case 'helpers':       showScreen('helpers');  startHelpersRound();  break;
       }
     };
 
@@ -1433,6 +1491,517 @@
     if (state.advancing || !state.blendPhonemes) return;
     clearHintTimer();
     speakChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
+  });
+
+  // ============================================================
+  //  v5 — WHOLE-CHILD MODES
+  //  Picker-style modes covering Rammeplan areas 2, 3, 4, 5, 6, 7.
+  //  All follow the same shape: stimulus + N choices, tap matching.
+  //  Wrong taps follow the same forgiving flow as Find / Sounds /
+  //  Rhyme — wiggle, no penalty, delayed rotating-phrase re-cue.
+  // ============================================================
+
+  /* Shared helper — builds N choice buttons inside a container, each
+     calling the supplied onTap when clicked. Returns the chosen items
+     (the first one is always the correct target). */
+  function buildPickerChoices(container, target, pool, count, onTap, renderItem) {
+    const others = pool.filter((p) => p !== target);
+    const distractors = shuffle(others).slice(0, Math.max(1, count - 1));
+    const ordered = shuffle([target, ...distractors]);
+    container.innerHTML = '';
+    ordered.forEach((item) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice';
+      btn.innerHTML = renderItem(item);
+      btn.addEventListener('click', () => onTap(btn, item));
+      container.appendChild(btn);
+    });
+    return ordered;
+  }
+
+  /* ─── Feelings (Rammeplan area 6 — Ethics / emotions) ─── */
+  function startFeelingsRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'feelings', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const feeling = FEELINGS.find((f) => f.key === skill.target);
+    if (!feeling) return;
+    el.feelingsPrompt.textContent = `Find the ${feeling.label} face`;
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    buildPickerChoices(el.feelingsChoices, feeling, FEELINGS, count,
+      (btn, item) => onFeelingsChoice(btn, item.key),
+      (f) => `<span class="pc-emoji">${f.emoji}</span><span class="pc-word">${escapeHtml(f.label)}</span>`);
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([`Find the ${feeling.label} face.`]), 280);
+  }
+  function onFeelingsChoice(btn, key) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = key === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    const target = FEELINGS.find((f) => f.key === state.target);
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! That's ${target.label}.`]);
+      spawnSparkles(btn); setTimeout(startFeelingsRound, 1700);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Find the ${target.label} face.`]));
+    }
+  }
+
+  /* ─── Body parts (Rammeplan area 2 — Body) ─── */
+  function startBodyRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'body', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const part = BODY_PARTS.find((b) => b.key === skill.target);
+    if (!part) return;
+    el.bodyPrompt.textContent = part.prompt;
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    buildPickerChoices(el.bodyChoices, part, BODY_PARTS, count,
+      (btn, item) => onBodyChoice(btn, item.key),
+      (b) => `<span class="pc-emoji">${b.emoji}</span><span class="pc-word">${escapeHtml(b.label)}</span>`);
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([part.prompt]), 280);
+  }
+  function onBodyChoice(btn, key) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = key === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    const target = BODY_PARTS.find((b) => b.key === state.target);
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! That's the ${target.label}.`]);
+      spawnSparkles(btn); setTimeout(startBodyRound, 1700);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([target.prompt]));
+    }
+  }
+
+  /* ─── Shapes (Rammeplan area 5 — Quantity/space/shape) ─── */
+  function renderShapeSVG(shape) {
+    return `<svg viewBox="0 0 200 240" class="shape-svg" xmlns="http://www.w3.org/2000/svg">${shape.svgInner}</svg>`;
+  }
+  function startShapesRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'shapes', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const shape = SHAPES.find((s) => s.key === skill.target);
+    if (!shape) return;
+    el.shapesPrompt.innerHTML = `Find the <strong>${escapeHtml(shape.label)}</strong>`;
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    buildPickerChoices(el.shapesChoices, shape, SHAPES, count,
+      (btn, item) => onShapesChoice(btn, item.key),
+      (s) => `<span class="pc-shape">${renderShapeSVG(s)}</span>`);
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([`Find the ${shape.label}.`]), 280);
+  }
+  function onShapesChoice(btn, key) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = key === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    const target = SHAPES.find((s) => s.key === state.target);
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! ${target.label}.`]);
+      spawnSparkles(btn); setTimeout(startShapesRound, 1700);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Find the ${target.label}.`]));
+    }
+  }
+
+  /* ─── Colors (Rammeplan area 3 — Art/creativity) ─── */
+  function startColorsRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'colors', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const color = COLORS.find((c) => c.key === skill.target);
+    if (!color) return;
+    el.colorsPrompt.innerHTML = `Find <strong>${escapeHtml(color.label)}</strong>`;
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    buildPickerChoices(el.colorsChoices, color, COLORS, count,
+      (btn, item) => onColorsChoice(btn, item.key),
+      (c) => `<span class="pc-swatch" style="background:${c.oklch};background:${c.fallback}"></span><span class="pc-word">${escapeHtml(c.label)}</span>`);
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([`Find ${color.label}.`]), 280);
+  }
+  function onColorsChoice(btn, key) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = key === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    const target = COLORS.find((c) => c.key === state.target);
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! ${target.label}.`]);
+      spawnSparkles(btn); setTimeout(startColorsRound, 1700);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Find ${target.label}.`]));
+    }
+  }
+
+  /* ─── Patterns (Rammeplan area 5 — pattern recognition) ─── */
+  function startPatternsRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'patterns', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const rule = PATTERN_RULES.find((p) => p.key === skill.target);
+    if (!rule) return;
+
+    // Assign a random color to each unique letter in the pattern
+    const letters = [...new Set(rule.sequence)];
+    const palette = shuffle(COLORS.filter((c) => c.key !== 'white')).slice(0, letters.length);
+    const itemFor = {};
+    letters.forEach((l, i) => { itemFor[l] = palette[i]; });
+
+    el.patternDisplay.innerHTML = '';
+    rule.sequence.forEach((l, i) => {
+      const span = document.createElement('span');
+      if (i === rule.hideIdx) {
+        span.className = 'pattern-slot empty';
+        span.textContent = '?';
+      } else {
+        span.className = 'pattern-slot';
+        span.style.background = itemFor[l].oklch;
+      }
+      el.patternDisplay.appendChild(span);
+    });
+
+    const correctItem = itemFor[rule.sequence[rule.hideIdx]];
+    state.patternCorrectKey = correctItem.key;
+    const distractors = shuffle(COLORS.filter((c) => c.key !== correctItem.key && c.key !== 'white')).slice(0, 2);
+    const ordered = shuffle([correctItem, ...distractors]);
+
+    el.patternChoices.innerHTML = '';
+    ordered.forEach((c) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice pattern-choice';
+      btn.innerHTML = `<span class="pc-swatch" style="background:${c.oklch};background:${c.fallback}"></span>`;
+      btn.addEventListener('click', () => onPatternsChoice(btn, c.key));
+      el.patternChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak(['What comes next?']), 280);
+  }
+  function onPatternsChoice(btn, key) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = key === state.patternCorrectKey;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak(['Yes! You got the pattern.']);
+      spawnSparkles(btn); setTimeout(startPatternsRound, 1700);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak(['Look at the pattern. What comes next?']));
+    }
+  }
+
+  /* ─── Animals & habitats (Rammeplan area 4 — Nature) ─── */
+  function startAnimalsRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'animals', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const pair = ANIMAL_HABITATS.find((a) => a.key === skill.target);
+    if (!pair) return;
+    el.animalsCue.innerHTML = `<span class="pc-emoji">${pair.animal.e}</span><span class="pc-word">${escapeHtml(pair.animal.name)}</span>`;
+
+    const otherHabitats = ANIMAL_HABITATS.filter((a) => a.habitat.name !== pair.habitat.name);
+    const distractors = shuffle(otherHabitats).slice(0, 2).map((a) => a.habitat);
+    const ordered = shuffle([pair.habitat, ...distractors]);
+    state.animalCorrect = pair.habitat.name;
+
+    el.animalsChoices.innerHTML = '';
+    ordered.forEach((h) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice';
+      btn.innerHTML = `<span class="pc-emoji">${h.e}</span><span class="pc-word">${escapeHtml(h.name)}</span>`;
+      btn.addEventListener('click', () => onAnimalsChoice(btn, h.name));
+      el.animalsChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([`Where does the ${pair.animal.name} live?`]), 280);
+  }
+  function onAnimalsChoice(btn, name) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = name === state.animalCorrect;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! It lives in the ${name}.`]);
+      spawnSparkles(btn); setTimeout(startAnimalsRound, 1800);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      const pair = ANIMAL_HABITATS.find((a) => a.key === state.target);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Where does the ${pair.animal.name} live?`]));
+    }
+  }
+
+  /* ─── Community helpers (Rammeplan area 7 — Society) ─── */
+  function startHelpersRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'helpers', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const item = COMMUNITY_HELPERS.find((h) => h.key === skill.target);
+    if (!item) return;
+    el.helpersScenario.textContent = item.scenario.e;
+    el.helpersQuestion.textContent = item.scenario.q;
+
+    const otherHelpers = COMMUNITY_HELPERS.filter((h) => h.key !== item.key);
+    const distractors = shuffle(otherHelpers).slice(0, 2).map((h) => h.helper);
+    const ordered = shuffle([item.helper, ...distractors]);
+    state.helperCorrect = item.helper.name;
+
+    el.helpersChoices.innerHTML = '';
+    ordered.forEach((h) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice';
+      btn.innerHTML = `<span class="pc-emoji">${h.e}</span><span class="pc-word">${escapeHtml(h.name)}</span>`;
+      btn.addEventListener('click', () => onHelpersChoice(btn, h.name));
+      el.helpersChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([item.scenario.q]), 280);
+  }
+  function onHelpersChoice(btn, name) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = name === state.helperCorrect;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! The ${name} does that.`]);
+      spawnSparkles(btn); setTimeout(startHelpersRound, 1800);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      const item = COMMUNITY_HELPERS.find((h) => h.key === state.target);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([item.scenario.q]));
+    }
+  }
+
+  // ============================================================
+  //  v5 — PARENT RESOURCES (off-screen activities + reading log)
+  //  These deliberately add NO game mechanics for the child.
+  //  They make the app a Norwegian-aligned platform rather than
+  //  just Norwegian-style game content.
+  // ============================================================
+
+  let activityFilter = 'all';
+
+  function renderActivities() {
+    if (!el.activitiesList) return;
+    const profile = activeProfile();
+    if (!profile) return;
+    const age = profile.ageMonths;
+
+    const pool = (typeof PARENT_ACTIVITIES !== 'undefined' ? PARENT_ACTIVITIES : []).filter((a) => {
+      if (a.minAge > age + 6) return false; // skip clearly too-old activities
+      if (activityFilter !== 'all' && a.area !== activityFilter) return false;
+      return true;
+    });
+    const chosen = shuffle(pool).slice(0, 3);
+
+    el.activitiesList.innerHTML = '';
+    if (chosen.length === 0) {
+      el.activitiesList.innerHTML = '<p style="color:var(--text-soft); padding:16px;">No activities match that filter for this age. Pick a different category or "All".</p>';
+      return;
+    }
+    chosen.forEach((a) => {
+      const card = document.createElement('div');
+      card.className = `activity-card area-${a.area}`;
+      card.innerHTML = `
+        <div class="activity-area-tag">${escapeHtml(a.area)}</div>
+        <div class="activity-text">${escapeHtml(a.t)}</div>
+      `;
+      el.activitiesList.appendChild(card);
+    });
+  }
+
+  function openActivities() {
+    closeSettings();
+    renderActivities();
+    el.modalActivities?.classList.add('active');
+  }
+
+  el.activitiesBtn?.addEventListener('click', openActivities);
+  el.activitiesRefresh?.addEventListener('click', renderActivities);
+  el.activitiesClose?.addEventListener('click', () => el.modalActivities.classList.remove('active'));
+  el.modalActivities?.addEventListener('click', (e) => {
+    if (e.target === el.modalActivities) el.modalActivities.classList.remove('active');
+  });
+  el.activitiesFilters?.forEach((b) => {
+    b.addEventListener('click', () => {
+      el.activitiesFilters.forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      activityFilter = b.dataset.activityFilter;
+      renderActivities();
+    });
+  });
+
+  /* ─── Reading log ───
+     Per-profile log of books read aloud together. The Rammeplan
+     emphasizes read-aloud as the single strongest predictor of
+     later reading; we record this not to gamify but to make it
+     easy for the parent to keep up the practice. */
+
+  function ensureReadingLog(profile) {
+    profile.readingLog ||= [];
+    return profile.readingLog;
+  }
+
+  function readingStatsForMonth(log) {
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonth = log.filter((e) => (e.date || '').startsWith(monthStart));
+    return {
+      thisMonth: thisMonth.length,
+      total: log.length,
+      lastDate: log[0]?.date || null
+    };
+  }
+
+  function renderReading() {
+    const profile = activeProfile();
+    if (!profile || !el.readingList) return;
+    const log = ensureReadingLog(profile);
+
+    const stats = readingStatsForMonth(log);
+    if (el.readingStats) {
+      el.readingStats.innerHTML = log.length === 0
+        ? '<em>No books logged yet. The first one is the hardest — add a book you read this week.</em>'
+        : `<strong>${stats.thisMonth}</strong> book${stats.thisMonth === 1 ? '' : 's'} read together this month · ${stats.total} total`;
+    }
+
+    el.readingList.innerHTML = '';
+    [...log].reverse().forEach((entry) => {
+      const row = document.createElement('div');
+      row.className = 'reading-row';
+      row.innerHTML = `
+        <div class="reading-row-main">
+          <div class="reading-row-title">${escapeHtml(entry.title)}</div>
+          <div class="reading-row-meta">${escapeHtml(entry.date || '')}${entry.reader ? ` · with ${escapeHtml(entry.reader)}` : ''}</div>
+        </div>
+        <button class="reading-row-delete" data-id="${entry.id}" aria-label="Remove">✕</button>
+      `;
+      el.readingList.appendChild(row);
+    });
+  }
+
+  function openReading() {
+    closeSettings();
+    if (el.readingDate) el.readingDate.value = todayString();
+    renderReading();
+    el.modalReading?.classList.add('active');
+  }
+
+  el.readingBtn?.addEventListener('click', openReading);
+  el.readingClose?.addEventListener('click', () => el.modalReading.classList.remove('active'));
+  el.modalReading?.addEventListener('click', (e) => {
+    if (e.target === el.modalReading) el.modalReading.classList.remove('active');
+  });
+
+  el.readingAddForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const profile = activeProfile();
+    if (!profile) return;
+    const title = (el.readingTitle.value || '').trim();
+    if (!title) return;
+    const log = ensureReadingLog(profile);
+    log.push({
+      id: cryptoRandomId().slice(0, 8),
+      title: title.slice(0, 200),
+      date: el.readingDate.value || todayString(),
+      reader: (el.readingReader.value || '').trim().slice(0, 60) || null
+    });
+    saveStorage();
+    el.readingTitle.value = '';
+    el.readingReader.value = '';
+    renderReading();
+  });
+
+  el.readingList?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.reading-row-delete');
+    if (!btn) return;
+    const profile = activeProfile();
+    if (!profile) return;
+    const log = ensureReadingLog(profile);
+    profile.readingLog = log.filter((x) => x.id !== btn.dataset.id);
+    saveStorage();
+    renderReading();
   });
 
   // ============================================================

@@ -1,13 +1,14 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v4';
+const VERSION = 'lnum-v5';
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './letters.js',
+  './world.js',
   './curriculum.js',
   './manifest.webmanifest',
   './icons/icon.svg',

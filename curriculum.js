@@ -54,7 +54,31 @@ const STANDARDS_REFERENCE = {
   'RAMMEPLAN-COMM-1.4':  'Norwegian Rammeplan — Communication, Language & Text: phonological awareness — playing with rhyme, syllables, and sounds',
   'RAMMEPLAN-QUANT-1.1': 'Norwegian Rammeplan — Quantities, Spaces & Shapes: number recognition and written numeral familiarity',
   'RAMMEPLAN-QUANT-1.2': 'Norwegian Rammeplan — Quantities, Spaces & Shapes: counting and one-to-one correspondence with concrete objects',
-  'RAMMEPLAN-PRINCIPLE-CHILD-AGENCY': 'Norwegian Rammeplan — Foundational principle: children are competent, agentic learners who explore on their own initiative'
+  'RAMMEPLAN-PRINCIPLE-CHILD-AGENCY': 'Norwegian Rammeplan — Foundational principle: children are competent, agentic learners who explore on their own initiative',
+
+  /* ─── v5 — additional Rammeplan area mappings ─── */
+  'RAMMEPLAN-KROPP-1.1':  'Norwegian Rammeplan — Body, movement, food & health: recognizing parts of the body',
+  'RAMMEPLAN-KUNST-1.1':  'Norwegian Rammeplan — Art, culture & creativity: recognizing colors and aesthetic qualities',
+  'RAMMEPLAN-NATUR-1.1':  'Norwegian Rammeplan — Nature, environment & technology: recognizing animals and their habitats',
+  'RAMMEPLAN-ETIKK-1.1':  'Norwegian Rammeplan — Ethics, religion & philosophy: recognizing and naming emotions in self and others',
+  'RAMMEPLAN-SAMFUNN-1.1':'Norwegian Rammeplan — Local community & society: recognizing community helpers and their roles',
+  'RAMMEPLAN-QUANT-2.1':  'Norwegian Rammeplan — Quantities, spaces & shapes: recognizing two-dimensional shapes',
+  'RAMMEPLAN-QUANT-2.2':  'Norwegian Rammeplan — Quantities, spaces & shapes: recognizing and continuing patterns',
+
+  /* US CCSS additions for v5 */
+  'CCSS-K.G.A.2':  'Correctly name shapes regardless of their orientations or overall size (CCSS Kindergarten, Geometry A.2)',
+  'CCSS-K.G.A.3':  'Identify shapes as two-dimensional or three-dimensional (CCSS Kindergarten, Geometry A.3)',
+  'CCSS-K.OA.A':   'Understand addition and subtraction; recognize patterns and quantity relationships (CCSS Kindergarten, Operations & Algebraic Thinking)',
+
+  /* NAEYC additions for v5 */
+  'NAEYC-Math-3.1':       'Patterning and algebraic thinking — recognizing, copying, and extending patterns (NAEYC ELOF, Mathematics)',
+  'NAEYC-Math-4.1':       'Geometry and spatial sense — recognizing and naming basic two-dimensional shapes (NAEYC ELOF, Mathematics)',
+  'NAEYC-Soc-Em-1.1':     'Social & emotional development — recognizing and naming emotions (NAEYC ELOF, Social Emotional)',
+  'NAEYC-Soc-Em-2.1':     'Social & emotional development — self-regulation precursors (NAEYC ELOF, Social Emotional)',
+  'NAEYC-Health-1.1':     'Health, safety & physical development — body awareness (NAEYC ELOF)',
+  'NAEYC-Sci-1.1':        'Scientific reasoning — observing and classifying living things (NAEYC ELOF, Cognition)',
+  'NAEYC-Soc-1.1':        'Social studies — recognizing community roles and helpers (NAEYC ELOF, Cognition)',
+  'NAEYC-Arts-1.1':       'Creative arts expression — color recognition and aesthetic awareness (NAEYC ELOF)'
 };
 
 const SKILLS = [];
@@ -159,6 +183,165 @@ NUMBERS.forEach((num) => {
     ]
   });
 });
+
+/* ============================================================
+   v5 — Whole-child skill registration
+   These map gameplay to the remaining Rammeplan areas:
+   - Feelings  → area 6 (Ethics, religion & philosophy)
+   - Body      → area 2 (Body, movement, food & health)
+   - Shapes    → area 5 (Quantities, spaces & shapes)
+   - Colors    → area 3 (Art, culture & creativity)
+   - Patterns  → area 5 (Quantities, spaces & shapes)
+   - Animals   → area 4 (Nature, environment & technology)
+   - Helpers   → area 7 (Local community & society)
+   ============================================================ */
+
+/* ---------- Feelings (emotion recognition) ---------- */
+if (typeof FEELINGS !== 'undefined') {
+  FEELINGS.forEach((f) => {
+    SKILLS.push({
+      id: `feeling-${f.key}`,
+      category: 'feeling',
+      mode: 'feelings',
+      target: f.key,
+      label: f.label,
+      minAgeMonths: 30,
+      masteryThreshold: 5,
+      prereqs: [],
+      standards: [
+        'RAMMEPLAN-ETIKK-1.1',
+        'NAEYC-Soc-Em-1.1', 'NAEYC-Soc-Em-2.1',
+        'EU-ECEC-CURR-HOLISTIC'
+      ]
+    });
+  });
+}
+
+/* ---------- Body parts ---------- */
+if (typeof BODY_PARTS !== 'undefined') {
+  BODY_PARTS.forEach((b) => {
+    SKILLS.push({
+      id: `body-${b.key}`,
+      category: 'body',
+      mode: 'body',
+      target: b.key,
+      label: b.label,
+      minAgeMonths: 30,
+      masteryThreshold: 5,
+      prereqs: [],
+      standards: [
+        'RAMMEPLAN-KROPP-1.1',
+        'NAEYC-Health-1.1',
+        'EU-ECEC-CURR-HOLISTIC'
+      ]
+    });
+  });
+}
+
+/* ---------- Shapes ---------- */
+if (typeof SHAPES !== 'undefined') {
+  SHAPES.forEach((s) => {
+    SKILLS.push({
+      id: `shape-${s.key}`,
+      category: 'shape',
+      mode: 'shapes',
+      target: s.key,
+      label: s.label,
+      minAgeMonths: 30,
+      masteryThreshold: 5,
+      prereqs: [],
+      standards: [
+        'CCSS-K.G.A.2', 'NAEYC-Math-4.1',
+        'RAMMEPLAN-QUANT-2.1',
+        'EU-ECEC-CURR-NUMER'
+      ]
+    });
+  });
+}
+
+/* ---------- Colors ---------- */
+if (typeof COLORS !== 'undefined') {
+  COLORS.forEach((c) => {
+    SKILLS.push({
+      id: `color-${c.key}`,
+      category: 'color',
+      mode: 'colors',
+      target: c.key,
+      label: c.label,
+      minAgeMonths: 30,
+      masteryThreshold: 5,
+      prereqs: [],
+      standards: [
+        'NAEYC-Arts-1.1',
+        'RAMMEPLAN-KUNST-1.1',
+        'EU-ECEC-CURR-HOLISTIC'
+      ]
+    });
+  });
+}
+
+/* ---------- Patterns ---------- */
+if (typeof PATTERN_RULES !== 'undefined') {
+  PATTERN_RULES.forEach((p) => {
+    SKILLS.push({
+      id: `pattern-${p.key}`,
+      category: 'pattern',
+      mode: 'patterns',
+      target: p.key,
+      label: p.key.toUpperCase() + ' pattern',
+      minAgeMonths: 42,
+      masteryThreshold: 4,
+      prereqs: [],
+      standards: [
+        'CCSS-K.OA.A', 'NAEYC-Math-3.1',
+        'RAMMEPLAN-QUANT-2.2',
+        'EU-ECEC-CURR-NUMER'
+      ]
+    });
+  });
+}
+
+/* ---------- Animals & habitats ---------- */
+if (typeof ANIMAL_HABITATS !== 'undefined') {
+  ANIMAL_HABITATS.forEach((a) => {
+    SKILLS.push({
+      id: `animal-${a.key}`,
+      category: 'animal',
+      mode: 'animals',
+      target: a.key,
+      label: `${a.animal.name} → ${a.habitat.name}`,
+      minAgeMonths: 36,
+      masteryThreshold: 4,
+      prereqs: [],
+      standards: [
+        'NAEYC-Sci-1.1',
+        'RAMMEPLAN-NATUR-1.1',
+        'EU-ECEC-CURR-HOLISTIC'
+      ]
+    });
+  });
+}
+
+/* ---------- Community helpers ---------- */
+if (typeof COMMUNITY_HELPERS !== 'undefined') {
+  COMMUNITY_HELPERS.forEach((h) => {
+    SKILLS.push({
+      id: `helper-${h.key}`,
+      category: 'helper',
+      mode: 'helpers',
+      target: h.key,
+      label: h.helper.name,
+      minAgeMonths: 42,
+      masteryThreshold: 4,
+      prereqs: [],
+      standards: [
+        'NAEYC-Soc-1.1',
+        'RAMMEPLAN-SAMFUNN-1.1',
+        'EU-ECEC-CURR-HOLISTIC'
+      ]
+    });
+  });
+}
 
 /* ---------- First-sound isolation (phonemic awareness) ---------- */
 /* Uses LETTER_WORDS — child hears the word, identifies its starting letter. */

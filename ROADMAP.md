@@ -16,6 +16,7 @@ A phased plan from current v2 → v5+, written to slot into the existing GuardCy
 | v3.3 — Educational platform reframe: Norwegian pedagogy, child agency, interest tracking, in-app About | ✅ Shipped | 2026-05-14 |
 | v4.0 — Phonemic awareness modes (First sound, Rhyme, Blend) | ✅ Shipped | 2026-05-14 |
 | **Live in production at `letters.guardcybersolutionsllc.com`** | ✅ Deployed | 2026-05-14 |
+| v5.0 — Whole-child platform: 7 new modes covering Rammeplan areas 2–7; parent activity cards; reading log; free Edge-TTS voice-pack script | ✅ Shipped | 2026-05-14 |
 | v4 — phonemic awareness + lowercase + sight words | Planned | — |
 | v5 — backend (sync, parent dashboard) on shared droplet | Planned | — |
 

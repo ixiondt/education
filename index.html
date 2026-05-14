@@ -106,6 +106,49 @@
         </button>
       </div>
 
+      <h2 class="mode-section-title">Math &amp; shapes</h2>
+      <p class="mode-section-sub">Quantities, spaces, and patterns — Rammeplan area 5.</p>
+      <div class="mode-grid">
+        <button class="mode-card whole shapes"   data-mode="shapes">
+          <div class="icon">🔷</div>
+          <div class="label">Shapes</div>
+        </button>
+        <button class="mode-card whole colors"   data-mode="colors">
+          <div class="icon">🎨</div>
+          <div class="label">Colors</div>
+        </button>
+        <button class="mode-card whole patterns" data-mode="patterns">
+          <div class="icon">🔁</div>
+          <div class="label">Patterns</div>
+        </button>
+      </div>
+
+      <h2 class="mode-section-title">Self &amp; feelings</h2>
+      <p class="mode-section-sub">Body and emotions — Rammeplan areas 2 and 6.</p>
+      <div class="mode-grid">
+        <button class="mode-card whole feelings" data-mode="feelings">
+          <div class="icon">😀</div>
+          <div class="label">Feelings</div>
+        </button>
+        <button class="mode-card whole body"     data-mode="body">
+          <div class="icon">👃</div>
+          <div class="label">My body</div>
+        </button>
+      </div>
+
+      <h2 class="mode-section-title">World around us</h2>
+      <p class="mode-section-sub">Nature and community — Rammeplan areas 4 and 7.</p>
+      <div class="mode-grid">
+        <button class="mode-card whole animals"  data-mode="animals">
+          <div class="icon">🐻</div>
+          <div class="label">Animals</div>
+        </button>
+        <button class="mode-card whole helpers"  data-mode="helpers">
+          <div class="icon">👩‍⚕️</div>
+          <div class="label">Helpers</div>
+        </button>
+      </div>
+
       <button class="freeplay-cta" data-mode="play">
         <span class="freeplay-icon">🎨</span>
         <span class="freeplay-text">
@@ -175,6 +218,48 @@
       <div class="blend-phonemes" id="blend-phonemes"></div>
       <div class="picture-choices" id="blend-choices"></div>
       <button class="btn btn-secondary btn-replay" id="blend-replay">🔊 Hear it again</button>
+    </section>
+
+    <!-- ============ v5 — WHOLE-CHILD SCREENS ============ -->
+
+    <section class="screen" id="screen-feelings">
+      <div class="play-prompt"><span id="feelings-prompt">Find the happy face</span></div>
+      <div class="picture-choices" id="feelings-choices"></div>
+    </section>
+
+    <section class="screen" id="screen-body">
+      <div class="play-prompt"><span id="body-prompt">Where is the nose?</span></div>
+      <div class="picture-choices" id="body-choices"></div>
+    </section>
+
+    <section class="screen" id="screen-shapes">
+      <div class="play-prompt"><span id="shapes-prompt">Find the circle</span></div>
+      <div class="picture-choices" id="shapes-choices"></div>
+    </section>
+
+    <section class="screen" id="screen-colors">
+      <div class="play-prompt"><span id="colors-prompt">Find blue</span></div>
+      <div class="picture-choices" id="colors-choices"></div>
+    </section>
+
+    <section class="screen" id="screen-patterns">
+      <div class="play-prompt"><span>What comes next?</span></div>
+      <div class="pattern-display" id="pattern-display"></div>
+      <div class="picture-choices" id="pattern-choices"></div>
+    </section>
+
+    <section class="screen" id="screen-animals">
+      <div class="play-prompt"><span>Where does it live?</span></div>
+      <div class="animal-cue" id="animals-cue"></div>
+      <div class="picture-choices" id="animals-choices"></div>
+    </section>
+
+    <section class="screen" id="screen-helpers">
+      <div class="play-prompt">
+        <span class="pic" id="helpers-scenario">🔥</span>
+      </div>
+      <div class="play-prompt"><span id="helpers-question">Who helps?</span></div>
+      <div class="picture-choices" id="helpers-choices"></div>
     </section>
 
     <!-- ============ FREE PLAY ============ -->
@@ -288,8 +373,67 @@
         <button class="btn btn-secondary" id="progress-btn">View progress</button>
       </div>
       <button class="btn btn-secondary" id="record-btn">🎙 Record your voice</button>
+      <button class="btn btn-secondary" id="activities-btn">🌳 Off-screen activities</button>
+      <button class="btn btn-secondary" id="reading-btn">📚 Reading log</button>
       <button class="btn btn-secondary" id="about-btn">📖 About our approach</button>
       <button class="btn btn-primary" id="settingsClose">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ OFF-SCREEN ACTIVITIES ============ -->
+  <div class="modal" id="modal-activities" role="dialog" aria-modal="true" aria-labelledby="activities-title">
+    <div class="modal-card modal-card-wide">
+      <h2 id="activities-title">Off-screen activities</h2>
+      <p style="font-size:14px; color:var(--text-soft);">
+        These ideas don't use a screen. They're aligned with the Norwegian Rammeplan and
+        give your child what this app cannot — embodied, social, outdoor, real-material
+        learning. Pick a category or browse all.
+      </p>
+
+      <div class="segmented activities-filters">
+        <button data-activity-filter="all"       aria-pressed="true">All</button>
+        <button data-activity-filter="language"  aria-pressed="false">Language</button>
+        <button data-activity-filter="math"      aria-pressed="false">Math</button>
+        <button data-activity-filter="physical"  aria-pressed="false">Body</button>
+        <button data-activity-filter="art"       aria-pressed="false">Art</button>
+        <button data-activity-filter="nature"    aria-pressed="false">Nature</button>
+        <button data-activity-filter="social"    aria-pressed="false">Feelings</button>
+        <button data-activity-filter="community" aria-pressed="false">Community</button>
+      </div>
+
+      <div class="activities-list" id="activities-list"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="activities-refresh">🔄 Show different ideas</button>
+        <button class="btn btn-primary"   id="activities-close">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ READING LOG ============ -->
+  <div class="modal" id="modal-reading" role="dialog" aria-modal="true" aria-labelledby="reading-title">
+    <div class="modal-card modal-card-wide">
+      <h2 id="reading-title">Reading log</h2>
+      <p style="font-size:14px; color:var(--text-soft);">
+        Reading aloud together is the single strongest predictor of later reading success —
+        stronger than any app. Log the books you read with your child to track the practice
+        you're already doing.
+      </p>
+
+      <div class="reading-stats" id="reading-stats"></div>
+
+      <form class="reading-add-form" id="reading-add-form">
+        <input type="text" id="reading-title"  placeholder="Book title" maxlength="200" required autocomplete="off" />
+        <div class="reading-add-row">
+          <input type="date" id="reading-date" />
+          <input type="text" id="reading-reader" placeholder="Who read it (optional)" maxlength="60" autocomplete="off" />
+          <button type="submit" class="btn btn-primary" id="reading-add-btn">+ Add</button>
+        </div>
+      </form>
+
+      <div class="reading-list" id="reading-list"></div>
+
+      <button class="btn btn-primary" id="reading-close">Done</button>
     </div>
   </div>
 
@@ -537,6 +681,7 @@
   </div>
 
   <script src="letters.js"></script>
+  <script src="world.js"></script>
   <script src="curriculum.js"></script>
   <script src="app.js"></script>
 </body>
