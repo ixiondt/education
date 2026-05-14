@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  api:
+    container_name: lnum-api
+    build: .
+    ports:
+      # Bind 127.0.0.1 only — Caddy fronts everything, never expose direct
+      - "127.0.0.1:3013:3013"
+    env_file: .env
+    restart: unless-stopped
+    # Resource hints — friendly to the shared droplet
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.50"

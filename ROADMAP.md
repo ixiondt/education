@@ -17,8 +17,9 @@ A phased plan from current v2 → v5+, written to slot into the existing GuardCy
 | v4.0 — Phonemic awareness modes (First sound, Rhyme, Blend) | ✅ Shipped | 2026-05-14 |
 | **Live in production at `letters.guardcybersolutionsllc.com`** | ✅ Deployed | 2026-05-14 |
 | v5.0 — Whole-child platform: 7 new modes covering Rammeplan areas 2–7; parent activity cards; reading log; free Edge-TTS voice-pack script | ✅ Shipped | 2026-05-14 |
-| v4 — phonemic awareness + lowercase + sight words | Planned | — |
-| v5 — backend (sync, parent dashboard) on shared droplet | Planned | — |
+| v5.0-be — Backend tenant: Next.js 16 + Drizzle + Postgres 16, idempotent schema (7 tables), `/api/health` + `/api/sync/probe` live through Caddy → rootless Podman | ✅ Shipped | 2026-05-14 |
+| v5.1 — Magic-link auth + opt-in profile sync, parent web dashboard | Planned | — |
+| v5.2+ — Conflict-free event ingest (`/api/sync/push` + `/api/sync/pull`), aggregate dashboards | Planned | — |
 
 ---
 
@@ -139,15 +140,18 @@ Keeping events lets us replay/aggregate without losing the per-event detail. Old
 
 ---
 
-## v5 — Backend (only when sync becomes the need)
+## v5 — Backend
 
-**Trigger:** v5 starts when you have at least one of:
-- Same kid using two devices and you want progress to sync
-- Parent dashboard accessible from a different device than the kid's
-- Multiple parents / a teacher want a view
-- You want anonymous aggregate analytics ("most-missed letters across all users")
+> **v5.0 is live as of 2026-05-14.** The tenant is provisioned, the schema is migrated, the container is running behind Caddy. The PWA is unchanged — it does not yet call `/api/*` for anything but health probes. v5.1+ is the client work that opts users into sync.
 
-Before any of those happen, v3 + v4 fully cover one-family use.
+### Turn-by-turn status
+
+| Turn | Scope | Status |
+|---|---|---|
+| 1 | Tenant provisioning, schema, health probes | ✅ 2026-05-14 |
+| 2 | Magic-link auth (Resend), parent web dashboard route | Planned |
+| 3 | `/api/sync/push` + `/api/sync/pull`, IndexedDB outbox in client | Planned |
+| 4 | Aggregate dashboards (per-child, per-standard, per-day) + PDF export | Planned |
 
 ### Infrastructure plan — slots into the existing GuardCyber droplet
 

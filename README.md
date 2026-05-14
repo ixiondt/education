@@ -70,13 +70,24 @@ Recording 89 clips (26 letter names + 26 sounds + 26 picture-words + 11 numbers)
 
 ---
 
-## Privacy, hosting, and the v5 backend plan
+## Privacy, hosting, and the v5 backend
 
 - **No accounts. No servers. No analytics. No telemetry. No ads.**
 - All data — profile, progress, voice recordings — stays in `localStorage` and `IndexedDB` on the device.
-- No external network requests after first load. The service worker caches the app shell for full offline operation.
+- The app remains **fully usable with the network off**. The service worker caches the app shell for full offline operation. Sync is strictly opt-in (off by default).
 
-When (and only when) cross-device sync becomes a need, v5 deploys as another tenant on the existing GuardCyber droplet at `letters.guardcybersolutionsllc.com`. The infrastructure plan is fully detailed in `ROADMAP.md`. Marginal monthly cost: ~$0 (reuse of existing droplet) plus optionally $10/yr for a dedicated domain later.
+The v5 backend is **provisioned and reachable** as of 2026-05-14, but it is **dormant from the client's perspective**: no profile is auto-synced, no telemetry is captured, no PII leaves the device unless a parent explicitly opts in (planned for v5.2+ — magic-link based, no passwords).
+
+Tenant allocation (live):
+
+| Layer | Endpoint | Behavior |
+|---|---|---|
+| Static PWA | `https://letters.guardcybersolutionsllc.com/` | Caddy file-server (no upstream) |
+| Backend API | `https://letters.guardcybersolutionsllc.com/api/*` | Next.js standalone, rootless Podman on 127.0.0.1:3013 |
+| Health | `/api/health` | DB ping, returns `{status,db,dbLatencyMs}` |
+| Probe | `/api/sync/probe` | Schema readiness check (lists table row counts) |
+
+Marginal monthly cost: ~$0 (reuse of existing GuardCyber droplet) plus optionally $10/yr for a dedicated domain later.
 
 ---
 
@@ -90,12 +101,23 @@ When (and only when) cross-device sync becomes a need, v5 deploys as another ten
 ├── index.html                  # app shell — welcome, home, play screens, modals
 ├── styles.css                  # theme (calm + bright), layout, motion
 ├── app.js                      # main logic: profiles, modes, voice, tracer, recording, PWA
-├── curriculum.js               # skill graph: ~120 skills across 4 international frameworks
-├── letters.js                  # static data: stroke paths, phonics, picture-words
+├── curriculum.js               # skill graph: ~290 skills across 4 international frameworks
+├── letters.js                  # static data: stroke paths, phonics, picture-words, books
+├── world.js                    # broader content: feelings, shapes, habitats, helpers, time
 ├── manifest.webmanifest        # PWA install metadata
 ├── sw.js                       # service worker (offline cache, versioned)
 ├── icons/                      # PWA icons (SVG primary, PNG via tools/make-icons.html)
-└── tools/make-icons.html       # one-shot tool to render PNGs from SVG for iOS
+├── tools/make-icons.html       # one-shot tool to render PNGs from SVG for iOS
+├── caddy-letters.conf          # Caddy block for the live tenant (static + /api/* proxy)
+├── api/                        # v5 backend — Next.js 16 + Drizzle + Postgres 16
+│   ├── src/app/api/            # route handlers (health, sync/probe)
+│   ├── src/lib/                # schema, db, logger, api-error envelope
+│   ├── drizzle/0000_initial.sql  # idempotent initial migration (7 tables)
+│   ├── Dockerfile              # multi-stage Node 20 alpine standalone build
+│   └── podman-compose.yml      # rootless service binding 127.0.0.1:3013
+└── scripts/                    # deploy.sh (static), deploy-api.sh (backend),
+                                # setup-droplet.sh, setup-droplet-api.sh (one-shot
+                                # tenant + DB + pg_hba bootstrap)
 ```
 
 ---
@@ -125,61 +147,59 @@ Chrome treats `http://localhost` as a secure origin for SW / PWA purposes, so HT
 
 ### Production deployment
 
-Production is **Caddy serving static files** on the existing GuardCyber droplet — no Node runtime, no container, same pattern as the Dark Moon Security tenant documented in `~/Nextcloud/Projects/GuardCyber/README.md`. The marginal cost is **$0** (reuse of existing infrastructure) plus $10/year if/when a dedicated domain replaces the subdomain.
+Production is a **two-layer tenant** on the existing GuardCyber droplet — Caddy serves the static PWA directly, and proxies `/api/*` to a rootless-Podman Next.js container. Same multi-tenant pattern as the other GuardCyber sub-domains documented in `~/Nextcloud/Projects/GuardCyber/README.md`. Marginal cost is **$0** (shared droplet) plus $10/year if/when a dedicated domain replaces the subdomain.
 
-Tenant allocation (already chosen, see `ROADMAP.md`):
+Tenant allocation (live):
 
 | Item | Value |
 |---|---|
 | Domain | `letters.guardcybersolutionsllc.com` |
 | Droplet | `192.241.132.219` (DigitalOcean NYC1, existing) |
-| App directory | `/opt/apps/letters-and-numbers/` |
-| OS user | `lnum-deploy` (chmod 755, owned by tenant) |
-| Web server | Caddy (existing instance, multi-tenant Caddyfile) |
+| Static app directory | `/opt/apps/letters-and-numbers/` (owner `lnum-deploy`, chmod 755) |
+| Backend app directory | `/opt/apps/letters-and-numbers-api/` (owner `lnum-deploy`, chmod 700) |
+| Backend port | `127.0.0.1:3013` (loopback only — exposed via Caddy) |
+| Database | PostgreSQL 16 — `db_lnum` / user `lnum_user` (shared instance) |
+| Web server | Caddy (existing multi-tenant Caddyfile) |
 | TLS | Cloudflare Full Strict + Caddy auto-Let's-Encrypt |
 
-**One-time droplet setup** (run on the droplet as the `deploy` user):
+**One-time droplet setup**
+
+The static PWA tenant is bootstrapped by `scripts/setup-droplet.sh`. The backend tenant — subuid range for rootless Podman, app directory, DB + user, `pg_hba` rule, schema migration — is bootstrapped idempotently by `scripts/setup-droplet-api.sh`:
 
 ```bash
-# Create the tenant user
-sudo useradd -r -m -s /bin/bash lnum-deploy
-sudo loginctl enable-linger lnum-deploy
-
-# Create the app directory
-sudo mkdir -p /opt/apps/letters-and-numbers
-sudo chown lnum-deploy:lnum-deploy /opt/apps/letters-and-numbers
-sudo chmod 755 /opt/apps/letters-and-numbers
-
-# Append the Caddy block from caddy-letters.conf to the shared Caddyfile
-sudo nano /opt/apps/shared/caddy/Caddyfile
-# (paste contents of caddy-letters.conf)
-sudo systemctl reload caddy
-
-# DNS — in Cloudflare, add an A record:
-#   letters.guardcybersolutionsllc.com → 192.241.132.219 (Proxied / orange cloud)
-# Set SSL/TLS to Full (Strict).
+# From your laptop, one shot:
+scp scripts/setup-droplet-api.sh api/drizzle/0000_initial.sql deploy@192.241.132.219:/tmp/
+ssh deploy@192.241.132.219 "bash /tmp/setup-droplet-api.sh"
 ```
 
-**Recurring deploy** (run from your laptop, every release):
+The script is safe to re-run; each step checks before acting. It also generates a strong DB password and writes `${APP_DIR}/.env` with chmod 600.
+
+Then append the Caddy block from `caddy-letters.conf` to `/opt/apps/shared/caddy/Caddyfile` (it must include both `handle /api/*` and the static `handle` block — see the file) and `sudo systemctl reload caddy`. Cloudflare DNS: A record `letters → 192.241.132.219` (Proxied), SSL/TLS Full (Strict).
+
+**Recurring deploys** (from your laptop)
 
 ```bash
-npm run deploy
-# Or directly:
-bash scripts/deploy.sh
+# Static PWA — typical release
+npm run deploy                          # rsync + Caddy reload + smoke test
+DRY_RUN=1 bash scripts/deploy.sh        # dry-run first if you want
 
-# Dry-run first if you want to see what changes:
-DRY_RUN=1 bash scripts/deploy.sh
+# Backend API — when schema or routes change
+bash scripts/deploy-api.sh              # rsync src → podman-compose build + up -d
 ```
 
-The deploy script:
-1. Verifies you're at project root (sanity check)
-2. Echoes the `sw.js` version it's about to ship
-3. `rsync`s files to a staging area on the droplet
-4. `sudo rsync`s into `/opt/apps/letters-and-numbers/` (owned by `lnum-deploy`)
-5. Reloads Caddy
-6. Curls the live URL and confirms it serves 200 + matches the local SW version
+`deploy.sh` (static):
+1. Verifies project root, echoes the `sw.js` version
+2. `rsync`s to a staging dir on the droplet, then `sudo rsync`s into `/opt/apps/letters-and-numbers/`
+3. Reloads Caddy
+4. Curls the live URL and confirms it serves 200 + matches the local SW version
 
-For the rsync exclude list and staging conventions, see `scripts/deploy.sh`. The Caddy config (security headers, CSP, cache policy) is in `caddy-letters.conf`.
+`deploy-api.sh` (backend):
+1. `rsync`s `api/` to `/tmp/lnum-api-staging` on the droplet
+2. Writes a remote build script to `/tmp/lnum-api-build.sh` and runs it as `lnum-deploy`
+3. The remote script `podman-compose build`s and `up -d`s the `lnum-api` container
+4. Smoke-tests `https://letters.guardcybersolutionsllc.com/api/health`
+
+The Caddy config (security headers, CSP, cache policy, `/api/*` reverse proxy) is in `caddy-letters.conf`. Schema migrations live under `api/drizzle/` and use idempotent `IF NOT EXISTS` clauses, applied as the `postgres` superuser by `setup-droplet-api.sh` per the multi-phase remediation rules in `~/.claude/CLAUDE.md`.
 
 ### Why no build step?
 
@@ -223,9 +243,11 @@ The settings panel sits behind a "tap the 7" challenge — easy for an adult, ha
 
 See [ROADMAP.md](ROADMAP.md) for the full plan.
 
-**v4** content expansion: lowercase tracing (52 new path definitions + 52 new skills), phonemic awareness (rhyming, first-sound isolation, blending), Dolch sight words, stroke-order animations.
+**v4** ✅ shipped: lowercase tracing (52 path definitions, 52 skills), phonemic awareness (rhyming, first-sound isolation, blending), Dolch sight words, decodable reading books, arithmetic, calm corner, Rammeplan dashboard, age bands 1–6.
 
-**v5** backend: cross-device sync, parent web dashboard accessible separately from the kid's device, optionally a teacher/family-account model. Deploys as another tenant on the existing GuardCyber droplet — see ROADMAP.
+**v5.0** ✅ shipped: backend tenant provisioned. Next.js 16 + Drizzle on Postgres 16, idempotent schema (7 tables), `/api/health` and `/api/sync/probe` live behind Cloudflare → Caddy → rootless Podman.
+
+**v5.1** next: opt-in profile sync (magic-link auth, no passwords), parent web dashboard accessible separately from the kid's device. The schema (`parents`, `children`, `devices`, `skill_progress`, `play_events`, `session_summaries`, `magic_links`) is already in place; client and route handlers are the remaining work.
 
 ---
 
