@@ -29,3 +29,8 @@ icons/apple-touch-icon.png
 # Local secrets / env (none today, reserved for future backend)
 .env
 .env.local
+
+# Python bytecode (from scripts/generate-voices.py)
+__pycache__/
+*.pyc
+*.pyo
