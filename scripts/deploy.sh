@@ -84,9 +84,13 @@ if [[ "${DRY_RUN}" == "1" ]]; then
 fi
 
 # ── Move into place, set ownership, reload Caddy ──────────────
+# IMPORTANT: --exclude='audio/' on the final rsync protects the
+# audio/ directory on the droplet from being wiped by --delete.
+# Voice-pack MP3s are device-/server-local (gitignored) and updated
+# via scripts/generate-voices.py + a separate sync.
 echo "→ Moving into ${REMOTE_DIR} and fixing ownership"
 ssh "${HOST}" "set -e
-  sudo rsync -a --delete '${STAGING_DIR}/' '${REMOTE_DIR}/'
+  sudo rsync -a --delete --exclude='audio/' '${STAGING_DIR}/' '${REMOTE_DIR}/'
   sudo chown -R '${TENANT_USER}:${TENANT_USER}' '${REMOTE_DIR}'
   # Caddy runs as its own user — files must be world-readable
   sudo find '${REMOTE_DIR}' -type f -exec chmod 644 {} \;

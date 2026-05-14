@@ -52,6 +52,14 @@ import os
 import sys
 from pathlib import Path
 
+# Windows console defaults to cp1252; force UTF-8 so progress prints don't
+# crash on Unicode characters (the audio files themselves are unaffected).
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except (AttributeError, OSError):
+    pass
+
 try:
     import edge_tts
 except ImportError:
