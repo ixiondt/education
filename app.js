@@ -1359,6 +1359,57 @@
   //  Three modes: First-sound isolation, Rhyme matching, Blending.
   // ============================================================
 
+  /* v5.0.5 — Phoneme-to-letter map.
+     CVC blend phonemes ('kuh', 'ah', 'tuh', ...) are identical to the
+     phonics sounds we already MP3'd per letter in audio/letters/sound/X.mp3.
+     This map lets blend mode reuse those existing MP3s instead of falling
+     back to robotic TTS. Built once from LETTER_SOUNDS at module load. */
+  const PHONEME_TO_LETTER = (() => {
+    const map = {};
+    if (typeof LETTER_SOUNDS === 'object' && LETTER_SOUNDS) {
+      for (const [letter, sound] of Object.entries(LETTER_SOUNDS)) {
+        if (!map[sound]) map[sound] = letter;
+      }
+    }
+    return map;
+  })();
+
+  /* Play CVC phonemes as a chain of letter-sound MP3s with deliberate
+     gaps between (so the child hears them as separate sounds and can
+     mentally blend). Falls back to TTS per-phoneme if the audio pack
+     isn't enabled or a phoneme is missing from the map. */
+  async function playPhonemeChain(phonemes, opts = {}) {
+    if (!phonemes || !phonemes.length) return;
+    const pauseMs = opts.pauseMs ?? 500;
+    for (let i = 0; i < phonemes.length; i++) {
+      const ph = phonemes[i];
+      const letter = PHONEME_TO_LETTER[ph];
+      let playedMP3 = false;
+      if (letter && profileSettings().customAudio === 'auto') {
+        const ok = await tryAudio(`./audio/letters/sound/${letter}.mp3`);
+        if (ok) playedMP3 = true;
+      }
+      if (!playedMP3) {
+        // TTS fallback for this phoneme — also resolves on end so we
+        // get the same chained-with-gap feel as the MP3 path.
+        if ('speechSynthesis' in window) {
+          await new Promise((resolve) => {
+            const u = new SpeechSynthesisUtterance(ph);
+            if (VoiceEngine.chosen) u.voice = VoiceEngine.chosen;
+            u.rate  = opts.rate  ?? 0.65;
+            u.pitch = opts.pitch ?? 1.05;
+            u.onend   = resolve;
+            u.onerror = resolve;
+            speechSynthesis.speak(u);
+          });
+        }
+      }
+      if (i < phonemes.length - 1) {
+        await new Promise((r) => setTimeout(r, pauseMs));
+      }
+    }
+  }
+
   /* Speak a sequence with pauses between parts — used for blend mode
      where "c... a... t" needs deliberate gaps between phonemes so the
      child can hear them as separate sounds, then mentally blend. */
@@ -1591,7 +1642,7 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => speakChain(cvc.phonemes, { rate: 0.55, pauseMs: 500 }), 300);
+    setTimeout(() => playPhonemeChain(cvc.phonemes, { rate: 0.55, pauseMs: 500 }), 300);
   }
 
   function onBlendChoice(btn, word) {
@@ -1611,7 +1662,7 @@
       btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
       scheduleHint('soundsHint', {}, () => {
-        speakChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
+        playPhonemeChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
       });
     }
   }
@@ -1619,7 +1670,7 @@
   el.blendReplay?.addEventListener('click', () => {
     if (state.advancing || !state.blendPhonemes) return;
     clearHintTimer();
-    speakChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
+    playPhonemeChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
   });
 
   // ============================================================
