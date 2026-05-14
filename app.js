@@ -13,6 +13,7 @@
 
   const DEFAULT_SETTINGS = {
     speech:        'both',    // name | sound | both
+    speechSpeed:   'normal',  // v5.15 — slow | normal | fast
     theme:         'calm',    // calm | bright
     case:          'upper',   // upper | lower | both
     choices:       '3',
@@ -347,6 +348,24 @@
   }
 
   // ============================================================
+  //  v5.15 — speech speed table.
+  //  Three discrete settings keep the choice simple for parents. Each
+  //  row provides the playbackRate to apply to MP3s (Aria pack /
+  //  recordings), the TTS rate (synthetic fallback), and the rate used
+  //  in blend-mode phoneme chains (slower for legibility).
+  //  Normal matches the v5.14 defaults exactly so existing users see
+  //  no behavior change unless they touch the new setting.
+  // ============================================================
+  const SPEECH_SPEEDS = {
+    slow:   { mp3: 0.95, tts: 0.85, seq: 0.75, pauseMs: 450 },
+    normal: { mp3: 1.15, tts: 1.05, seq: 0.90, pauseMs: 350 },
+    fast:   { mp3: 1.35, tts: 1.25, seq: 1.05, pauseMs: 250 }
+  };
+  function speechSpeed() {
+    return SPEECH_SPEEDS[profileSettings().speechSpeed] || SPEECH_SPEEDS.normal;
+  }
+
+  // ============================================================
   //  VOICE ENGINE
   //
   //  Picks the best TTS voice available, prefers the parent's saved
@@ -469,11 +488,12 @@
       if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
       speechSynthesis.cancel();
       const list = Array.isArray(parts) ? parts : [parts];
+      const speed = speechSpeed();
       list.filter((p) => p != null && p !== '').forEach((p) => {
         const u = new SpeechSynthesisUtterance(String(p));
         if (this.chosen) u.voice = this.chosen;
-        // v5.14 — bumped from 0.85 → 1.05 to match the snappier MP3 cadence
-        u.rate   = opts.rate   ?? 1.05;
+        // v5.15 — TTS rate is driven by the Speech-speed setting.
+        u.rate   = opts.rate   ?? speed.tts;
         u.pitch  = opts.pitch  ?? 1.05;
         u.volume = opts.volume ?? 1;
         speechSynthesis.speak(u);
@@ -497,10 +517,12 @@
         if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
         speechSynthesis.cancel();
 
-        const rate    = opts.rate   ?? 0.9;
-        const pitch   = opts.pitch  ?? 1.05;
-        const volume  = opts.volume ?? 1;
-        const pauseMs = opts.pauseMs ?? 350;
+        // v5.15 — speed-table driven; per-call opts still win
+        const speed = speechSpeed();
+        const rate    = opts.rate    ?? speed.seq;
+        const pitch   = opts.pitch   ?? 1.05;
+        const volume  = opts.volume  ?? 1;
+        const pauseMs = opts.pauseMs ?? speed.pauseMs;
 
         let i = 0;
         const next = () => {
@@ -610,7 +632,11 @@
         a.addEventListener('error', () => finish(false, 'error'), { once: true });
 
         a.preload = 'auto';
-        a.playbackRate = opts.playbackRate ?? 1.15;
+        // v5.15 — playback rate is driven by the parent's Speech speed
+        // setting (slow / normal / fast). Callers can still override
+        // explicitly with opts.playbackRate when needed (e.g. for a
+        // pacing-sensitive game tutorial later).
+        a.playbackRate = opts.playbackRate ?? speechSpeed().mp3;
         a.src = url;
 
         /* Safety timeout — if a slow / failing fetch never fires
@@ -1881,9 +1907,10 @@
      and could overlap an in-flight MP3 — fixed in v5.13. */
   async function playPhonemeChain(phonemes, opts = {}) {
     if (!phonemes || !phonemes.length) return;
-    // v5.14 — 500 → 350 to match speakSequence default; still enough of a
-    // gap that the child hears "c... a... t" as discrete phonemes.
-    const pauseMs = opts.pauseMs ?? 350;
+    // v5.15 — speed-table driven so blend mode follows the parent's
+    // Speech-speed choice. Still slower / more spaced than `speak()`
+    // since blending requires discrete phoneme perception.
+    const pauseMs = opts.pauseMs ?? speechSpeed().pauseMs;
     const ttsBuffer = [];
 
     const flushTTS = async () => {
@@ -3766,10 +3793,32 @@
       const profile = activeProfile();
       if (!profile) return;
       profile.settings[key] = b.dataset.value;
+
+      // v5.13 — flag explicit user choice when they turn the MP3 pack OFF,
+      // so the healing migration doesn't flip it back to 'auto' on next load.
+      if (key === 'customAudio' && b.dataset.value === 'off') {
+        profile.settings.__customAudioUserChosenOff = true;
+      } else if (key === 'customAudio' && b.dataset.value === 'auto') {
+        profile.settings.__customAudioUserChosenOff = false;
+      }
+
       saveStorage();
       seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
       if (key === 'theme')        applyTheme();
       if (key === 'showAllModes') { refreshModeLocks(); }
+      // v5.15 — audible preview of speech speed so the parent hears
+      // the difference immediately (otherwise they'd have to leave
+      // Settings and tap into a mode to test).
+      if (key === 'speechSpeed') {
+        // Use the friendly target-style phrase the kid will most often hear,
+        // routed through the same sayLetter() path so MP3 / TTS priority
+        // chain is identical to in-game playback.
+        if (typeof sayLetter === 'function') {
+          sayLetter('A', { mode: 'name' });
+        } else {
+          VoiceEngine.speak(['A']);
+        }
+      }
     });
   });
 

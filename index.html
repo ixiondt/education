@@ -541,6 +541,18 @@
         <select id="voice-select" aria-label="Voice"></select>
       </div>
 
+      <!-- v5.15 — playback speed for both MP3 pack and TTS fallback.
+              Some kids find the default snappier cadence too fast; some
+              older kids want it faster still. Per-profile setting. -->
+      <div class="setting-row">
+        <label>Speech speed</label>
+        <div class="segmented" data-setting="speechSpeed">
+          <button data-value="slow">Slow</button>
+          <button data-value="normal">Normal</button>
+          <button data-value="fast">Fast</button>
+        </div>
+      </div>
+
       <div class="setting-row">
         <label>Custom audio files</label>
         <div class="segmented" data-setting="customAudio">
