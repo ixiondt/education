@@ -1100,6 +1100,37 @@ body {
 .record-btn.play { color: var(--secondary); border-color: var(--secondary); }
 .record-btn.del  { color: var(--text-soft); }
 
+/* v5.13 — bulk-record bar sits between the segmented tabs and the list */
+.record-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+  flex-wrap: wrap;
+}
+.record-bulk-bar .btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+.record-bulk-status {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: var(--text-soft);
+  min-height: 18px;
+}
+.record-bulk-status.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+/* Highlight the row currently being bulk-recorded so the parent sees
+   which symbol to speak before the 4-second window starts. */
+.record-row.bulk-target {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.10);
+  scroll-margin-top: 12px;
+}
+
 /* ============================================================
    v3.2 — Free play (Rammeplan-inspired non-evaluative exploration)
    ============================================================ */
@@ -2248,6 +2279,54 @@ body.printing .install-prompt {
   box-shadow: 0 6px 18px var(--shadow);
 }
 .today-session-card.hidden { display: none; }
+
+/* v5.13 — robotic-voice nudge banner. Same width + radius as today-session-card
+   so it sits visually as a sibling. Tone is gentle (info-paper background, no
+   alarm colors) — this is a suggestion, not an error. */
+.voice-banner {
+  width: 100%;
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--text-soft);
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.voice-banner[hidden] { display: none; }
+.voice-banner-icon {
+  font-size: 28px;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.voice-banner-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+.voice-banner-body strong { font-size: 15px; }
+.voice-banner-body span { color: var(--text-soft); }
+.voice-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.voice-banner-actions .btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+@media (max-width: 560px) {
+  .voice-banner { flex-direction: column; align-items: flex-start; }
+  .voice-banner-actions { width: 100%; justify-content: stretch; }
+  .voice-banner-actions .btn { flex: 1; }
+}
 
 .today-head {
   display: flex;

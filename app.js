@@ -17,11 +17,16 @@
     case:          'upper',   // upper | lower | both
     choices:       '3',
     voiceURI:      '',        // empty = auto-pick
-    customAudio:   'off',     // auto | off — MP3 drop-ins (advanced); default off to avoid 404s
+    voiceFingerprint: null,   // v5.13 — { name, lang } — survives URI mismatch across devices
+    locale:        'en-US',   // v5.13 — preferred speech locale; filters voice pool
+    customAudio:   'auto',    // auto | off — neural Aria MP3 pack (305 files in production)
     sensoryMode:   'normal',  // normal | low (low = fewer sparkles + shorter break cap)
     prereqsMode:   'strict',  // strict | relaxed
     agencyMode:    'auto',    // auto | child — when 'child', kid picks their target at mode start (Rammeplan §5)
-    showAllModes:  'off'      // v5.1 — 'on' = ignore age band, show every mode card regardless
+    showAllModes:  'off',     // v5.1 — 'on' = ignore age band, show every mode card regardless
+    /* v5.13 — One-time banner that nudges the parent to record their own voice
+       when the device only has robotic TTS available. Dismissed: never re-shown. */
+    roboticVoiceBannerDismissed: false
   };
 
   function newProfileObject(name, ageMonths) {
@@ -50,14 +55,14 @@
     p.interests ||= {};        // v3.3 — interest-aware picker
     p.ageMonths = clampAgeMonths(p.ageMonths);
 
-    /* One-time migration for old 'auto' customAudio default. Old default
-       was 'auto' which 404'd against missing MP3 drop-ins for every letter.
-       New behavior: in-app recordings are the primary path; MP3 files are
-       advanced opt-in. We migrate any profile that still has the legacy
-       default; users who explicitly enable MP3 files in settings later
-       still get them. */
-    if (!p.settings.__customAudioMigrated && p.settings.customAudio === 'auto') {
-      p.settings.customAudio = 'off';
+    /* v5.13 — neural Aria MP3 pack (305 files) is now deployed to production,
+       so customAudio defaults to 'auto'. Profiles that were force-flipped to
+       'off' by the v5.1 migration get flipped back to 'auto' so they hear
+       the nice voice again, unless they've explicitly opted into 'off' since
+       (signaled by a separate timestamp flag we now set when they touch it). */
+    if (p.settings.__customAudioMigrated && p.settings.customAudio === 'off'
+        && !p.settings.__customAudioUserChosenOff) {
+      p.settings.customAudio = 'auto';
     }
     p.settings.__customAudioMigrated = true;
 
@@ -343,6 +348,18 @@
 
   // ============================================================
   //  VOICE ENGINE
+  //
+  //  Picks the best TTS voice available, prefers the parent's saved
+  //  preference, and serializes utterances so the kid never hears two
+  //  voices overlapping. v5.13 expanded the picker with:
+  //   - locale filter (en-US default; nb-NO / es-ES / fr-FR ready for K-12)
+  //   - voiceFingerprint fallback (URI doesn't match across devices, but
+  //     `{ name, lang }` usually does — e.g. picking Aria on Windows still
+  //     re-selects Aria on the same family of Edge installs)
+  //   - isRoboticBestVoice() so we can show the parent a remedy banner
+  //     when the device has nothing better than David/Mark/Zira
+  //   - speakSequence(parts, opts) — chains utterances with pauses,
+  //     replaces two earlier ad-hoc TTS bypasses in Blend mode.
   // ============================================================
   const VoiceEngine = {
     voices: [],
@@ -354,14 +371,53 @@
       this.pick();
     },
 
+    /* Filter the voice pool to the active locale family. Falls back to the
+       full pool if nothing in the locale matches — better a robotic English
+       voice than silence. */
+    _localePool() {
+      const wanted = (profileSettings().locale || 'en-US').toLowerCase();
+      const prefix = wanted.split(/[-_]/)[0]; // "en" from "en-US"
+      const exact = this.voices.filter((v) => v.lang && v.lang.toLowerCase() === wanted);
+      if (exact.length) return exact;
+      const family = this.voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith(prefix + '-'));
+      if (family.length) return family;
+      return this.voices;
+    },
+
     pick() {
       if (!this.voices.length) return;
-      const saved = profileSettings().voiceURI;
-      if (saved) {
-        const match = this.voices.find((v) => v.voiceURI === saved);
+      const settings = profileSettings();
+      const pool = this._localePool();
+
+      // 1) Saved URI exact match (same device, same browser, same install)
+      if (settings.voiceURI) {
+        const match = pool.find((v) => v.voiceURI === settings.voiceURI)
+                   || this.voices.find((v) => v.voiceURI === settings.voiceURI);
         if (match) { this.chosen = match; return; }
       }
-      this.chosen = [...this.voices].sort((a, b) => this.score(b) - this.score(a))[0] || null;
+
+      // 2) Fingerprint match — same name + lang on a different device
+      const fp = settings.voiceFingerprint;
+      if (fp && fp.name) {
+        const match = pool.find((v) => v.name === fp.name && (!fp.lang || v.lang === fp.lang))
+                   || this.voices.find((v) => v.name === fp.name);
+        if (match) { this.chosen = match; return; }
+      }
+
+      // 3) Auto-pick the best of the locale pool
+      this.chosen = [...pool].sort((a, b) => this.score(b) - this.score(a))[0] || null;
+    },
+
+    /* Persist BOTH the URI (for same-device round-trips) AND the
+       fingerprint (for cross-device portability) when the parent
+       explicitly picks a voice in Settings. */
+    rememberChoice(voice) {
+      const profile = activeProfile();
+      if (!profile) return;
+      profile.settings.voiceURI = voice ? voice.voiceURI : '';
+      profile.settings.voiceFingerprint = voice ? { name: voice.name, lang: voice.lang } : null;
+      saveStorage();
+      this.chosen = voice || null;
     },
 
     score(v) {
@@ -392,6 +448,19 @@
       return s;
     },
 
+    /* True iff every voice in the active locale pool reads as robotic.
+       Used by the home-screen banner to nudge the parent toward recording
+       their own voice — there's no point picking a "better" TTS when the
+       device doesn't offer one. */
+    isRoboticBestVoice() {
+      if (!this.chosen) return false;
+      const n = this.chosen.name || '';
+      if (/^microsoft (david|mark|zira|hazel)\b/i.test(n)) return true;
+      if (/aria|jenny|samantha|karen|google.*us.*english|natural|neural/i.test(n)) return false;
+      // Unknown voice — score it. Negative-ish score means likely robotic.
+      return this.score(this.chosen) < 20;
+    },
+
     speak(parts, opts = {}) {
       if (!('speechSynthesis' in window)) return;
       // Stop any in-flight MP3 playback before starting TTS — this
@@ -410,6 +479,44 @@
       });
     },
 
+    /* Chain TTS utterances with deliberate pauses between them. Replaces the
+       two earlier ad-hoc loops (speakChain + playPhonemeChain's TTS branch)
+       that bypassed audioPlayer.stop() and risked overlap with an in-flight
+       MP3. Returns a Promise that resolves after the last utterance finishes,
+       so callers can chain reliable transitions. */
+    speakSequence(parts, opts = {}) {
+      return new Promise((resolve) => {
+        if (!('speechSynthesis' in window) || !parts || !parts.length) {
+          resolve();
+          return;
+        }
+        if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
+        speechSynthesis.cancel();
+
+        const rate    = opts.rate   ?? 0.65;
+        const pitch   = opts.pitch  ?? 1.05;
+        const volume  = opts.volume ?? 1;
+        const pauseMs = opts.pauseMs ?? 500;
+
+        let i = 0;
+        const next = () => {
+          if (i >= parts.length) { resolve(); return; }
+          const text = parts[i];
+          if (text == null || text === '') { i++; next(); return; }
+          const u = new SpeechSynthesisUtterance(String(text));
+          if (this.chosen) u.voice = this.chosen;
+          u.rate   = rate;
+          u.pitch  = pitch;
+          u.volume = volume;
+          const advance = () => { i++; setTimeout(next, pauseMs); };
+          u.onend   = advance;
+          u.onerror = advance;
+          speechSynthesis.speak(u);
+        };
+        next();
+      });
+    },
+
     stop() {
       if ('speechSynthesis' in window) speechSynthesis.cancel();
       if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
@@ -418,7 +525,12 @@
 
   if ('speechSynthesis' in window) {
     VoiceEngine.refresh();
-    speechSynthesis.onvoiceschanged = () => VoiceEngine.refresh();
+    speechSynthesis.onvoiceschanged = () => {
+      VoiceEngine.refresh();
+      // v5.13 — voice list arrives async; re-evaluate the robotic-voice
+      // banner once the real options are known.
+      if (typeof refreshVoiceBanner === 'function') refreshVoiceBanner();
+    };
   }
 
   let speechPrimed = false;
@@ -791,17 +903,33 @@
   }
 
   // ============================================================
-  //  CUSTOM AUDIO OVERRIDES (MP3 drop-ins — advanced, opt-in)
+  //  CUSTOM AUDIO OVERRIDES (MP3 pack — neural Aria voice)
+  //  v5.13 — locale-aware lookup. Non-en-US locales try audio/<locale>/...
+  //  first, then fall back to the default en-US path. So a Norwegian
+  //  profile with a partial Norsk pack still gets English audio for
+  //  anything not yet translated, rather than silent gaps.
   // ============================================================
   const audioMissing = new Set();
 
-  function tryAudio(path) {
-    if (profileSettings().customAudio === 'off') return Promise.resolve(false);
-    if (audioMissing.has(path)) return Promise.resolve(false);
-    // Route through the shared audioPlayer to prevent multi-voice overlap
-    return audioPlayer.play(path, {
-      onError: () => audioMissing.add(path)
-    });
+  function localizedAudioPath(path) {
+    const loc = profileSettings().locale || 'en-US';
+    if (loc === 'en-US' || !path.startsWith('./audio/')) return path;
+    return path.replace('./audio/', `./audio/${loc}/`);
+  }
+
+  async function tryAudio(path) {
+    if (profileSettings().customAudio === 'off') return false;
+    // Try locale-specific path first when the active profile isn't en-US
+    const loc = profileSettings().locale || 'en-US';
+    if (loc !== 'en-US') {
+      const localPath = localizedAudioPath(path);
+      if (!audioMissing.has(localPath)) {
+        const ok = await audioPlayer.play(localPath, { onError: () => audioMissing.add(localPath) });
+        if (ok) return true;
+      }
+    }
+    if (audioMissing.has(path)) return false;
+    return audioPlayer.play(path, { onError: () => audioMissing.add(path) });
   }
 
   /* Speech priority chain for any spoken symbol:
@@ -1103,6 +1231,11 @@
     calmText:          $('calm-text'),
     calmCircle:        $('calm-circle'),
 
+    // v5.13 — robotic-voice nudge banner on home
+    voiceBanner:         $('voice-banner'),
+    voiceBannerRecord:   $('voice-banner-record'),
+    voiceBannerDismiss:  $('voice-banner-dismiss'),
+
     // v5.1 — today's session
     todaySessionCard:  $('today-session-card'),
     todayDate:         $('today-date'),
@@ -1183,12 +1316,16 @@
     printProgressBtn:  $('print-progress-btn'),
 
     // v3.1 — voice recording
-    recordBtn:     $('record-btn'),
-    modalRecord:   $('modal-record'),
-    recordList:    $('record-list'),
-    recordClose:   $('record-close'),
-    recordSummary: $('record-summary'),
-    recordTabs:    document.querySelectorAll('[data-record-tab]')
+    recordBtn:        $('record-btn'),
+    modalRecord:      $('modal-record'),
+    recordList:       $('record-list'),
+    recordClose:      $('record-close'),
+    recordSummary:    $('record-summary'),
+    recordTabs:       document.querySelectorAll('[data-record-tab]'),
+    // v5.13 — bulk recorder
+    recordBulkStart:  $('record-bulk-start'),
+    recordBulkStop:   $('record-bulk-stop'),
+    recordBulkStatus: $('record-bulk-status')
   };
 
   // ============================================================
@@ -1463,7 +1600,29 @@
     endSessionEarly();  // v5.1 — exits the daily-session flow if active
     refreshHeader();
     refreshTodaySessionCard();
+    refreshVoiceBanner();
     showScreen('home');
+  }
+
+  /* v5.13 — robotic-voice nudge.
+     Shows the home banner only when ALL of these are true:
+       1. The active profile hasn't dismissed it before
+       2. They don't have any IDB recordings yet (a recording proves the
+          parent already chose the better path)
+       3. The voice the engine would pick is robotic-tier (Microsoft David /
+          Zira / Mark / Hazel or an unscored unknown)
+     If `speechSynthesis` is missing entirely we still surface the banner
+     so the parent knows audio won't work and what to try next. */
+  function refreshVoiceBanner() {
+    const banner = el.voiceBanner;
+    if (!banner) return;
+    const profile = activeProfile();
+    if (!profile) { banner.hidden = true; return; }
+    if (profile.settings.roboticVoiceBannerDismissed) { banner.hidden = true; return; }
+    if (recordedKeys.size > 0) { banner.hidden = true; return; }
+    const noTTS = !('speechSynthesis' in window);
+    const robotic = noTTS || VoiceEngine.isRoboticBestVoice();
+    banner.hidden = !robotic;
   }
 
   // ============================================================
@@ -1702,61 +1861,43 @@
 
   /* Play CVC phonemes as a chain of letter-sound MP3s with deliberate
      gaps between (so the child hears them as separate sounds and can
-     mentally blend). Falls back to TTS per-phoneme if the audio pack
-     isn't enabled or a phoneme is missing from the map. */
+     mentally blend). Falls back to VoiceEngine.speakSequence per-phoneme
+     when the audio pack isn't on or a phoneme isn't mapped. The fallback
+     used to call speechSynthesis directly, which bypassed audioPlayer.stop()
+     and could overlap an in-flight MP3 — fixed in v5.13. */
   async function playPhonemeChain(phonemes, opts = {}) {
     if (!phonemes || !phonemes.length) return;
     const pauseMs = opts.pauseMs ?? 500;
+    const ttsBuffer = [];
+
+    const flushTTS = async () => {
+      if (!ttsBuffer.length) return;
+      await VoiceEngine.speakSequence(ttsBuffer.slice(), { ...opts, pauseMs });
+      ttsBuffer.length = 0;
+    };
+
     for (let i = 0; i < phonemes.length; i++) {
       const ph = phonemes[i];
       const letter = PHONEME_TO_LETTER[ph];
-      let playedMP3 = false;
       if (letter && profileSettings().customAudio === 'auto') {
+        // Flush any pending TTS phonemes first so MP3 and TTS don't overlap
+        await flushTTS();
         const ok = await tryAudio(`./audio/letters/sound/${letter}.mp3`);
-        if (ok) playedMP3 = true;
-      }
-      if (!playedMP3) {
-        // TTS fallback for this phoneme — also resolves on end so we
-        // get the same chained-with-gap feel as the MP3 path.
-        if ('speechSynthesis' in window) {
-          await new Promise((resolve) => {
-            const u = new SpeechSynthesisUtterance(ph);
-            if (VoiceEngine.chosen) u.voice = VoiceEngine.chosen;
-            u.rate  = opts.rate  ?? 0.65;
-            u.pitch = opts.pitch ?? 1.05;
-            u.onend   = resolve;
-            u.onerror = resolve;
-            speechSynthesis.speak(u);
-          });
+        if (ok) {
+          if (i < phonemes.length - 1) await new Promise((r) => setTimeout(r, pauseMs));
+          continue;
         }
       }
-      if (i < phonemes.length - 1) {
-        await new Promise((r) => setTimeout(r, pauseMs));
-      }
+      ttsBuffer.push(ph);
     }
+    await flushTTS();
   }
 
-  /* Speak a sequence with pauses between parts — used for blend mode
-     where "c... a... t" needs deliberate gaps between phonemes so the
-     child can hear them as separate sounds, then mentally blend. */
+  /* Legacy alias — kept so we don't have to touch every Blend-mode call site
+     in this turn. Routes through VoiceEngine.speakSequence which serializes
+     correctly against audioPlayer. */
   function speakChain(parts, opts = {}) {
-    if (!('speechSynthesis' in window) || !parts.length) return;
-    const rate     = opts.rate ?? 0.65;
-    const pitch    = opts.pitch ?? 1.05;
-    const pauseMs  = opts.pauseMs ?? 500;
-    speechSynthesis.cancel();
-    let i = 0;
-    const next = () => {
-      if (i >= parts.length) return;
-      const u = new SpeechSynthesisUtterance(parts[i]);
-      if (VoiceEngine.chosen) u.voice = VoiceEngine.chosen;
-      u.rate  = rate;
-      u.pitch = pitch;
-      u.onend = () => { i++; setTimeout(next, pauseMs); };
-      u.onerror = u.onend;
-      speechSynthesis.speak(u);
-    };
-    next();
+    return VoiceEngine.speakSequence(parts, opts);
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -3619,10 +3760,12 @@
   el.voiceSelect?.addEventListener('change', () => {
     const profile = activeProfile();
     if (!profile) return;
-    profile.settings.voiceURI = el.voiceSelect.value;
-    saveStorage();
-    VoiceEngine.pick();
+    // v5.13 — persist both URI (this device) and fingerprint (any device)
+    const uri = el.voiceSelect.value;
+    const match = uri ? VoiceEngine.voices.find((v) => v.voiceURI === uri) : null;
+    VoiceEngine.rememberChoice(match);
     VoiceEngine.speak(['Hello!']);
+    refreshVoiceBanner();
   });
 
   el.settingsClose.addEventListener('click', closeSettings);
@@ -4087,6 +4230,9 @@
       recordingKey = null;
       if (blob.size > 200) await saveRecording(stoppedKey, blob);
       renderRecordList();
+      // v5.13 — first recording proves the parent took the better path;
+      // hide the home banner.
+      refreshVoiceBanner();
     };
     activeRecorder.start();
     clearTimeout(autoStopTimer);
@@ -4171,6 +4317,131 @@
     el.recordSummary.textContent = `${recorded} of ${total} recorded`;
   }
 
+  // ============================================================
+  //  v5.13 — BULK RECORDER
+  //  Sequencer that walks every item in the active tab, recording each
+  //  for MAX_RECORDING_MS with a short cool-down + audible cue between
+  //  items. Cancellable via the Stop button or by closing the modal.
+  // ============================================================
+  const BULK_GAP_MS = 1100;          // pause between items (write-back + breath)
+  const BULK_COUNTDOWN_MS = 800;     // "get ready" beat before each recording
+  let bulkRecording = false;
+  let bulkCancelled = false;
+
+  function setBulkStatus(text, active = false) {
+    if (!el.recordBulkStatus) return;
+    el.recordBulkStatus.textContent = text || '';
+    el.recordBulkStatus.classList.toggle('active', !!active);
+  }
+
+  function setBulkButtons(running) {
+    if (el.recordBulkStart) {
+      el.recordBulkStart.hidden = running;
+      el.recordBulkStart.disabled = false;
+    }
+    if (el.recordBulkStop) {
+      el.recordBulkStop.hidden = !running;
+    }
+  }
+
+  /* Play a short tone so the parent has an audible cue between items.
+     Uses WebAudio (no extra MP3 dependency). Falls back to silent gap if
+     the browser doesn't expose AudioContext (vanishingly rare). */
+  function playBulkCue(kind = 'go') {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.value = kind === 'go' ? 880 : 660;
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      o.start();
+      o.stop(ctx.currentTime + 0.22);
+      setTimeout(() => { try { ctx.close(); } catch {} }, 400);
+    } catch {}
+  }
+
+  async function startBulkRecording() {
+    if (bulkRecording) return;
+    bulkCancelled = false;
+    bulkRecording = true;
+    setBulkButtons(true);
+
+    // Make sure the mic is granted up front — failing here is friendlier
+    // than failing item-by-item halfway through the alphabet.
+    const stream = await getMic();
+    if (!stream) {
+      bulkRecording = false;
+      setBulkButtons(false);
+      setBulkStatus('Microphone access was denied — enable it in your browser settings and try again.', false);
+      return;
+    }
+
+    const items = recordItemsForTab(activeRecordTab);
+    for (let i = 0; i < items.length; i++) {
+      if (bulkCancelled) break;
+      const item = items[i];
+
+      // Highlight the row in the list and scroll it into view
+      const row = el.recordList?.querySelector(`[data-key="${CSS.escape(item.key)}"]`)?.closest('.record-row');
+      if (row) {
+        el.recordList.querySelectorAll('.bulk-target').forEach((n) => n.classList.remove('bulk-target'));
+        row.classList.add('bulk-target');
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+
+      setBulkStatus(`Get ready — ${item.symbol}  (${i + 1} of ${items.length})`, true);
+      await sleep(BULK_COUNTDOWN_MS);
+      if (bulkCancelled) break;
+
+      playBulkCue('go');
+      setBulkStatus(`Speak now: "${item.hint.replace(/^Say (the )?/i, '')}"  (${i + 1} of ${items.length})`, true);
+      const started = await startRecordingFor(item.key);
+      if (!started) {
+        setBulkStatus('Recording could not start — stopping bulk.', false);
+        break;
+      }
+
+      // Wait for the recording window to finish (auto-stops at MAX_RECORDING_MS,
+      // or sooner if cancelled).
+      const waitUntil = Date.now() + MAX_RECORDING_MS;
+      while (activeRecorder && Date.now() < waitUntil && !bulkCancelled) {
+        await sleep(120);
+      }
+      if (activeRecorder) stopActiveRecording();
+      // Wait for the onstop handler to finish saving + re-render the list
+      await sleep(180);
+      if (bulkCancelled) break;
+
+      // Brief cool-down + cue between items
+      playBulkCue('done');
+      setBulkStatus(`Saved ${item.symbol}. Next…`, true);
+      await sleep(BULK_GAP_MS);
+    }
+
+    // Clear highlight + restore UI
+    el.recordList?.querySelectorAll('.bulk-target').forEach((n) => n.classList.remove('bulk-target'));
+    bulkRecording = false;
+    setBulkButtons(false);
+    setBulkStatus(bulkCancelled ? 'Stopped.' : 'Done — all items in this tab recorded.', false);
+    refreshVoiceBanner();
+  }
+
+  function cancelBulkRecording() {
+    if (!bulkRecording) return;
+    bulkCancelled = true;
+    stopActiveRecording();
+  }
+
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
   // About / Pedagogy modal wiring
   el.aboutBtn?.addEventListener('click', () => {
     closeSettings();
@@ -4212,12 +4483,18 @@
 
   el.recordTabs?.forEach((b) => {
     b.addEventListener('click', () => {
+      if (bulkRecording) cancelBulkRecording();
       el.recordTabs.forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
       activeRecordTab = b.dataset.recordTab;
       stopActiveRecording();
       renderRecordList();
+      setBulkStatus('');
     });
   });
+
+  // v5.13 — bulk recorder buttons
+  el.recordBulkStart?.addEventListener('click', () => { startBulkRecording(); });
+  el.recordBulkStop?.addEventListener('click',  () => { cancelBulkRecording(); });
 
   el.recordBtn?.addEventListener('click', () => {
     closeSettings();
@@ -4227,16 +4504,38 @@
     renderRecordList();
   });
 
+  // v5.13 — robotic-voice banner wiring
+  el.voiceBannerRecord?.addEventListener('click', () => {
+    // Quietly dismiss the banner (the parent's clearly engaged) and open
+    // the recording modal directly.
+    const profile = activeProfile();
+    if (profile) { profile.settings.roboticVoiceBannerDismissed = true; saveStorage(); }
+    if (el.voiceBanner) el.voiceBanner.hidden = true;
+    el.modalRecord?.classList.add('active');
+    activeRecordTab = 'letter-name';
+    el.recordTabs?.forEach((x) => x.setAttribute('aria-pressed', x.dataset.recordTab === 'letter-name' ? 'true' : 'false'));
+    renderRecordList();
+  });
+  el.voiceBannerDismiss?.addEventListener('click', () => {
+    const profile = activeProfile();
+    if (profile) { profile.settings.roboticVoiceBannerDismissed = true; saveStorage(); }
+    if (el.voiceBanner) el.voiceBanner.hidden = true;
+  });
+
   el.recordClose?.addEventListener('click', () => {
+    if (bulkRecording) cancelBulkRecording();
     stopActiveRecording();
     releaseMic();
     el.modalRecord.classList.remove('active');
+    setBulkStatus('');
   });
   el.modalRecord?.addEventListener('click', (e) => {
     if (e.target === el.modalRecord) {
+      if (bulkRecording) cancelBulkRecording();
       stopActiveRecording();
       releaseMic();
       el.modalRecord.classList.remove('active');
+      setBulkStatus('');
     }
   });
 
@@ -4556,13 +4855,21 @@
   refreshHeader();
   refreshTodaySessionCard();
   showScreen(state.profiles.length === 0 ? 'welcome' : 'home');
-  refreshRecordedKeys(); // load IDB key index so speech can fast-path
+  refreshRecordedKeys().then(() => refreshVoiceBanner()); // load IDB key index so speech can fast-path
 
   if ('speechSynthesis' in window) {
     let tries = 0;
     const t = setInterval(() => {
       VoiceEngine.refresh();
-      if (VoiceEngine.voices.length || tries++ > 20) clearInterval(t);
+      if (VoiceEngine.voices.length || tries++ > 20) {
+        clearInterval(t);
+        // v5.13 — banner depends on knowing the voice pool, which on Safari
+        // arrives several ticks after page load. Re-check once stable.
+        refreshVoiceBanner();
+      }
     }, 250);
+  } else {
+    // No speechSynthesis at all — surface the banner immediately
+    refreshVoiceBanner();
   }
 })();

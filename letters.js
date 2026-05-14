@@ -8,13 +8,18 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const NUMBERS = ['0','1','2','3','4','5','6','7','8','9','10'];
 
 /* Approximate letter sounds, tuned for synthetic TTS pronunciation.
+   All consonants use the 'X+uh' form (a short schwa release) so the alphabet
+   reads with a consistent phonics cadence — phonetically-pure sustained forms
+   ('sss','zzz','ks') sound buzzy through neural TTS, which reads them as a
+   literal hiss/buzz rather than a short phoneme. The MP3 pack uses these same
+   strings, rendered by Aria; this TTS fallback matches.
    If these sound odd on your device, switch "Letter speech" to Names. */
 const LETTER_SOUNDS = {
   A:'ah',  B:'buh', C:'kuh', D:'duh', E:'eh',
   F:'fuh', G:'guh', H:'huh', I:'ih',  J:'juh',
   K:'kuh', L:'luh', M:'muh', N:'nuh', O:'oh',
-  P:'puh', Q:'kwuh', R:'ruh', S:'sss', T:'tuh',
-  U:'uh',  V:'vuh', W:'wuh', X:'ks',  Y:'yuh', Z:'zzz'
+  P:'puh', Q:'kwuh', R:'ruh', S:'suh', T:'tuh',
+  U:'uh',  V:'vuh', W:'wuh', X:'ks',  Y:'yuh', Z:'zuh'
 };
 
 /* Picture-word associations for the Sounds mode.

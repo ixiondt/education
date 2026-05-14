@@ -66,6 +66,21 @@
     <section class="screen" id="screen-home">
       <h1 class="home-title" id="home-title">What would you like to play?</h1>
 
+      <!-- ▼ v5.13 robotic-voice banner — only shown when the device's best
+              TTS option is something like Microsoft David / Zira and the
+              neural MP3 pack hasn't kicked in. One-time dismissable. -->
+      <div class="voice-banner" id="voice-banner" role="status" hidden>
+        <div class="voice-banner-icon" aria-hidden="true">🎙</div>
+        <div class="voice-banner-body">
+          <strong>Audio sounds robotic?</strong>
+          <span>Record your own voice in Settings → 🎙 — it plays instead of the synthetic one and works offline.</span>
+        </div>
+        <div class="voice-banner-actions">
+          <button class="btn btn-primary" id="voice-banner-record" type="button">Record</button>
+          <button class="btn btn-secondary" id="voice-banner-dismiss" type="button" aria-label="Dismiss this notice">Not now</button>
+        </div>
+      </div>
+
       <!-- ▼ v5.1 daily session — Norwegian-style 10-min mini-session of
               mixed activities. Click to start a guided sequence. -->
       <div class="today-session-card" id="today-session-card">
@@ -755,7 +770,7 @@
     <div class="modal-card modal-card-wide">
       <h2 id="record-title">Record your voice</h2>
       <p style="color: var(--text-soft); font-size: 14px;">
-        Tap <strong>●</strong>, say the letter / sound / word out loud, then tap <strong>⏹</strong>. The game will play your recording instead of the synthetic voice. Recordings stay on this device.
+        Tap <strong>●</strong> to record one item, or <strong>Record all</strong> to walk through every item in this tab in sequence (you'll hear a soft beep between each, ~4 seconds to speak each one). Recordings stay on this device.
       </p>
       <p class="record-summary" id="record-summary"></p>
 
@@ -764,6 +779,13 @@
         <button data-record-tab="letter-sound" aria-pressed="false">Sounds</button>
         <button data-record-tab="letter-word"  aria-pressed="false">Words</button>
         <button data-record-tab="number"       aria-pressed="false">Numbers</button>
+      </div>
+
+      <!-- v5.13 — bulk-record bar. Sticks under the tabs. -->
+      <div class="record-bulk-bar">
+        <button class="btn btn-primary" id="record-bulk-start" type="button">Record all in this tab</button>
+        <button class="btn btn-secondary" id="record-bulk-stop" type="button" hidden>Stop</button>
+        <div class="record-bulk-status" id="record-bulk-status" aria-live="polite"></div>
       </div>
 
       <div class="record-list" id="record-list"></div>

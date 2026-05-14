@@ -275,9 +275,74 @@ async def synth_one(voice: str, text: str, out_path: Path, rate: str = "-10%", v
     await communicator.save(str(out_path))
 
 
+# ===========================================================================
+# v5.13 — multi-locale voice support
+# ---------------------------------------------------------------------------
+# K-12 needs Norwegian (matching Rammeplan content) and we eyed Spanish/French
+# for v6. The audio path layout becomes:
+#   audio/<category>/<key>.mp3              — default locale (en-US)
+#   audio/<locale>/<category>/<key>.mp3     — non-default locales
+# The PWA's audio resolver tries the locale-specific path first and falls
+# back to the default. Pick the locale at generation time:
+#   python scripts/generate-voices.py --locale en-US --voice en-US-AriaNeural
+#   python scripts/generate-voices.py --locale nb-NO --voice nb-NO-PernilleNeural
+#   python scripts/generate-voices.py --locale es-ES --voice es-ES-ElviraNeural
+#   python scripts/generate-voices.py --locale fr-FR --voice fr-FR-DeniseNeural
+#
+# The translation dicts below are minimal stubs for v5.13. Filling them out
+# is content work — handled per Band as K-12 content lands.
+
+# Norwegian alphabet adds three letters: Æ, Ø, Å. Plus the consonant-phonemes
+# differ (e.g. "G" is /ɡ/ which Norwegian renders as "geh", not "guh").
+# Stubbed minimal so the script runs; expand when Band B Norsk content arrives.
+NORSK = {
+    "letters_extra": ["Æ", "Ø", "Å"],
+    "sounds": {  # uses Norwegian short-vowel + voiced-consonant cadence
+        "A": "ah",  "B": "beh", "C": "seh", "D": "deh", "E": "eh",
+        "F": "ef",  "G": "geh", "H": "haw", "I": "ee",  "J": "yeh",
+        "K": "kaw", "L": "el",  "M": "em",  "N": "en",  "O": "oh",
+        "P": "peh", "Q": "ku",  "R": "ehrr","S": "es",  "T": "teh",
+        "U": "oo",  "V": "veh", "W": "double-veh", "X": "eks",
+        "Y": "ee",  "Z": "set", "Æ": "eh",  "Ø": "uh",  "Å": "oh",
+    },
+    "numbers": { "0": "null", "1": "én", "2": "to", "3": "tre", "4": "fire",
+                 "5": "fem",  "6": "seks", "7": "sju", "8": "åtte",
+                 "9": "ni", "10": "ti" },
+}
+
+SPANISH = {
+    "sounds": {
+        "A": "ah",  "B": "beh", "C": "seh", "D": "deh", "E": "eh",
+        "F": "efe", "G": "geh", "H": "ah-cheh", "I": "ee", "J": "ho-tah",
+        "K": "kah", "L": "eleh","M": "emeh","N": "eneh","O": "oh",
+        "P": "peh", "Q": "kuh", "R": "ereh","S": "eseh","T": "teh",
+        "U": "oo",  "V": "uveh","W": "doh-bleh-uveh","X": "ekis",
+        "Y": "ee-grieh-gah", "Z": "thethah",
+    },
+    "numbers": { "0": "cero", "1": "uno", "2": "dos", "3": "tres", "4": "cuatro",
+                 "5": "cinco", "6": "seis", "7": "siete", "8": "ocho",
+                 "9": "nueve", "10": "diez" },
+}
+
+LOCALE_DEFAULT_VOICE = {
+    "en-US": "en-US-AriaNeural",
+    "en-GB": "en-GB-SoniaNeural",
+    "nb-NO": "nb-NO-PernilleNeural",
+    "es-ES": "es-ES-ElviraNeural",
+    "es-MX": "es-MX-DaliaNeural",
+    "fr-FR": "fr-FR-DeniseNeural",
+}
+
+
 async def main():
     parser = argparse.ArgumentParser(description="Generate a free alphabet/number audio pack via Edge TTS")
-    parser.add_argument("--voice", default="en-US-AriaNeural", help="Edge TTS voice name (default: en-US-AriaNeural)")
+    parser.add_argument(
+        "--locale", default="en-US",
+        choices=list(LOCALE_DEFAULT_VOICE.keys()),
+        help="Locale to generate (en-US default; non-default locales output under audio/<locale>/...)"
+    )
+    parser.add_argument("--voice", default=None,
+                        help="Edge TTS voice name; defaults to a good neural voice for the chosen --locale")
     parser.add_argument("--rate", default="-10%", help="Speech rate adjustment (default: -10%% for kid clarity)")
     parser.add_argument("--out", default="audio", help="Output root directory (default: ./audio)")
     parser.add_argument(
@@ -288,6 +353,25 @@ async def main():
     )
     parser.add_argument("--skip-existing", action="store_true", help="Skip files that already exist")
     args = parser.parse_args()
+
+    # If --voice wasn't passed, pick the default for the locale
+    if not args.voice:
+        args.voice = LOCALE_DEFAULT_VOICE[args.locale]
+
+    # Non-default locales output under audio/<locale>/... so the PWA resolver
+    # can stack them on top of the en-US base pack.
+    if args.locale != "en-US":
+        args.out = str(Path(args.out) / args.locale)
+        # Swap the SOUNDS / NUMBER_WORDS tables to the locale-specific ones
+        global SOUNDS, NUMBER_WORDS, LETTERS
+        if args.locale.startswith("nb"):
+            SOUNDS = {**SOUNDS, **NORSK["sounds"]}
+            NUMBER_WORDS = NORSK["numbers"]
+            LETTERS = LETTERS + NORSK["letters_extra"]
+        elif args.locale.startswith("es"):
+            SOUNDS = {**SOUNDS, **SPANISH["sounds"]}
+            NUMBER_WORDS = SPANISH["numbers"]
+        # fr-FR: TODO when v6 lands; fall through with English content for now
 
     root = Path(args.out)
     print(f"Generating audio pack")
