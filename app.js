@@ -472,7 +472,8 @@
       list.filter((p) => p != null && p !== '').forEach((p) => {
         const u = new SpeechSynthesisUtterance(String(p));
         if (this.chosen) u.voice = this.chosen;
-        u.rate   = opts.rate   ?? 0.85;
+        // v5.14 — bumped from 0.85 → 1.05 to match the snappier MP3 cadence
+        u.rate   = opts.rate   ?? 1.05;
         u.pitch  = opts.pitch  ?? 1.05;
         u.volume = opts.volume ?? 1;
         speechSynthesis.speak(u);
@@ -483,7 +484,10 @@
        two earlier ad-hoc loops (speakChain + playPhonemeChain's TTS branch)
        that bypassed audioPlayer.stop() and risked overlap with an in-flight
        MP3. Returns a Promise that resolves after the last utterance finishes,
-       so callers can chain reliable transitions. */
+       so callers can chain reliable transitions.
+       v5.14 — bumped default rate 0.65 → 0.9 and pauseMs 500 → 350 for the
+       blend-mode phoneme chain. Still slower than `speak()` because the
+       child needs to hear each phoneme distinctly, but no longer plodding. */
     speakSequence(parts, opts = {}) {
       return new Promise((resolve) => {
         if (!('speechSynthesis' in window) || !parts || !parts.length) {
@@ -493,10 +497,10 @@
         if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
         speechSynthesis.cancel();
 
-        const rate    = opts.rate   ?? 0.65;
+        const rate    = opts.rate   ?? 0.9;
         const pitch   = opts.pitch  ?? 1.05;
         const volume  = opts.volume ?? 1;
-        const pauseMs = opts.pauseMs ?? 500;
+        const pauseMs = opts.pauseMs ?? 350;
 
         let i = 0;
         const next = () => {
@@ -572,7 +576,12 @@
 
     /* Play an audio resource (MP3 URL, or blob: URL from IDB recording).
        Stops any previous audio first. Resolves true on natural end,
-       false on error / abort / timeout. */
+       false on error / abort / timeout.
+       v5.14 — playbackRate defaults to 1.15 (a touch faster than the
+       MP3 pack's source rate). The pack was rendered with --rate -10%
+       for kid clarity but in practice the kids find the delivery a
+       little slow; 1.15 brings it back to a natural-feeling cadence
+       without losing intelligibility. Overrideable per-call. */
     play(url, opts = {}) {
       this.stop();
       if (typeof VoiceEngine !== 'undefined') VoiceEngine.stop();
@@ -601,6 +610,7 @@
         a.addEventListener('error', () => finish(false, 'error'), { once: true });
 
         a.preload = 'auto';
+        a.playbackRate = opts.playbackRate ?? 1.15;
         a.src = url;
 
         /* Safety timeout — if a slow / failing fetch never fires
@@ -616,11 +626,9 @@
     }
   };
 
-  /* Speech-busy poll — used to defer round transitions until any
-     in-flight speech (MP3 or synth TTS) has finished naturally.
-     Without this, advancing to the next round mid-utterance cuts
-     the current letter / cheer off, which the user-experience
-     reads as "it cut off what it was saying". */
+  /* Speech-busy poll — kept for callers that genuinely need to wait
+     (the daily-session greeter and a couple of mode openings). The
+     post-correct advance no longer uses it; see advanceAfterSpeech. */
   function speechBusy() {
     if (audioPlayer.current) return true;
     if ('speechSynthesis' in window && speechSynthesis.speaking) return true;
@@ -636,15 +644,21 @@
       check();
     });
   }
-  /* Schedule the next round to start after any in-flight speech ends.
-     Used in every correct-tap handler so transitions never clip audio. */
-  function advanceAfterSpeech(callback, celebrationMs = 700) {
-    waitForSpeech().then(() => setTimeout(() => {
+  /* Advance to the next round.
+     v5.14 — user feedback: the post-correct wait felt too long.
+     We now snap to the next round in ~150ms (just enough for the
+     sparkles to be visible) instead of waiting for speech to finish
+     plus a 700ms beat. The naturally-following startNextRound() calls
+     audioPlayer.stop() + VoiceEngine.stop() to cut any tail cleanly.
+     Pass an explicit celebrationMs to override per-mode if needed
+     (e.g., trace mode wants a longer beat to admire the path). */
+  function advanceAfterSpeech(callback, celebrationMs = 150) {
+    setTimeout(() => {
       // If in a guided session, the session decides what comes next.
       // Otherwise fall through to the per-mode callback.
       if (state.session && advanceSession()) return;
       callback();
-    }, celebrationMs));
+    }, celebrationMs);
   }
 
   /* ─── v5.1 — Daily session orchestration ─────────────────────
@@ -1867,7 +1881,9 @@
      and could overlap an in-flight MP3 — fixed in v5.13. */
   async function playPhonemeChain(phonemes, opts = {}) {
     if (!phonemes || !phonemes.length) return;
-    const pauseMs = opts.pauseMs ?? 500;
+    // v5.14 — 500 → 350 to match speakSequence default; still enough of a
+    // gap that the child hears "c... a... t" as discrete phonemes.
+    const pauseMs = opts.pauseMs ?? 350;
     const ttsBuffer = [];
 
     const flushTTS = async () => {
