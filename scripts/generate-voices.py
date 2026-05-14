@@ -77,11 +77,17 @@ NUMBERS = list("0123456789") + ["10"]
 
 # Approximate phonemes for each letter — matches LETTER_SOUNDS in letters.js
 SOUNDS = {
+    # 'consonant + uh' form for stops; same pattern for continuants so the
+    # whole alphabet has a consistent TTS-friendly phonics cadence. The
+    # phonetically-precise sustained forms ('sss','zzz') sound buzzy through
+    # neural TTS — Aria reads them as a literal hiss/buzz rather than a
+    # short phoneme. The 'uh' form trades a small amount of phonetic
+    # accuracy for far better audio quality.
     "A": "ah",  "B": "buh", "C": "kuh", "D": "duh", "E": "eh",
     "F": "fuh", "G": "guh", "H": "huh", "I": "ih",  "J": "juh",
     "K": "kuh", "L": "luh", "M": "muh", "N": "nuh", "O": "oh",
-    "P": "puh", "Q": "kwuh","R": "ruh", "S": "sss", "T": "tuh",
-    "U": "uh",  "V": "vuh", "W": "wuh", "X": "ks",  "Y": "yuh", "Z": "zzz",
+    "P": "puh", "Q": "kwuh","R": "ruh", "S": "suh", "T": "tuh",
+    "U": "uh",  "V": "vuh", "W": "wuh", "X": "ks",  "Y": "yuh", "Z": "zuh",
 }
 
 # Picture-words — matches LETTER_WORDS in letters.js
@@ -209,6 +215,8 @@ PHRASES = {
     "grow-question":    "Who grows our food?",
     "car-question":     "Who fixes cars?",
     "mail-question":    "Who brings the mail?",
+    "pick-what":        "Pick what you want to play with.",
+    "surprise":         "Surprise me!",
 }
 
 

@@ -1071,8 +1071,9 @@
       el.agencyChoices.appendChild(btn);
     });
 
-    /* Voice prompt — short, Norwegian-style: invites without pressuring */
-    VoiceEngine.speak(['Pick what you want to play with.']);
+    /* Voice prompt via MP3 chain — falls back to TTS only if the
+       agency phrase MP3 isn't deployed yet. */
+    sayPromptKey('pick-what', 'Pick what you want to play with.');
     el.modalAgency.classList.add('active');
     el.agencySurprise.onclick = () => {
       el.modalAgency.classList.remove('active');
