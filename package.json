@@ -1,0 +1,29 @@
+{
+  "name": "letters-and-numbers",
+  "version": "4.0.0",
+  "description": "Early-childhood educational PWA grounded in the Norwegian Rammeplan. Static, offline-first, zero build step.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes serve@latest --listen 8000 .",
+    "dev:python": "python -m http.server 8000",
+    "dev:caddy": "caddy file-server --listen 127.0.0.1:8000 --root .",
+    "deploy": "bash scripts/deploy.sh",
+    "preview:prod": "echo 'Production preview: ssh deploy@192.241.132.219 \"curl -sI https://letters.guardcybersolutionsllc.com\"'",
+    "size": "echo 'Asset sizes (raw, then estimated gzip):' && find . -maxdepth 2 -type f \\( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.webmanifest' \\) ! -path './node_modules/*' ! -path './.git/*' -exec wc -c {} + | sort -n"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "early-childhood",
+    "education",
+    "rammeplan",
+    "pwa",
+    "phonics",
+    "preschool",
+    "literacy",
+    "numeracy"
+  ],
+  "license": "UNLICENSED"
+}

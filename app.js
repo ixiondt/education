@@ -1,0 +1,2645 @@
+/* ============================================================
+   Letters & Numbers — main application (v2)
+   Depends on globals from letters.js and curriculum.js.
+   ============================================================ */
+
+(() => {
+  'use strict';
+
+  // ============================================================
+  //  STORAGE  —  profiles + active profile
+  // ============================================================
+  const STORAGE_KEY = 'ln.v2';
+
+  const DEFAULT_SETTINGS = {
+    speech:        'both',    // name | sound | both
+    theme:         'calm',    // calm | bright
+    case:          'upper',   // upper | lower | both
+    choices:       '3',
+    voiceURI:      '',        // empty = auto-pick
+    customAudio:   'off',     // auto | off — MP3 drop-ins (advanced); default off to avoid 404s
+    sensoryMode:   'normal',  // normal | low (low = fewer sparkles + shorter break cap)
+    prereqsMode:   'strict',  // strict | relaxed
+    agencyMode:    'auto'     // auto | child — when 'child', kid picks their target at mode start (Rammeplan §5)
+  };
+
+  function newProfileObject(name, ageMonths) {
+    return {
+      id: cryptoRandomId(),
+      name: (name || 'Friend').slice(0, 30).trim() || 'Friend',
+      ageMonths: clampAgeMonths(ageMonths),
+      createdAt: new Date().toISOString(),
+      settings: { ...DEFAULT_SETTINGS },
+      progress: { skills: {}, events: [], sessions: [] },
+      streaks:   { current: 0, longest: 0, lastPlayedDate: null },
+      /* v3.3 — interest map drives the curriculum picker per Rammeplan §5
+         "children's right to participation". Symbol uppercase → tap count. */
+      interests: {}
+    };
+  }
+
+  /* Add v3-shape fields to any older profile without breaking v2 storage. */
+  function healProfileV3(p) {
+    p.settings    = { ...DEFAULT_SETTINGS, ...(p.settings || {}) };
+    p.progress    = p.progress || {};
+    p.progress.skills   ||= {};
+    p.progress.events   ||= [];
+    p.progress.sessions ||= [];
+    p.streaks   ||= { current: 0, longest: 0, lastPlayedDate: null };
+    p.interests ||= {};        // v3.3 — interest-aware picker
+    p.ageMonths = clampAgeMonths(p.ageMonths);
+
+    /* One-time migration for old 'auto' customAudio default. Old default
+       was 'auto' which 404'd against missing MP3 drop-ins for every letter.
+       New behavior: in-app recordings are the primary path; MP3 files are
+       advanced opt-in. We migrate any profile that still has the legacy
+       default; users who explicitly enable MP3 files in settings later
+       still get them. */
+    if (!p.settings.__customAudioMigrated && p.settings.customAudio === 'auto') {
+      p.settings.customAudio = 'off';
+    }
+    p.settings.__customAudioMigrated = true;
+
+    return p;
+  }
+
+  function cryptoRandomId() {
+    try {
+      if (crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    } catch {}
+    const a = new Uint8Array(16);
+    (crypto?.getRandomValues || ((x) => x.forEach((_, i, arr) => (arr[i] = Math.floor(Math.random() * 256)))))(a);
+    return [...a].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  }
+
+  function clampAgeMonths(m) {
+    const n = typeof m === 'number' ? m : parseInt(m, 10);
+    if (!Number.isFinite(n)) return 48;
+    return Math.max(18, Math.min(120, n));
+  }
+
+  function loadStorage() {
+    // Try v2
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && Array.isArray(data.profiles)) {
+          /* Heal, and detect whether anything changed. If so, persist
+             immediately so the migration is durable even if the user
+             never makes another action this session. */
+          const before = JSON.stringify(data);
+          data.profiles.forEach(healProfileV3);
+          if (!data.activeProfileId && data.profiles.length) data.activeProfileId = data.profiles[0].id;
+          if (JSON.stringify(data) !== before) {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+          }
+          return data;
+        }
+      }
+    } catch {}
+    // Migrate v1 if present
+    const migrated = migrateFromV1();
+    if (migrated) return migrated;
+    return { profiles: [], activeProfileId: null };
+  }
+
+  function saveStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        profiles: state.profiles,
+        activeProfileId: state.activeProfileId
+      }));
+    } catch {}
+  }
+
+  function migrateFromV1() {
+    let v1settings = null, v1progress = null;
+    try { const s = localStorage.getItem('ln.settings'); if (s) v1settings = JSON.parse(s); } catch {}
+    try { const p = localStorage.getItem('ln.progress'); if (p) v1progress = JSON.parse(p); } catch {}
+    if (!v1settings && !v1progress) return null;
+
+    const profile = newProfileObject('My child', 48);
+    if (v1settings) profile.settings = { ...DEFAULT_SETTINGS, ...v1settings };
+
+    if (v1progress) {
+      const now = Date.now();
+      for (const [letter, t] of Object.entries(v1progress.letters || {})) {
+        if (t.correct) profile.progress.skills[`letter-recognize-${letter}`] = {
+          successes: t.correct, attempts: t.correct + (t.wrong || 0), lastSeen: now
+        };
+        if (t.traced) profile.progress.skills[`letter-trace-${letter}`] = {
+          successes: t.traced, attempts: t.traced, lastSeen: now
+        };
+      }
+      for (const [num, t] of Object.entries(v1progress.numbers || {})) {
+        if (t.correct) profile.progress.skills[`number-recognize-${num}`] = {
+          successes: t.correct, attempts: t.correct + (t.wrong || 0), lastSeen: now
+        };
+        if (t.traced) profile.progress.skills[`number-trace-${num}`] = {
+          successes: t.traced, attempts: t.traced, lastSeen: now
+        };
+      }
+    }
+
+    return { profiles: [profile], activeProfileId: profile.id };
+  }
+
+  // ============================================================
+  //  v3 — date / streak / event helpers
+  // ============================================================
+  function todayString(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  function daysBetween(aStr, bStr) {
+    const a = new Date(aStr + 'T00:00:00');
+    const b = new Date(bStr + 'T00:00:00');
+    return Math.round((b - a) / 86400000);
+  }
+
+  function bumpStreaks(profile) {
+    const today = todayString();
+    profile.streaks ||= { current: 0, longest: 0, lastPlayedDate: null };
+    if (profile.streaks.lastPlayedDate === today) return;
+    if (!profile.streaks.lastPlayedDate) {
+      profile.streaks.current = 1;
+    } else {
+      const diff = daysBetween(profile.streaks.lastPlayedDate, today);
+      profile.streaks.current = diff === 1 ? profile.streaks.current + 1 : 1;
+    }
+    profile.streaks.longest = Math.max(profile.streaks.longest, profile.streaks.current);
+    profile.streaks.lastPlayedDate = today;
+  }
+
+  function rollupSession(profile, success, durationMs, mode) {
+    const today = todayString();
+    profile.progress.sessions ||= [];
+    let entry = profile.progress.sessions.find((s) => s.date === today);
+    if (!entry) {
+      entry = { date: today, attempts: 0, successes: 0, durationMs: 0, modes: [] };
+      profile.progress.sessions.push(entry);
+    }
+    entry.attempts++;
+    if (success) entry.successes++;
+    entry.durationMs += durationMs || 0;
+    if (mode && !entry.modes.includes(mode)) entry.modes.push(mode);
+  }
+
+  /* Cap stored events to prevent localStorage bloat. We keep the last 1000;
+     anything older is already rolled up into sessions[]. */
+  const EVENT_CAP = 1000;
+  function trimEvents(profile) {
+    if (profile.progress.events.length > EVENT_CAP + 100) {
+      profile.progress.events = profile.progress.events.slice(-EVENT_CAP);
+    }
+  }
+
+  /**
+   * Single entry-point for every "kid answered" event.
+   * Records to skill progress + appends to event log + rolls up to today's
+   * session + bumps streak + saves storage. Called from every mode handler.
+   */
+  function recordAttempt(skillId, success, durationMs = 0) {
+    const profile = activeProfile();
+    if (!profile) return;
+
+    // Track first-time mastery transition for the skill detail view
+    const skill = SKILLS_BY_ID[skillId];
+    const wasMastered = skill ? isSkillMastered(skill, profile) : false;
+
+    recordSkillAttempt(profile, skillId, success);
+
+    // v3.3 — every interaction expresses interest. Bump the interest map
+    // for the target symbol so the picker biases toward what the child
+    // already gravitates toward (Rammeplan §5).
+    if (skill?.target) {
+      profile.interests = profile.interests || {};
+      const key = String(skill.target).toUpperCase();
+      profile.interests[key] = (profile.interests[key] || 0) + 1;
+    }
+
+    profile.progress.events ||= [];
+    profile.progress.events.push({
+      skillId,
+      success,
+      ts: Date.now(),
+      durationMs: Math.max(0, Math.min(durationMs, 60000)),
+      mode: state.mode
+    });
+    trimEvents(profile);
+
+    rollupSession(profile, success, durationMs, state.mode);
+    bumpStreaks(profile);
+
+    // Snapshot mastered-at timestamp on the transition (used for fade indicator)
+    if (skill && !wasMastered && isSkillMastered(skill, profile)) {
+      const slot = profile.progress.skills[skillId];
+      if (slot && !slot.masteredAt) slot.masteredAt = Date.now();
+    }
+
+    saveStorage();
+    maybeSuggestBreak();
+  }
+
+  // ============================================================
+  //  STATE
+  // ============================================================
+  const _store = loadStorage();
+  const state = {
+    mode: null,                      // find-letters | find-numbers | trace-letters | trace-numbers | count | sounds
+    target: null,
+    currentSkill: null,
+    lastSkillId: null,
+    profiles: _store.profiles,
+    activeProfileId: _store.activeProfileId,
+    advancing: false,
+    tracer: null,
+
+    // v3 session tracking (in-memory; reset on goHome)
+    sessionStartedAt: 0,
+    roundStartedAt: 0,
+    breakSuggested: false,
+
+    // v3.1 — wrong-answer UX
+    wrongInRound: 0,
+    hintTimer: null
+  };
+
+  function clearHintTimer() {
+    if (state.hintTimer) { clearTimeout(state.hintTimer); state.hintTimer = null; }
+  }
+
+  function setPulse(element, on) {
+    if (!element) return;
+    if (on) element.classList.add('hint-pulse');
+    else    element.classList.remove('hint-pulse');
+  }
+
+  /* Schedule a gentle delayed hint. If they tap before it fires (right or wrong),
+     it's cleared. Phrasing rotates so it doesn't feel like the same recording. */
+  function scheduleHint(bankKey, vars, sayTargetFn) {
+    clearHintTimer();
+    state.hintTimer = setTimeout(() => {
+      state.hintTimer = null;
+      if (state.advancing) return;
+      VoiceEngine.speak([phrase(bankKey, vars)], { rate: 0.78, pitch: 1.12 });
+      // After saying the hint, also re-cue the target softly
+      setTimeout(() => { if (!state.advancing && sayTargetFn) sayTargetFn(); }, 700);
+    }, 3000);
+  }
+
+  function roundDuration() {
+    return state.roundStartedAt ? Date.now() - state.roundStartedAt : 0;
+  }
+
+  function startNewSession() {
+    state.sessionStartedAt = Date.now();
+    state.breakSuggested = false;
+  }
+
+  function sessionCapMs() {
+    // sensoryMode 'low' = shorter cap; 'normal' = longer; never zero (always offer a break)
+    return profileSettings().sensoryMode === 'low' ? 8 * 60 * 1000 : 15 * 60 * 1000;
+  }
+
+  function maybeSuggestBreak() {
+    if (state.breakSuggested) return;
+    if (!state.sessionStartedAt) return;
+    if (Date.now() - state.sessionStartedAt < sessionCapMs()) return;
+    state.breakSuggested = true;
+    // Defer slightly so the success animation finishes first
+    setTimeout(showBreakModal, 1400);
+  }
+
+  function showBreakModal() {
+    if (!el.modalBreak) return;
+    const profile = activeProfile();
+    const stats = profile ? computeProfileStats(profile) : null;
+    if (el.breakMinutes) {
+      el.breakMinutes.textContent = String(Math.round((Date.now() - state.sessionStartedAt) / 60000));
+    }
+    if (el.breakStats && stats) {
+      el.breakStats.textContent = `${stats.masteredSkills} of ${stats.availableSkills} mastered`;
+    }
+    el.modalBreak.classList.add('active');
+  }
+
+  function activeProfile() {
+    return state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0] || null;
+  }
+
+  function profileSettings() {
+    return activeProfile()?.settings || DEFAULT_SETTINGS;
+  }
+
+  // ============================================================
+  //  VOICE ENGINE
+  // ============================================================
+  const VoiceEngine = {
+    voices: [],
+    chosen: null,
+
+    refresh() {
+      if (!('speechSynthesis' in window)) return;
+      this.voices = speechSynthesis.getVoices() || [];
+      this.pick();
+    },
+
+    pick() {
+      if (!this.voices.length) return;
+      const saved = profileSettings().voiceURI;
+      if (saved) {
+        const match = this.voices.find((v) => v.voiceURI === saved);
+        if (match) { this.chosen = match; return; }
+      }
+      this.chosen = [...this.voices].sort((a, b) => this.score(b) - this.score(a))[0] || null;
+    },
+
+    score(v) {
+      /* Goal: pick the LEAST robotic voice available. Modern neural voices
+         (Aria, Jenny, Samantha, Google US) get heavy bonuses. The old
+         Microsoft David/Zira/Mark engines get penalized — they're the
+         #1 reason this app sounds robotic on Windows. */
+      let s = 0;
+      if (v.localService) s += 30;
+      if (/^en[-_]US/i.test(v.lang)) s += 12;
+      else if (/^en[-_]GB/i.test(v.lang)) s += 8;
+      else if (/^en[-_]/i.test(v.lang)) s += 5;
+
+      // Strong bonus for known natural-sounding voices
+      if (/aria|jenny|guy|eva|davis|jane|nancy|tony|amber|ana|christopher|aaron/i.test(v.name)) s += 40;
+      if (/samantha|karen|moira|tessa|fiona|allison|ava|susan/i.test(v.name)) s += 35;
+      if (/google.*us.*english/i.test(v.name)) s += 35;
+      // "Natural" or "Neural" in the name is a strong signal
+      if (/natural|neural/i.test(v.name)) s += 15;
+
+      if (/microsoft/i.test(v.name)) s += 4;
+      if (/female|woman/i.test(v.name)) s += 2;
+
+      // Penalize the older robotic Microsoft engines
+      if (/^microsoft (david|mark|zira|hazel)\b/i.test(v.name)) s -= 8;
+
+      if (/novelty|whisper|cellos|hysterical|bahh|bells|boing|bubbles|deranged|albert|grandma|grandpa|jester|trinoids|zarvox|organ/i.test(v.name)) s -= 200;
+      return s;
+    },
+
+    speak(parts, opts = {}) {
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const list = Array.isArray(parts) ? parts : [parts];
+      list.filter((p) => p != null && p !== '').forEach((p) => {
+        const u = new SpeechSynthesisUtterance(String(p));
+        if (this.chosen) u.voice = this.chosen;
+        u.rate   = opts.rate   ?? 0.85;
+        u.pitch  = opts.pitch  ?? 1.05;
+        u.volume = opts.volume ?? 1;
+        speechSynthesis.speak(u);
+      });
+    },
+
+    stop() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+  };
+
+  if ('speechSynthesis' in window) {
+    VoiceEngine.refresh();
+    speechSynthesis.onvoiceschanged = () => VoiceEngine.refresh();
+  }
+
+  let speechPrimed = false;
+  function primeSpeech() {
+    if (speechPrimed || !('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    speechPrimed = true;
+  }
+  document.addEventListener('pointerdown', primeSpeech, { once: true });
+
+  // ============================================================
+  //  RECORDED AUDIO (IndexedDB — parent records voice in-app)
+  // ============================================================
+  const IDB_NAME = 'lnum-recordings';
+  const IDB_VERSION = 1;
+  const IDB_STORE = 'audio';
+
+  let _idbPromise = null;
+  function openIDB() {
+    if (_idbPromise) return _idbPromise;
+    if (!('indexedDB' in window)) return Promise.resolve(null);
+    _idbPromise = new Promise((resolve) => {
+      try {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror   = () => resolve(null);
+      } catch { resolve(null); }
+    });
+    return _idbPromise;
+  }
+
+  /* In-memory cache of which IDB keys exist, so we don't hit IDB
+     every time we want to play a letter. Built on init + on save. */
+  const recordedKeys = new Set();
+
+  async function refreshRecordedKeys() {
+    recordedKeys.clear();
+    const db = await openIDB();
+    if (!db) return;
+    await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).getAllKeys();
+      req.onsuccess = () => { (req.result || []).forEach((k) => recordedKeys.add(k)); resolve(); };
+      req.onerror   = () => resolve();
+    });
+  }
+
+  async function saveRecording(key, blob) {
+    const db = await openIDB();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(blob, key);
+      tx.oncomplete = () => { recordedKeys.add(key); resolve(true); };
+      tx.onerror    = () => resolve(false);
+    });
+  }
+
+  async function getRecording(key) {
+    const db = await openIDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror   = () => resolve(null);
+    });
+  }
+
+  async function deleteRecording(key) {
+    const db = await openIDB();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => { recordedKeys.delete(key); resolve(true); };
+      tx.onerror    = () => resolve(false);
+    });
+  }
+
+  async function playRecording(key) {
+    if (!recordedKeys.has(key)) return false;
+    const blob = await getRecording(key);
+    if (!blob) return false;
+    const url = URL.createObjectURL(blob);
+    const a = new Audio(url);
+    return new Promise((resolve) => {
+      a.addEventListener('ended', () => { URL.revokeObjectURL(url); resolve(true); }, { once: true });
+      a.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(false); }, { once: true });
+      a.play().catch(() => { URL.revokeObjectURL(url); resolve(false); });
+    });
+  }
+
+  /* Build the canonical IDB key for a given symbol + variant. */
+  function idbKey(category, variant, symbol) {
+    return `${category}/${variant || 'name'}/${symbol}`;
+  }
+
+  // ============================================================
+  //  CUSTOM AUDIO OVERRIDES (MP3 drop-ins — advanced, opt-in)
+  // ============================================================
+  const audioMissing = new Set();
+
+  function tryAudio(path) {
+    if (profileSettings().customAudio === 'off') return Promise.resolve(false);
+    if (audioMissing.has(path)) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const a = new Audio();
+      let settled = false;
+      const onOk = () => {
+        if (settled) return;
+        settled = true;
+        a.play().then(() => {
+          a.addEventListener('ended', () => resolve(true), { once: true });
+          a.addEventListener('error', () => resolve(false), { once: true });
+        }).catch(() => resolve(false));
+      };
+      const onErr = () => {
+        if (settled) return;
+        settled = true;
+        audioMissing.add(path);
+        resolve(false);
+      };
+      a.addEventListener('canplaythrough', onOk, { once: true });
+      a.addEventListener('error', onErr, { once: true });
+      a.preload = 'auto';
+      a.src = path;
+      setTimeout(() => { if (!settled) { settled = true; resolve(false); } }, 1500);
+    });
+  }
+
+  /* Speech priority chain for any spoken symbol:
+       1. IDB recording (parent's own voice, recorded in-app) — always preferred
+       2. MP3 file drop-in (advanced, requires customAudio = 'auto')
+       3. Synthetic TTS via Web Speech API
+     Fast path: recordedKeys (in-memory Set) means no async cost when nothing
+     is recorded — we skip straight to TTS. */
+  async function sayLetter(letter, opts = {}) {
+    const upper = String(letter).toUpperCase();
+    const mode = opts.mode || profileSettings().speech;
+    const sound = LETTER_SOUNDS[upper];
+
+    // 1. IDB recordings (instant, offline, parent's voice)
+    if (mode === 'name' || mode === 'both') {
+      const k = idbKey('letter', 'name', upper);
+      if (recordedKeys.has(k) && await playRecording(k)) {
+        if (mode === 'both') {
+          const sk = idbKey('letter', 'sound', upper);
+          if (recordedKeys.has(sk)) await playRecording(sk);
+          else VoiceEngine.speak([sound]);
+        }
+        return;
+      }
+    } else if (mode === 'sound') {
+      const k = idbKey('letter', 'sound', upper);
+      if (recordedKeys.has(k) && await playRecording(k)) return;
+    }
+
+    // 2. MP3 drop-ins (only if explicitly enabled)
+    if (profileSettings().customAudio === 'auto') {
+      const folder = mode === 'sound' ? 'sound' : 'name';
+      const ok = await tryAudio(`./audio/letters/${folder}/${upper}.mp3`);
+      if (ok && mode === 'both') {
+        await tryAudio(`./audio/letters/sound/${upper}.mp3`);
+        return;
+      }
+      if (ok) return;
+    }
+
+    // 3. TTS fallback
+    switch (mode) {
+      case 'name':  VoiceEngine.speak([upper]); break;
+      case 'sound': VoiceEngine.speak([sound]); break;
+      default:      VoiceEngine.speak([upper, sound]); break;
+    }
+  }
+
+  async function sayNumber(n) {
+    const key = String(n);
+    const k = idbKey('number', 'name', key);
+    if (recordedKeys.has(k) && await playRecording(k)) return;
+    if (profileSettings().customAudio === 'auto') {
+      const ok = await tryAudio(`./audio/numbers/${key}.mp3`);
+      if (ok) return;
+    }
+    VoiceEngine.speak([key]);
+  }
+
+  async function sayWord(letter) {
+    const upper = String(letter).toUpperCase();
+    const info = LETTER_WORDS[upper];
+    if (!info) return sayLetter(upper);
+    const k = idbKey('letter', 'word', upper);
+    if (recordedKeys.has(k) && await playRecording(k)) return;
+    if (profileSettings().customAudio === 'auto') {
+      const ok = await tryAudio(`./audio/letters/word/${upper}.mp3`);
+      if (ok) return;
+    }
+    VoiceEngine.speak([info.word]);
+  }
+
+  async function sayPhrase(text) {
+    VoiceEngine.speak([text]);
+  }
+
+  // ============================================================
+  //  PHRASE BANKS (variation so it stops sounding repetitive)
+  // ============================================================
+  const PHRASES = {
+    correctShort:    ['Yes!', 'Great!', 'You got it!', 'Wonderful!', 'Awesome!', 'Nice!', 'Perfect!'],
+    correctEcho:     ['{target}!', 'Yes, {target}!', '{target}! Great work.', 'You found {target}!', '{target}! Nice.'],
+    findHint:        ['Try again.', 'Look carefully.', 'Take your time.', 'Almost.', 'Where is it?'],
+    soundsCorrect:   ['Yes! {word}!', '{word}! Great!', 'You got it! {word}.', '{word}, {target}!'],
+    soundsHint:      ['Listen again.', 'Try once more.', 'Hmm, look again.', 'Where is it?'],
+    countPrompt:     ['How many?', 'Count them.', "Let's count.", 'How many do you see?'],
+    countCorrect:    ['Yes! {n}!', '{n}! Great counting.', 'You counted {n}!', '{n}! Nice work.'],
+    countHint:       ['Count again.', 'Take your time.', 'Try once more.']
+  };
+  const _lastPhrase = new Map();
+  function phrase(bankKey, vars = {}) {
+    const bank = PHRASES[bankKey];
+    if (!bank || !bank.length) return '';
+    const last = _lastPhrase.get(bankKey);
+    let i;
+    do { i = Math.floor(Math.random() * bank.length); } while (bank.length > 1 && i === last);
+    _lastPhrase.set(bankKey, i);
+    return bank[i].replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ''));
+  }
+
+  // ============================================================
+  //  ELEMENTS
+  // ============================================================
+  const $ = (id) => document.getElementById(id);
+
+  const el = {
+    screens: {
+      welcome:     $('screen-welcome'),
+      home:        $('screen-home'),
+      find:        $('screen-find'),
+      trace:       $('screen-trace'),
+      count:       $('screen-count'),
+      sounds:      $('screen-sounds'),
+      play:        $('screen-play'),
+      'first-sound': $('screen-first-sound'),
+      rhyme:       $('screen-rhyme'),
+      blend:       $('screen-blend')
+    },
+    homeBtn:       $('homeBtn'),
+    settingsBtn:   $('settingsBtn'),
+
+    homeTitle:       $('home-title'),
+    profileChip:     $('profile-chip'),
+    profileChipName: $('profile-chip-name'),
+    profileChipLvl:  $('profile-chip-level'),
+
+    welcomeName:   $('welcome-name'),
+    welcomeAge:    $('welcome-age'),
+    welcomeSubmit: $('welcome-submit'),
+
+    findPromptLabel: $('find-prompt-label'),
+    findTarget:      $('find-target'),
+    findChoices:     $('find-choices'),
+
+    traceLabel: $('trace-label'),
+    traceSvg:   $('trace-svg'),
+    traceDots:  $('trace-dots'),
+
+    countStage:   $('count-stage'),
+    countChoices: $('count-choices'),
+
+    soundsPic:     $('sounds-pic'),
+    soundsWord:    $('sounds-word'),
+    soundsChoices: $('sounds-choices'),
+
+    playGrid:      $('play-grid'),
+    playShuffle:   $('play-shuffle'),
+
+    // v4 — phonemic awareness mode elements
+    firstSoundWord:    $('first-sound-word'),
+    firstSoundEmoji:   $('first-sound-emoji'),
+    firstSoundChoices: $('first-sound-choices'),
+    firstSoundReplay:  $('first-sound-replay'),
+
+    rhymeTargetEmoji:  $('rhyme-target-emoji'),
+    rhymeTargetWord:   $('rhyme-target-word'),
+    rhymeChoices:      $('rhyme-choices'),
+
+    blendPhonemes:     $('blend-phonemes'),
+    blendChoices:      $('blend-choices'),
+    blendReplay:       $('blend-replay'),
+
+    // v3.3 — agency picker + about/pedagogy modal
+    modalAgency:    $('modal-agency'),
+    agencyChoices:  $('agency-choices'),
+    agencySurprise: $('agency-surprise'),
+    aboutBtn:       $('about-btn'),
+    modalAbout:     $('modal-about'),
+    aboutClose:     $('about-close'),
+
+    sparkles:      $('sparkles'),
+
+    modalGate:     $('modal-gate'),
+    modalSettings: $('modal-settings'),
+    modalProgress: $('modal-progress'),
+    modalProfile:  $('modal-profile'),
+    modalProfileEdit: $('modal-profile-edit'),
+
+    gateTarget:    $('gate-target'),
+    gateNumbers:   $('gate-numbers'),
+
+    voiceSelect:   $('voice-select'),
+    progressBtn:   $('progress-btn'),
+    profileSwitchBtn: $('profile-switch-btn'),
+    resetProgressBtn: $('reset-progress-btn'),
+    settingsClose: $('settingsClose'),
+    progressClose: $('progressClose'),
+    progressSummary: $('progress-summary'),
+    progressLetters: $('progress-letters'),
+    progressNumbers: $('progress-numbers'),
+
+    profileList:   $('profile-list'),
+    profileAdd:    $('profile-add'),
+    profileClose:  $('profile-close'),
+
+    profileEditTitle:    $('profile-edit-title'),
+    profileEditName:     $('profile-edit-name'),
+    profileEditAge:      $('profile-edit-age'),
+    profileEditDelete:   $('profile-edit-delete'),
+    profileEditCancel:   $('profile-edit-cancel'),
+    profileEditSave:     $('profile-edit-save'),
+
+    installPrompt: $('install-prompt'),
+    installBtn:    $('install-btn'),
+    installDismiss:$('install-dismiss'),
+
+    // v3 — break, skill detail, standards view, export
+    modalBreak:    $('modal-break'),
+    breakMinutes:  $('break-minutes'),
+    breakStats:    $('break-stats'),
+    breakContinue: $('break-continue'),
+    breakDone:     $('break-done'),
+
+    modalSkill:    $('modal-skill'),
+    skillTitle:    $('skill-title'),
+    skillDetails:  $('skill-details'),
+    skillClose:    $('skill-close'),
+
+    progressStreak:        $('progress-streak'),
+    progressStandardsList: $('progress-standards-list'),
+    progressTabs:          document.querySelectorAll('[data-progress-tab]'),
+    progressViewTarget:    $('progress-view-target'),
+    progressViewStandard:  $('progress-view-standard'),
+
+    exportProgressBtn: $('export-progress-btn'),
+    printProgressBtn:  $('print-progress-btn'),
+
+    // v3.1 — voice recording
+    recordBtn:     $('record-btn'),
+    modalRecord:   $('modal-record'),
+    recordList:    $('record-list'),
+    recordClose:   $('record-close'),
+    recordSummary: $('record-summary'),
+    recordTabs:    document.querySelectorAll('[data-record-tab]')
+  };
+
+  // ============================================================
+  //  THEME + HEADER
+  // ============================================================
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', profileSettings().theme);
+  }
+
+  function refreshHeader() {
+    const p = activeProfile();
+    if (!p) {
+      el.profileChip?.classList.add('hidden');
+      return;
+    }
+    el.profileChip?.classList.remove('hidden');
+    if (el.profileChipName) el.profileChipName.textContent = p.name;
+    if (el.profileChipLvl) {
+      const stats = computeProfileStats(p);
+      el.profileChipLvl.textContent = `${stats.abilityLevel} · ${stats.masteredSkills}/${stats.availableSkills}`;
+    }
+  }
+
+  // ============================================================
+  //  HELPERS
+  // ============================================================
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function pickDistractors(target, pool, count) {
+    const result = [target];
+    const seen = new Set([String(target).toUpperCase()]);
+    const cap = Math.min(count, pool.length);
+    while (result.length < cap) {
+      const c = pool[Math.floor(Math.random() * pool.length)];
+      const k = String(c).toUpperCase();
+      if (!seen.has(k)) { seen.add(k); result.push(c); }
+    }
+    return shuffle(result);
+  }
+
+  function caseFor(letter, override) {
+    const c = override || profileSettings().case;
+    if (c === 'upper') return letter.toUpperCase();
+    if (c === 'lower') return letter.toLowerCase();
+    return Math.random() < 0.5 ? letter.toLowerCase() : letter.toUpperCase();
+  }
+
+  function showScreen(name) {
+    Object.values(el.screens).forEach((s) => s?.classList.remove('active'));
+    el.screens[name]?.classList.add('active');
+    el.homeBtn.style.display = (name === 'home' || name === 'welcome') ? 'none' : 'flex';
+    el.settingsBtn.style.display = (name === 'welcome') ? 'none' : 'flex';
+  }
+
+  function spawnSparkles(near) {
+    const rect = near.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const emojis = ['⭐','✨','🌟','💫'];
+    const N = profileSettings().sensoryMode === 'low' ? 6 : 14;
+    for (let i = 0; i < N; i++) {
+      const s = document.createElement('div');
+      s.className = 'sparkle';
+      s.textContent = emojis[i % emojis.length];
+      const angle = (i / N) * Math.PI * 2;
+      const dist  = 60 + Math.random() * 50;
+      s.style.left = (cx + Math.cos(angle) * dist) + 'px';
+      s.style.top  = (cy + Math.sin(angle) * dist) + 'px';
+      s.style.animationDelay = (i * 30) + 'ms';
+      el.sparkles.appendChild(s);
+      setTimeout(() => s.remove(), 1500);
+    }
+  }
+
+  // ============================================================
+  //  AGENCY PICKER (v3.3 — Rammeplan §5 "Child's right to participate")
+  //  When settings.agencyMode === 'child', the kid picks their target
+  //  on mode entry instead of the curriculum picker choosing.
+  // ============================================================
+  function renderAgencyTile(skill, mode) {
+    const symbol = escapeHtml(String(skill.target));
+    if (mode === 'sounds' || mode === 'first-sound') {
+      const info = LETTER_WORDS[skill.target] || { emoji: '' };
+      return `<span class="agency-emoji">${info.emoji}</span><span class="agency-label">${symbol}</span>`;
+    }
+    if (mode === 'rhyme') {
+      const fam = (typeof RHYME_FAMILIES !== 'undefined') && RHYME_FAMILIES.find((f) => f.key === skill.target);
+      if (fam) return `<span class="agency-emoji">${fam.words[0].e}</span><span class="agency-label">-${symbol}</span>`;
+    }
+    if (mode === 'blend') {
+      const cvc = (typeof CVC_WORDS !== 'undefined') && CVC_WORDS.find((c) => c.word === skill.target);
+      if (cvc) return `<span class="agency-emoji">${cvc.emoji}</span><span class="agency-label">${symbol}</span>`;
+    }
+    return `<span class="agency-symbol">${symbol}</span>`;
+  }
+
+  function showAgencyPicker(mode, onChosen) {
+    const profile = activeProfile();
+    if (!profile || !el.modalAgency) {
+      onChosen(pickNextSkill(profile, mode, state.lastSkillId));
+      return;
+    }
+
+    // Build 4 deduped candidates from the picker
+    const candidates = [];
+    const seen = new Set();
+    let lastId = state.lastSkillId;
+    for (let i = 0; i < 24 && candidates.length < 4; i++) {
+      const s = pickNextSkill(profile, mode, lastId);
+      if (s && !seen.has(s.id)) {
+        candidates.push(s);
+        seen.add(s.id);
+        lastId = s.id;
+      }
+    }
+    if (candidates.length === 0) {
+      onChosen(null);
+      return;
+    }
+
+    el.agencyChoices.innerHTML = '';
+    candidates.forEach((skill) => {
+      const btn = document.createElement('button');
+      btn.className = `agency-choice mode-${mode}`;
+      btn.innerHTML = renderAgencyTile(skill, mode);
+      btn.addEventListener('click', () => {
+        el.modalAgency.classList.remove('active');
+        onChosen(skill);
+      });
+      el.agencyChoices.appendChild(btn);
+    });
+
+    /* Voice prompt — short, Norwegian-style: invites without pressuring */
+    VoiceEngine.speak(['Pick what you want to play with.']);
+    el.modalAgency.classList.add('active');
+    el.agencySurprise.onclick = () => {
+      el.modalAgency.classList.remove('active');
+      onChosen(candidates[Math.floor(Math.random() * candidates.length)]);
+    };
+  }
+
+  function startMode(mode) {
+    state.mode = mode;
+    state.lastSkillId = null;
+    state.chosenForRound = null;
+    /* Free play is deliberately session-less: no break timer, no progress
+       tracking. The Rammeplan principle is that children are competent
+       agentic learners — Play mode steps out of the way and lets them
+       explore on their own initiative. */
+    if (mode !== 'play') startNewSession();
+
+    const launchActivity = () => {
+      switch (mode) {
+        case 'find-letters':
+        case 'find-numbers':  showScreen('find');  startFindRound();   break;
+        case 'trace-letters':
+        case 'trace-numbers': showScreen('trace'); startTraceRound();  break;
+        case 'count':         showScreen('count'); startCountRound();  break;
+        case 'sounds':        showScreen('sounds'); startSoundsRound(); break;
+        case 'play':          showScreen('play');  startPlayMode();    break;
+        case 'first-sound':   showScreen('first-sound'); startFirstSoundRound(); break;
+        case 'rhyme':         showScreen('rhyme'); startRhymeRound();  break;
+        case 'blend':         showScreen('blend'); startBlendRound();  break;
+      }
+    };
+
+    /* Child agency mode: kid picks their own target before mode starts.
+       Free play already IS agency — no picker. After first round, normal
+       picker continues to run. The child can re-enter the mode to pick again. */
+    const profile = activeProfile();
+    if (profile?.settings.agencyMode === 'child' && mode !== 'play') {
+      showAgencyPicker(mode, (chosen) => {
+        state.chosenForRound = chosen;
+        launchActivity();
+      });
+    } else {
+      launchActivity();
+    }
+  }
+
+  function goHome() {
+    VoiceEngine.stop();
+    if (state.tracer) { state.tracer.destroy(); state.tracer = null; }
+    state.sessionStartedAt = 0;
+    state.breakSuggested = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    setPulse(el.findTarget, false);
+    setPulse(el.soundsPic, false);
+    refreshHeader();
+    showScreen('home');
+  }
+
+  // ============================================================
+  //  FIND MODE
+  // ============================================================
+  function startFindRound() {
+    state.advancing = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    setPulse(el.findTarget, false);
+    const profile = activeProfile();
+    if (!profile) return;
+
+    /* v3.3 — use child's pre-picked skill on first round of mode if agency
+       mode is on. After that, normal picker takes over for natural rotation. */
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, state.mode, state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target;
+
+    const isLetters = state.mode === 'find-letters';
+    el.findPromptLabel.textContent = isLetters ? 'Find the letter' : 'Find the number';
+    el.findTarget.textContent = isLetters ? caseFor(skill.target) : skill.target;
+
+    const distractorPool = skillsForMode(state.mode).map((s) => s.target);
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const choices = pickDistractors(skill.target, distractorPool, count);
+
+    el.findChoices.innerHTML = '';
+    choices.forEach((sym) => {
+      const display = isLetters ? caseFor(sym) : sym;
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = display;
+      btn.addEventListener('click', () => onFindChoice(btn, sym));
+      el.findChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => {
+      if (isLetters) sayLetter(skill.target);
+      else sayNumber(skill.target);
+    }, 250);
+  }
+
+  function onFindChoice(btn, sym) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = String(sym).toUpperCase() === String(state.target).toUpperCase();
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true;
+      btn.classList.add('correct');
+      setPulse(el.findTarget, false);
+      // Short rotating cheer + the letter; not the same line every time
+      VoiceEngine.speak([phrase('correctEcho', { target: sym })]);
+      spawnSparkles(btn);
+      setTimeout(startFindRound, 1500);
+    } else {
+      state.wrongInRound++;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      // After the second wrong: visual hint by pulsing the target in the prompt
+      if (state.wrongInRound >= 2) setPulse(el.findTarget, true);
+      // No immediate re-speak. Schedule a gentle, rotating-phrase hint
+      // that fires only if they don't tap again within 3s.
+      scheduleHint('findHint', {}, () => {
+        if (state.mode === 'find-letters') sayLetter(state.target);
+        else sayNumber(state.target);
+      });
+    }
+  }
+
+  // ============================================================
+  //  COUNT MODE
+  // ============================================================
+  function startCountRound() {
+    state.advancing = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'count', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target;
+    const n = parseInt(skill.target, 10);
+
+    el.countStage.innerHTML = '';
+    const emoji = COUNT_EMOJIS[Math.floor(Math.random() * COUNT_EMOJIS.length)];
+    for (let i = 0; i < n; i++) {
+      const span = document.createElement('span');
+      span.className = 'count-item';
+      span.textContent = emoji;
+      span.style.animationDelay = (i * 80) + 'ms';
+      el.countStage.appendChild(span);
+    }
+
+    const distractorPool = skillsForMode('count').map((s) => s.target);
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const choices = pickDistractors(skill.target, distractorPool, count);
+
+    el.countChoices.innerHTML = '';
+    choices.forEach((num) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = num;
+      btn.addEventListener('click', () => onCountChoice(btn, num));
+      el.countChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([phrase('countPrompt')]), 250);
+  }
+
+  function onCountChoice(btn, num) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = num === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true;
+      btn.classList.add('correct');
+      VoiceEngine.speak([phrase('countCorrect', { n: num })]);
+      spawnSparkles(btn);
+      setTimeout(startCountRound, 1600);
+    } else {
+      state.wrongInRound++;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('countHint', {}, () => sayNumber(state.target));
+    }
+  }
+
+  // ============================================================
+  //  SOUNDS MODE
+  // ============================================================
+  function startSoundsRound() {
+    state.advancing = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    setPulse(el.soundsPic, false);
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'sounds', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target;
+    const info = LETTER_WORDS[skill.target];
+
+    el.soundsPic.textContent = info.emoji;
+    el.soundsWord.textContent = info.word;
+
+    const distractorPool = skillsForMode('sounds').map((s) => s.target);
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const choices = pickDistractors(skill.target, distractorPool, count);
+
+    el.soundsChoices.innerHTML = '';
+    choices.forEach((letter) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = letter;
+      btn.addEventListener('click', () => onSoundsChoice(btn, letter));
+      el.soundsChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([info.word, '.', LETTER_SOUNDS[skill.target]]), 250);
+  }
+
+  function onSoundsChoice(btn, letter) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = letter === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    const info = LETTER_WORDS[state.target];
+    if (correct) {
+      state.advancing = true;
+      btn.classList.add('correct');
+      setPulse(el.soundsPic, false);
+      VoiceEngine.speak([phrase('soundsCorrect', { target: letter, word: info.word })]);
+      spawnSparkles(btn);
+      setTimeout(startSoundsRound, 1700);
+    } else {
+      state.wrongInRound++;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      if (state.wrongInRound >= 2) setPulse(el.soundsPic, true);
+      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([info.word, '.', LETTER_SOUNDS[state.target]]));
+    }
+  }
+
+  // ============================================================
+  //  v4 — PHONEMIC AWARENESS MODES
+  //  Pedagogical bridge from "knows letters" to "can read".
+  //  Three modes: First-sound isolation, Rhyme matching, Blending.
+  // ============================================================
+
+  /* Speak a sequence with pauses between parts — used for blend mode
+     where "c... a... t" needs deliberate gaps between phonemes so the
+     child can hear them as separate sounds, then mentally blend. */
+  function speakChain(parts, opts = {}) {
+    if (!('speechSynthesis' in window) || !parts.length) return;
+    const rate     = opts.rate ?? 0.65;
+    const pitch    = opts.pitch ?? 1.05;
+    const pauseMs  = opts.pauseMs ?? 500;
+    speechSynthesis.cancel();
+    let i = 0;
+    const next = () => {
+      if (i >= parts.length) return;
+      const u = new SpeechSynthesisUtterance(parts[i]);
+      if (VoiceEngine.chosen) u.voice = VoiceEngine.chosen;
+      u.rate  = rate;
+      u.pitch = pitch;
+      u.onend = () => { i++; setTimeout(next, pauseMs); };
+      u.onerror = u.onend;
+      speechSynthesis.speak(u);
+    };
+    next();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  First-sound isolation
+  //  "What does 'cat' start with?" — child hears the word, taps the letter
+  // ─────────────────────────────────────────────────────────────
+  function startFirstSoundRound() {
+    state.advancing = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'first-sound', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target;
+    const info = LETTER_WORDS[skill.target] || { word: skill.target, emoji: '' };
+
+    el.firstSoundEmoji.textContent = info.emoji;
+    el.firstSoundWord.textContent  = info.word;
+
+    const distractorPool = LETTERS;
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const choices = pickDistractors(skill.target, distractorPool, count);
+
+    el.firstSoundChoices.innerHTML = '';
+    choices.forEach((letter) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = letter;
+      btn.addEventListener('click', () => onFirstSoundChoice(btn, letter));
+      el.firstSoundChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => {
+      /* Speak word, emphasize first phoneme, repeat word. The repeated
+         start-phoneme is how kindergarten teachers cue this skill:
+         "cat starts with ccc... cat." */
+      VoiceEngine.speak([info.word, '. ', LETTER_SOUNDS[skill.target], '. ', info.word, '.']);
+    }, 250);
+  }
+
+  function onFirstSoundChoice(btn, letter) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = letter === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    const info = LETTER_WORDS[state.target] || { word: state.target };
+    if (correct) {
+      state.advancing = true;
+      btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! ${info.word} starts with ${letter}!`]);
+      spawnSparkles(btn);
+      setTimeout(startFirstSoundRound, 1800);
+    } else {
+      state.wrongInRound++;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      if (state.wrongInRound >= 2) setPulse(el.firstSoundEmoji, true);
+      scheduleHint('soundsHint', {}, () => {
+        VoiceEngine.speak([info.word, '. ', LETTER_SOUNDS[state.target], '. ', info.word, '.']);
+      });
+    }
+  }
+
+  el.firstSoundReplay?.addEventListener('click', () => {
+    if (state.advancing || !state.target) return;
+    clearHintTimer();
+    const info = LETTER_WORDS[state.target];
+    if (info) VoiceEngine.speak([info.word, '. ', LETTER_SOUNDS[state.target], '. ', info.word, '.']);
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  //  Rhyme matching
+  //  Show one word; child taps which of 3 picture choices rhymes with it.
+  // ─────────────────────────────────────────────────────────────
+  function startRhymeRound() {
+    state.advancing = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'rhyme', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target; // rhyme family key
+
+    const family = RHYME_FAMILIES.find((f) => f.key === skill.target);
+    if (!family || family.words.length < 2) return;
+
+    // Pick the cue (the word we show) and the match (a word from same family)
+    const shuffled = shuffle(family.words);
+    const cue   = shuffled[0];
+    const match = shuffled[1];
+
+    // Pick 2 distractors from other families
+    const otherFamilies = RHYME_FAMILIES.filter((f) => f.key !== skill.target);
+    const distractors = [];
+    while (distractors.length < 2 && otherFamilies.length) {
+      const f = otherFamilies.splice(Math.floor(Math.random() * otherFamilies.length), 1)[0];
+      distractors.push(f.words[Math.floor(Math.random() * f.words.length)]);
+    }
+    const choices = shuffle([match, ...distractors]);
+
+    el.rhymeTargetEmoji.textContent = cue.e;
+    el.rhymeTargetWord.textContent  = cue.w;
+    state.rhymeMatch = match.w;
+
+    el.rhymeChoices.innerHTML = '';
+    choices.forEach((word) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice';
+      btn.innerHTML = `<span class="pc-emoji">${word.e}</span><span class="pc-word">${escapeHtml(word.w)}</span>`;
+      btn.addEventListener('click', () => onRhymeChoice(btn, word.w));
+      el.rhymeChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => VoiceEngine.speak([`Find what rhymes with ${cue.w}. ${cue.w}.`]), 300);
+  }
+
+  function onRhymeChoice(btn, word) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = word === state.rhymeMatch;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true;
+      btn.classList.add('correct');
+      VoiceEngine.speak([`Yes! ${word} rhymes!`]);
+      spawnSparkles(btn);
+      setTimeout(startRhymeRound, 1700);
+    } else {
+      state.wrongInRound++;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      const cueWord = el.rhymeTargetWord.textContent;
+      scheduleHint('soundsHint', {}, () => {
+        VoiceEngine.speak([`Listen for the rhyme. ${cueWord}.`]);
+      });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Blending
+  //  Hear "c... a... t" → tap the matching picture.
+  //  Highest cognitive load; recommended 4y+.
+  // ─────────────────────────────────────────────────────────────
+  function startBlendRound() {
+    state.advancing = false;
+    state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'blend', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target;
+
+    const cvc = CVC_WORDS.find((c) => c.word === skill.target);
+    if (!cvc) return;
+    state.blendPhonemes = cvc.phonemes;
+    state.blendWord     = cvc.word;
+
+    /* Show phoneme cards (visual scaffold) but de-emphasize until the child
+       has tried. Pedagogy: blend should be primarily an auditory task. */
+    el.blendPhonemes.innerHTML = '';
+    cvc.phonemes.forEach((p, i) => {
+      const span = document.createElement('span');
+      span.className = 'blend-phoneme';
+      span.textContent = p;
+      span.style.animationDelay = (i * 200) + 'ms';
+      el.blendPhonemes.appendChild(span);
+    });
+
+    // Pick 2 distractor words from other CVCs
+    const others = CVC_WORDS.filter((c) => c.word !== cvc.word);
+    const distractors = shuffle(others).slice(0, 2);
+    const choices = shuffle([cvc, ...distractors]);
+
+    el.blendChoices.innerHTML = '';
+    choices.forEach((c) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice';
+      btn.innerHTML = `<span class="pc-emoji">${c.emoji}</span>`;
+      btn.dataset.word = c.word;
+      btn.addEventListener('click', () => onBlendChoice(btn, c.word));
+      el.blendChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => speakChain(cvc.phonemes, { rate: 0.55, pauseMs: 500 }), 300);
+  }
+
+  function onBlendChoice(btn, word) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = word === state.blendWord;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true;
+      btn.classList.add('correct');
+      /* The big reveal: phonemes blended into the whole word */
+      VoiceEngine.speak([`Yes! ${state.blendWord}!`]);
+      spawnSparkles(btn);
+      setTimeout(startBlendRound, 1800);
+    } else {
+      state.wrongInRound++;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint('soundsHint', {}, () => {
+        speakChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
+      });
+    }
+  }
+
+  el.blendReplay?.addEventListener('click', () => {
+    if (state.advancing || !state.blendPhonemes) return;
+    clearHintTimer();
+    speakChain(state.blendPhonemes, { rate: 0.55, pauseMs: 500 });
+  });
+
+  // ============================================================
+  //  PLAY MODE  (v3.2 — non-evaluative free exploration)
+  //  No skill picker, no progress recording, no streaks, no breaks.
+  //  Aligned with Norwegian Rammeplan principle of child agency.
+  // ============================================================
+  const PLAY_LAYOUT = { letters: 6, numbers: 3, words: 3 };
+
+  function buildPlayTiles() {
+    const profile = activeProfile();
+    const age = profile?.ageMonths ?? 48;
+    /* Age-appropriate weighting: younger kids see more pictures and fewer
+       letters; older kids see more letters and numbers. */
+    let counts;
+    if (age < 36)      counts = { letters: 3, numbers: 2, words: 6 };
+    else if (age < 48) counts = { letters: 5, numbers: 3, words: 4 };
+    else               counts = PLAY_LAYOUT;
+
+    const tiles = [];
+    shuffle(LETTERS).slice(0, counts.letters).forEach((L) => tiles.push({ type: 'letter', value: L }));
+    shuffle(NUMBERS).slice(0, counts.numbers).forEach((N) => tiles.push({ type: 'number', value: N }));
+    shuffle(LETTERS).slice(0, counts.words).forEach((L) => tiles.push({ type: 'word', value: L }));
+    return shuffle(tiles);
+  }
+
+  function startPlayMode() {
+    if (!el.playGrid) return;
+    el.playGrid.innerHTML = '';
+    const tiles = buildPlayTiles();
+    tiles.forEach((tile, i) => {
+      const btn = document.createElement('button');
+      btn.className = `play-tile type-${tile.type}`;
+      btn.style.animationDelay = (i * 30) + 'ms';
+      if (tile.type === 'word') {
+        const info = LETTER_WORDS[tile.value] || { word: tile.value, emoji: '❓' };
+        btn.innerHTML = `<span class="play-tile-emoji">${info.emoji}</span><span class="play-tile-word">${escapeHtml(info.word)}</span>`;
+      } else {
+        const span = document.createElement('span');
+        span.className = 'play-tile-symbol';
+        span.textContent = tile.value;
+        btn.appendChild(span);
+      }
+      btn.addEventListener('click', () => onPlayTap(btn, tile));
+      el.playGrid.appendChild(btn);
+    });
+  }
+
+  function onPlayTap(btn, tile) {
+    btn.classList.remove('play-tapped');
+    void btn.offsetWidth;
+    btn.classList.add('play-tapped');
+    setTimeout(() => btn.classList.remove('play-tapped'), 700);
+    if (tile.type === 'letter')      sayLetter(tile.value);
+    else if (tile.type === 'number') sayNumber(tile.value);
+    else if (tile.type === 'word')   sayWord(tile.value);
+
+    /* Free play also signals interest. Tracked silently — never shown to
+       the child, used only by the picker on subsequent structured rounds. */
+    const profile = activeProfile();
+    if (profile && tile.value) {
+      profile.interests = profile.interests || {};
+      const k = String(tile.value).toUpperCase();
+      profile.interests[k] = (profile.interests[k] || 0) + 1;
+      saveStorage();
+    }
+  }
+
+  el.playShuffle?.addEventListener('click', () => {
+    VoiceEngine.stop();
+    startPlayMode();
+  });
+
+  // ============================================================
+  //  TRACER
+  // ============================================================
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  class Tracer {
+    constructor(svg, strokes, onComplete) {
+      this.svg = svg;
+      this.strokes = strokes;
+      this.onComplete = onComplete;
+      this.cur = 0;
+      this.outlines = [];
+      this.trails = [];
+      this.lengths = [];
+      this.samples = [];
+      this.progress = [];
+      this.dragging = false;
+      this.activePointer = null;
+      this.threshold = 32;
+      this.lookAhead = 18;
+      this.lookBack = 2;
+      this.minStrokeCompletion = 0.92;
+      this.build();
+      this.bind();
+    }
+
+    build() {
+      while (this.svg.firstChild) this.svg.removeChild(this.svg.firstChild);
+      this.strokes.forEach((s) => {
+        const outline = document.createElementNS(SVGNS, 'path');
+        outline.setAttribute('d', s.d);
+        outline.setAttribute('class', 'trace-outline');
+        this.svg.appendChild(outline);
+
+        const trail = document.createElementNS(SVGNS, 'path');
+        trail.setAttribute('d', s.d);
+        trail.setAttribute('class', 'trace-trail');
+        const len = outline.getTotalLength();
+        trail.style.strokeDasharray  = String(len);
+        trail.style.strokeDashoffset = String(len);
+        this.svg.appendChild(trail);
+
+        this.outlines.push(outline);
+        this.trails.push(trail);
+        this.lengths.push(len);
+
+        const N = Math.max(40, Math.round(len / 6));
+        const pts = new Array(N + 1);
+        for (let k = 0; k <= N; k++) pts[k] = outline.getPointAtLength((k / N) * len);
+        this.samples.push(pts);
+        this.progress.push(-1);
+      });
+
+      this.startDot = document.createElementNS(SVGNS, 'circle');
+      this.startDot.setAttribute('r', '15');
+      this.startDot.setAttribute('class', 'trace-start');
+      this.svg.appendChild(this.startDot);
+      this.updateStartDot();
+    }
+
+    updateStartDot() {
+      if (this.cur >= this.strokes.length) {
+        this.startDot.style.display = 'none';
+        return;
+      }
+      const first = this.samples[this.cur][0];
+      this.startDot.setAttribute('cx', first.x);
+      this.startDot.setAttribute('cy', first.y);
+      this.startDot.style.display = '';
+    }
+
+    bind() {
+      this._onDown = this.onDown.bind(this);
+      this._onMove = this.onMove.bind(this);
+      this._onUp   = this.onUp.bind(this);
+      this.svg.addEventListener('pointerdown', this._onDown);
+      this.svg.addEventListener('pointermove', this._onMove);
+      this.svg.addEventListener('pointerup', this._onUp);
+      this.svg.addEventListener('pointercancel', this._onUp);
+    }
+    destroy() {
+      this.svg.removeEventListener('pointerdown', this._onDown);
+      this.svg.removeEventListener('pointermove', this._onMove);
+      this.svg.removeEventListener('pointerup', this._onUp);
+      this.svg.removeEventListener('pointercancel', this._onUp);
+    }
+
+    toSvgCoords(clientX, clientY) {
+      const pt = this.svg.createSVGPoint();
+      pt.x = clientX; pt.y = clientY;
+      const ctm = this.svg.getScreenCTM();
+      if (!ctm) return null;
+      return pt.matrixTransform(ctm.inverse());
+    }
+
+    onDown(e) {
+      if (this.cur >= this.strokes.length) return;
+      this.dragging = true;
+      this.activePointer = e.pointerId;
+      try { this.svg.setPointerCapture(e.pointerId); } catch {}
+      this.handlePoint(e);
+    }
+    onMove(e) {
+      if (!this.dragging || e.pointerId !== this.activePointer) return;
+      this.handlePoint(e);
+    }
+    onUp(e) {
+      if (e.pointerId !== this.activePointer) return;
+      this.dragging = false;
+      this.activePointer = null;
+      try { this.svg.releasePointerCapture(e.pointerId); } catch {}
+    }
+
+    handlePoint(e) {
+      if (this.cur >= this.strokes.length) return;
+      const p = this.toSvgCoords(e.clientX, e.clientY);
+      if (!p) return;
+      const samples = this.samples[this.cur];
+      const lastIdx = samples.length - 1;
+      const cur = this.progress[this.cur];
+
+      const startIdx = Math.max(0, cur - this.lookBack);
+      const endIdx   = Math.min(lastIdx, cur + this.lookAhead);
+      let bestIdx = cur;
+      let bestDist = Infinity;
+      for (let i = startIdx; i <= endIdx; i++) {
+        const dx = samples[i].x - p.x;
+        const dy = samples[i].y - p.y;
+        const d  = dx*dx + dy*dy;
+        if (d < bestDist) { bestDist = d; bestIdx = i; }
+      }
+      const thresh2 = this.threshold * this.threshold;
+      if (bestDist > thresh2) return;
+      if (bestIdx > cur) {
+        this.progress[this.cur] = bestIdx;
+        this.refreshTrail();
+      }
+      if (bestIdx / lastIdx >= this.minStrokeCompletion) this.completeStroke();
+    }
+
+    refreshTrail() {
+      const idx = this.cur;
+      const samples = this.samples[idx];
+      const trail   = this.trails[idx];
+      const len     = this.lengths[idx];
+      const progress = (this.progress[idx] + 1) / samples.length;
+      trail.style.strokeDashoffset = String(Math.max(0, len * (1 - progress)));
+    }
+
+    completeStroke() {
+      const idx = this.cur;
+      this.progress[idx] = this.samples[idx].length - 1;
+      this.trails[idx].style.strokeDashoffset = '0';
+      this.trails[idx].classList.add('done');
+      this.outlines[idx].classList.add('done');
+      this.cur++;
+      if (this.cur >= this.strokes.length) {
+        this.startDot.style.display = 'none';
+        setTimeout(() => this.onComplete && this.onComplete(), 600);
+      } else {
+        this.updateStartDot();
+      }
+      updateTraceDots();
+    }
+  }
+
+  function updateTraceDots() {
+    if (!state.tracer) return;
+    el.traceDots.innerHTML = '';
+    state.tracer.strokes.forEach((_, i) => {
+      const d = document.createElement('span');
+      d.className = 'trace-stroke-dot';
+      if (i < state.tracer.cur) d.classList.add('done');
+      else if (i === state.tracer.cur) d.classList.add('active');
+      el.traceDots.appendChild(d);
+    });
+  }
+
+  function startTraceRound() {
+    state.advancing = false;
+    const profile = activeProfile();
+    if (!profile) return;
+
+    /* v3.3 — use child's pre-picked skill on first round of mode if agency
+       mode is on. After that, normal picker takes over for natural rotation. */
+    let skill = state.chosenForRound;
+    state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, state.mode, state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill;
+    state.lastSkillId  = skill.id;
+    state.target = skill.target;
+
+    const isLetters = state.mode === 'trace-letters';
+    const strokes = (isLetters ? LETTER_PATHS : NUMBER_PATHS)[skill.target];
+    el.traceLabel.textContent = `Trace ${skill.target}`;
+
+    if (state.tracer) state.tracer.destroy();
+    state.tracer = new Tracer(el.traceSvg, strokes, onTraceComplete);
+    updateTraceDots();
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => {
+      if (isLetters) sayLetter(skill.target);
+      else sayNumber(skill.target);
+    }, 250);
+  }
+
+  function onTraceComplete() {
+    if (state.advancing) return;
+    state.advancing = true;
+    recordAttempt(state.currentSkill.id, true, roundDuration());
+    const rect = el.traceSvg.getBoundingClientRect();
+    spawnSparkles({ getBoundingClientRect: () => rect });
+    if (state.mode === 'trace-letters') sayLetter(state.target);
+    else sayNumber(state.target);
+    setTimeout(startTraceRound, 1700);
+  }
+
+  // ============================================================
+  //  PARENT GATE
+  // ============================================================
+  let gateOnPass = null;
+
+  function openGate(onPass) {
+    gateOnPass = onPass;
+    const pool = NUMBERS.filter((n) => n !== '0' && n !== '10');
+    const target = pool[Math.floor(Math.random() * pool.length)];
+    el.gateTarget.textContent = target;
+    el.gateNumbers.innerHTML = '';
+    shuffle(pool).forEach((n) => {
+      const b = document.createElement('button');
+      b.className = 'gate-num';
+      b.textContent = n;
+      b.addEventListener('click', () => {
+        if (n === target) {
+          el.modalGate.classList.remove('active');
+          const fn = gateOnPass; gateOnPass = null;
+          if (fn) fn();
+        } else {
+          b.classList.add('dim');
+        }
+      });
+      el.gateNumbers.appendChild(b);
+    });
+    el.modalGate.classList.add('active');
+  }
+
+  el.modalGate.addEventListener('click', (e) => {
+    if (e.target === el.modalGate) el.modalGate.classList.remove('active');
+  });
+
+  // ============================================================
+  //  SETTINGS
+  // ============================================================
+  function populateVoiceSelect() {
+    const sel = el.voiceSelect;
+    if (!sel) return;
+    sel.innerHTML = '';
+    const auto = document.createElement('option');
+    auto.value = '';
+    auto.textContent = '— Best available (auto) —';
+    sel.appendChild(auto);
+
+    const voices = (VoiceEngine.voices || []).slice().sort((a, b) => VoiceEngine.score(b) - VoiceEngine.score(a));
+    voices.forEach((v) => {
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      const tag = v.localService ? '' : ' • online';
+      opt.textContent = `${v.name} (${v.lang})${tag}`;
+      sel.appendChild(opt);
+    });
+    sel.value = profileSettings().voiceURI || '';
+  }
+
+  function syncSettingsUI() {
+    el.modalSettings.querySelectorAll('.segmented').forEach((seg) => {
+      const key = seg.dataset.setting;
+      const val = String(profileSettings()[key] ?? '');
+      seg.querySelectorAll('button').forEach((b) => {
+        b.setAttribute('aria-pressed', b.dataset.value === val ? 'true' : 'false');
+      });
+    });
+    populateVoiceSelect();
+  }
+
+  function openSettings() {
+    if (!activeProfile()) return;
+    syncSettingsUI();
+    el.modalSettings.classList.add('active');
+  }
+
+  function closeSettings() {
+    el.modalSettings.classList.remove('active');
+  }
+
+  el.modalSettings.querySelectorAll('.segmented').forEach((seg) => {
+    const key = seg.dataset.setting;
+    seg.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-value]');
+      if (!b) return;
+      const profile = activeProfile();
+      if (!profile) return;
+      profile.settings[key] = b.dataset.value;
+      saveStorage();
+      seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      if (key === 'theme') applyTheme();
+    });
+  });
+
+  el.voiceSelect?.addEventListener('change', () => {
+    const profile = activeProfile();
+    if (!profile) return;
+    profile.settings.voiceURI = el.voiceSelect.value;
+    saveStorage();
+    VoiceEngine.pick();
+    VoiceEngine.speak(['Hello!']);
+  });
+
+  el.settingsClose.addEventListener('click', closeSettings);
+  el.modalSettings.addEventListener('click', (e) => {
+    if (e.target === el.modalSettings) closeSettings();
+  });
+
+  // ============================================================
+  //  PROGRESS SCREEN
+  // ============================================================
+  function renderProgressCells(container, items, getSkillIdFor) {
+    container.innerHTML = '';
+    const profile = activeProfile();
+    items.forEach((sym) => {
+      const skillId = getSkillIdFor(sym);
+      const skill = SKILLS_BY_ID[skillId];
+      const t = skill ? getSkillProgress(skill, profile) : { successes: 0 };
+      const mastered = skill ? isSkillMastered(skill, profile) : false;
+      const fading   = skill ? isSkillFading(skill, profile)   : false;
+      const stars = mastered ? '★★★' :
+                    t.successes >= 4 ? '★★' :
+                    t.successes >= 1 ? '★' : '';
+      let cls = '';
+      if (fading) cls = 'fading';
+      else if (mastered) cls = 'mastered';
+      else if (t.successes > 0) cls = 'practiced';
+
+      const cell = document.createElement('button');
+      cell.className = `progress-cell ${cls}`;
+      cell.setAttribute('aria-label', `Skill detail for ${sym}`);
+      const s = document.createElement('div');
+      s.className = 'sym';
+      s.textContent = sym;
+      const st = document.createElement('div');
+      st.className = 'stars';
+      st.textContent = stars;
+      cell.appendChild(s);
+      cell.appendChild(st);
+      cell.addEventListener('click', () => openSkillDetail(sym, items === LETTERS ? 'letter' : 'number'));
+      container.appendChild(cell);
+    });
+  }
+
+  function renderProgressStandards() {
+    if (!el.progressStandardsList) return;
+    const profile = activeProfile();
+    el.progressStandardsList.innerHTML = '';
+
+    /* Group by framework family so parents see US standards, EU, and
+       Norwegian Rammeplan in separate sections — the same gameplay
+       maps to all of them. */
+    const byFamily = standardsByFramework();
+    const familyOrder = [
+      'CCSS-K (United States)',
+      'NAEYC ELOF (United States)',
+      'EU Quality Framework for ECEC',
+      'Rammeplan (Norway)',
+      'Other'
+    ];
+
+    familyOrder.forEach((family) => {
+      const codes = byFamily[family];
+      if (!codes || !codes.length) return;
+      const header = document.createElement('h3');
+      header.className = 'standard-family';
+      header.textContent = family;
+      el.progressStandardsList.appendChild(header);
+
+      codes.forEach((code) => {
+        const stat = getStandardProgress(code, profile);
+        if (stat.total === 0) return; // skip codes not yet attached to any skill
+        const card = document.createElement('div');
+        card.className = 'standard-card';
+        const pct = Math.round(stat.ratio * 100);
+        card.innerHTML = `
+          <div class="standard-head">
+            <span class="standard-code">${escapeHtml(code)}</span>
+            <span class="standard-pct">${pct}%</span>
+          </div>
+          <div class="standard-desc">${escapeHtml(stat.description)}</div>
+          <div class="standard-bar"><div class="standard-bar-fill" style="width: ${pct}%"></div></div>
+          <div class="standard-meta">${stat.mastered} mastered · ${stat.available} available · ${stat.total} total${stat.fading ? ` · ${stat.fading} fading` : ''}</div>
+        `;
+        el.progressStandardsList.appendChild(card);
+      });
+    });
+  }
+
+  function setProgressTab(name) {
+    el.progressTabs.forEach((b) => {
+      b.setAttribute('aria-pressed', b.dataset.progressTab === name ? 'true' : 'false');
+    });
+    if (el.progressViewTarget)   el.progressViewTarget.style.display   = name === 'target'   ? '' : 'none';
+    if (el.progressViewStandard) el.progressViewStandard.style.display = name === 'standard' ? '' : 'none';
+    if (name === 'standard') renderProgressStandards();
+  }
+
+  function renderProgressSummary() {
+    const p = activeProfile();
+    if (!p || !el.progressSummary) return;
+    const stats = computeProfileStats(p);
+    el.progressSummary.innerHTML = '';
+
+    const sessionsLast30 = (p.progress.sessions || []).filter((s) => {
+      const d = new Date(s.date);
+      return (Date.now() - d.getTime()) / 86400000 <= 30;
+    });
+    const minutesLast30 = sessionsLast30.reduce((acc, s) => acc + (s.durationMs || 0), 0) / 60000;
+
+    /* Rammeplan framing: this is a parent dashboard, but even here we
+       avoid evaluative/competitive vocabulary. */
+    const rows = [
+      ['Child',                p.name],
+      ['Age',                  `${Math.floor(p.ageMonths / 12)}y ${p.ageMonths % 12}mo`],
+      ['Where they are',       stats.abilityLevel],
+      ['Things age-appropriate', `${stats.availableSkills} of ${stats.totalSkills}`],
+      ['Confident with',       `${stats.masteredSkills} of ${stats.availableSkills}`],
+      ['Currently exploring',  `${stats.practicedSkills}`],
+      ['Play time last 30d',   `${Math.round(minutesLast30)} min over ${sessionsLast30.length} day${sessionsLast30.length === 1 ? '' : 's'}`]
+    ];
+    rows.forEach(([k, v]) => {
+      const row = document.createElement('div');
+      row.className = 'summary-row';
+      row.innerHTML = `<span class="summary-key">${k}</span><span class="summary-val">${v}</span>`;
+      el.progressSummary.appendChild(row);
+    });
+  }
+
+  function renderStreak() {
+    if (!el.progressStreak) return;
+    const p = activeProfile();
+    if (!p || !p.streaks || p.streaks.current < 2) {
+      el.progressStreak.style.display = 'none';
+      return;
+    }
+    el.progressStreak.style.display = '';
+    /* Growth metaphor, not pressure. A "streak" should never become anxiety. */
+    el.progressStreak.innerHTML = `🌱 <strong>${p.streaks.current} play days in a row</strong> · Best so far: ${p.streaks.longest}`;
+  }
+
+  function openProgress() {
+    renderProgressSummary();
+    renderStreak();
+    renderProgressCells(el.progressLetters, LETTERS, (sym) => `letter-recognize-${sym.toUpperCase()}`);
+    renderProgressCells(el.progressNumbers, NUMBERS, (sym) => `number-recognize-${sym}`);
+    setProgressTab('target');
+    el.modalSettings.classList.remove('active');
+    el.modalProgress.classList.add('active');
+  }
+
+  // ============================================================
+  //  SKILL DETAIL (v3)
+  // ============================================================
+  function openSkillDetail(symbol, kind /* 'letter' | 'number' */) {
+    const profile = activeProfile();
+    if (!profile || !el.modalSkill) return;
+    const key = kind === 'letter' ? symbol.toUpperCase() : symbol;
+
+    const skillIds = kind === 'letter'
+      ? [`letter-recognize-${key}`, `letter-sound-${key}`, `letter-trace-${key}`]
+      : [`number-recognize-${key}`, `number-trace-${key}`, `count-${key}`].filter(id => SKILLS_BY_ID[id]);
+
+    el.skillTitle.textContent = kind === 'letter' ? `Letter ${key}` : `Number ${key}`;
+    el.skillDetails.innerHTML = '';
+
+    skillIds.forEach((id) => {
+      const skill = SKILLS_BY_ID[id];
+      if (!skill) return;
+      const p = getSkillProgress(skill, profile);
+      const pct = Math.min(100, Math.round((p.successes / skill.masteryThreshold) * 100));
+      const available = isSkillAvailable(skill, profile, { relaxPrereqs: true });
+      const ageOk = (profile.ageMonths ?? 48) >= skill.minAgeMonths;
+      const mastered = isSkillMastered(skill, profile);
+      const fading = isSkillFading(skill, profile);
+
+      const item = document.createElement('div');
+      item.className = `skill-item ${mastered ? 'mastered' : ''} ${fading ? 'fading' : ''}`;
+
+      /* Norwegian-framed labels — never "mastered/failed/behind" language */
+      const statusBadge = !ageOk
+        ? `<span class="skill-badge muted">Suggested at ${Math.floor(skill.minAgeMonths/12)}y+</span>`
+        : mastered
+          ? (fading ? `<span class="skill-badge fading">Confident · time to revisit</span>` : `<span class="skill-badge mastered">Confident</span>`)
+          : p.successes > 0 ? `<span class="skill-badge practiced">Exploring</span>` : '';
+
+      const standardChips = (skill.standards || []).map((code) => {
+        const desc = STANDARDS_REFERENCE[code] || code;
+        return `<span class="standard-chip" title="${escapeHtml(desc)}">${escapeHtml(code)}</span>`;
+      }).join(' ');
+
+      item.innerHTML = `
+        <div class="skill-row-head">
+          <span class="skill-row-name">${prettySkillName(skill)}</span>
+          ${statusBadge}
+        </div>
+        <div class="skill-bar"><div class="skill-bar-fill" style="width: ${pct}%"></div></div>
+        <div class="skill-row-meta">
+          <span>${p.successes} of ${skill.masteryThreshold} correct${p.attempts > p.successes ? ` · ${p.attempts - p.successes} miss${p.attempts - p.successes === 1 ? '' : 'es'}` : ''}</span>
+          ${p.lastSeen ? `<span>last seen ${relativeDate(p.lastSeen)}</span>` : '<span>not yet practiced</span>'}
+        </div>
+        <div class="skill-row-standards">${standardChips}</div>
+      `;
+      el.skillDetails.appendChild(item);
+    });
+
+    el.modalProgress.classList.remove('active');
+    el.modalSkill.classList.add('active');
+  }
+
+  function prettySkillName(skill) {
+    switch (skill.category) {
+      case 'letter-recognize': return 'Recognize the letter';
+      case 'letter-sound':     return 'Letter sound (phonics)';
+      case 'letter-trace':     return 'Trace the letter';
+      case 'number-recognize': return 'Recognize the number';
+      case 'number-trace':     return 'Trace the number';
+      case 'count':            return 'Count objects';
+      default:                 return skill.label || skill.id;
+    }
+  }
+
+  function relativeDate(ts) {
+    const diffMs = Date.now() - ts;
+    const diffMin = diffMs / 60000;
+    if (diffMin < 1)    return 'just now';
+    if (diffMin < 60)   return `${Math.round(diffMin)} min ago`;
+    const diffHr = diffMin / 60;
+    if (diffHr < 24)    return `${Math.round(diffHr)}h ago`;
+    const diffDays = diffHr / 24;
+    if (diffDays < 14)  return `${Math.round(diffDays)}d ago`;
+    return new Date(ts).toLocaleDateString();
+  }
+
+  // ============================================================
+  //  EXPORT / PRINT (v3)
+  // ============================================================
+  function exportProgressJSON() {
+    const profile = activeProfile();
+    if (!profile) return;
+    const stats = computeProfileStats(profile);
+    const standards = {};
+    Object.keys(groupSkillsByStandard()).forEach((code) => {
+      standards[code] = getStandardProgress(code, profile);
+    });
+    const data = {
+      exportedAt: new Date().toISOString(),
+      schemaVersion: 'lnum-v3',
+      profile: {
+        name: profile.name,
+        ageMonths: profile.ageMonths,
+        createdAt: profile.createdAt
+      },
+      stats,
+      streaks: profile.streaks || null,
+      skills: profile.progress.skills || {},
+      sessions: profile.progress.sessions || [],
+      standards
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (profile.name || 'child').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    a.href = url;
+    a.download = `${safeName}-progress-${todayString()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function printProgress() {
+    /* The progress modal stays open; @media print hides everything else.
+       Browser print dialog lets the parent save as PDF. */
+    window.print();
+  }
+
+  el.progressBtn?.addEventListener('click', openProgress);
+  el.progressClose?.addEventListener('click', () => el.modalProgress.classList.remove('active'));
+  el.modalProgress?.addEventListener('click', (e) => {
+    if (e.target === el.modalProgress) el.modalProgress.classList.remove('active');
+  });
+  el.resetProgressBtn?.addEventListener('click', () => {
+    const profile = activeProfile();
+    if (!profile) return;
+    if (!confirm(`Reset progress for ${profile.name}? This cannot be undone.`)) return;
+    profile.progress = { skills: {}, events: [], sessions: [] };
+    profile.streaks  = { current: 0, longest: 0, lastPlayedDate: null };
+    saveStorage();
+    refreshHeader();
+    renderProgressSummary();
+    renderStreak();
+    renderProgressCells(el.progressLetters, LETTERS, (sym) => `letter-recognize-${sym.toUpperCase()}`);
+    renderProgressCells(el.progressNumbers, NUMBERS, (sym) => `number-recognize-${sym}`);
+    renderProgressStandards();
+  });
+
+  // v3 progress wiring — tabs, export, print, skill detail close
+  el.progressTabs?.forEach((btn) => {
+    btn.addEventListener('click', () => setProgressTab(btn.dataset.progressTab));
+  });
+  el.exportProgressBtn?.addEventListener('click', exportProgressJSON);
+  el.printProgressBtn?.addEventListener('click', printProgress);
+  el.skillClose?.addEventListener('click', () => {
+    el.modalSkill.classList.remove('active');
+    el.modalProgress.classList.add('active');
+  });
+  el.modalSkill?.addEventListener('click', (e) => {
+    if (e.target === el.modalSkill) {
+      el.modalSkill.classList.remove('active');
+      el.modalProgress.classList.add('active');
+    }
+  });
+
+  // ============================================================
+  //  VOICE RECORDING UI (v3.1)
+  //  Parent records letters/sounds/words/numbers in their own voice.
+  //  Stored in IndexedDB, played back instead of synthetic TTS.
+  // ============================================================
+  let activeRecorder = null;
+  let recordingKey   = null;
+  let recordingChunks = [];
+  let micStream      = null;
+  let autoStopTimer  = null;
+  let activeRecordTab = 'letter-name';
+  const MAX_RECORDING_MS = 4000;
+
+  async function getMic() {
+    if (micStream) return micStream;
+    if (!navigator.mediaDevices?.getUserMedia) return null;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      return micStream;
+    } catch (err) {
+      alert('Microphone access denied. Enable it in your browser/site settings, then try again.');
+      return null;
+    }
+  }
+
+  function releaseMic() {
+    if (micStream) {
+      micStream.getTracks().forEach((t) => t.stop());
+      micStream = null;
+    }
+  }
+
+  async function startRecordingFor(key) {
+    if (activeRecorder) { try { activeRecorder.stop(); } catch {} }
+    const stream = await getMic();
+    if (!stream) return false;
+    recordingChunks = [];
+
+    let mime = '';
+    if (typeof MediaRecorder !== 'undefined') {
+      const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      for (const c of candidates) {
+        if (MediaRecorder.isTypeSupported(c)) { mime = c; break; }
+      }
+    } else {
+      alert('Recording is not supported in this browser.');
+      return false;
+    }
+
+    activeRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recordingKey = key;
+    activeRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordingChunks.push(e.data); };
+    activeRecorder.onstop = async () => {
+      const blob = new Blob(recordingChunks, { type: activeRecorder?.mimeType || 'audio/webm' });
+      const stoppedKey = recordingKey;
+      activeRecorder = null;
+      recordingKey = null;
+      if (blob.size > 200) await saveRecording(stoppedKey, blob);
+      renderRecordList();
+    };
+    activeRecorder.start();
+    clearTimeout(autoStopTimer);
+    autoStopTimer = setTimeout(stopActiveRecording, MAX_RECORDING_MS);
+    return true;
+  }
+
+  function stopActiveRecording() {
+    clearTimeout(autoStopTimer);
+    autoStopTimer = null;
+    if (activeRecorder && activeRecorder.state !== 'inactive') {
+      try { activeRecorder.stop(); } catch {}
+    }
+  }
+
+  function recordItemsForTab(tab) {
+    if (tab === 'letter-name') {
+      return LETTERS.map((L) => ({
+        key: idbKey('letter', 'name', L),
+        symbol: L,
+        hint: `Say the letter name: "${L}"`
+      }));
+    }
+    if (tab === 'letter-sound') {
+      return LETTERS.map((L) => ({
+        key: idbKey('letter', 'sound', L),
+        symbol: L,
+        hint: `Say the phonetic sound: "${LETTER_SOUNDS[L]}"`
+      }));
+    }
+    if (tab === 'letter-word') {
+      return LETTERS.map((L) => {
+        const w = LETTER_WORDS[L] || { word: L, emoji: '' };
+        return {
+          key: idbKey('letter', 'word', L),
+          symbol: `${w.emoji} ${L}`,
+          hint: `Say the word: "${w.word}"`
+        };
+      });
+    }
+    if (tab === 'number') {
+      return NUMBERS.map((N) => ({
+        key: idbKey('number', 'name', N),
+        symbol: N,
+        hint: `Say the number: "${N}"`
+      }));
+    }
+    return [];
+  }
+
+  function renderRecordList() {
+    if (!el.recordList) return;
+    const items = recordItemsForTab(activeRecordTab);
+    el.recordList.innerHTML = '';
+    items.forEach((item) => {
+      const hasRec    = recordedKeys.has(item.key);
+      const isActive  = recordingKey === item.key && activeRecorder;
+      const row = document.createElement('div');
+      row.className = 'record-row' + (isActive ? ' recording' : '') + (hasRec ? ' has-rec' : '');
+      row.innerHTML = `
+        <div class="record-row-left">
+          <span class="record-symbol">${escapeHtml(item.symbol)}</span>
+          <span class="record-hint">${escapeHtml(item.hint)}</span>
+        </div>
+        <div class="record-row-actions">
+          <button class="record-btn ${isActive ? 'stop' : 'rec'}" data-action="${isActive ? 'stop' : 'record'}" data-key="${item.key}" aria-label="${isActive ? 'Stop' : 'Record'}">
+            ${isActive ? '⏹' : '●'}
+          </button>
+          <button class="record-btn play" data-action="play" data-key="${item.key}" ${hasRec ? '' : 'disabled'} aria-label="Play">▶</button>
+          <button class="record-btn del" data-action="delete" data-key="${item.key}" ${hasRec ? '' : 'disabled'} aria-label="Delete">✕</button>
+        </div>
+      `;
+      el.recordList.appendChild(row);
+    });
+    updateRecordSummary();
+  }
+
+  function updateRecordSummary() {
+    if (!el.recordSummary) return;
+    const total = LETTERS.length * 3 + NUMBERS.length; // 26×3 + 11 = 89
+    const recorded = [...recordedKeys].filter((k) => k.startsWith('letter/') || k.startsWith('number/')).length;
+    el.recordSummary.textContent = `${recorded} of ${total} recorded`;
+  }
+
+  // About / Pedagogy modal wiring
+  el.aboutBtn?.addEventListener('click', () => {
+    closeSettings();
+    el.modalAbout?.classList.add('active');
+  });
+  el.aboutClose?.addEventListener('click', () => el.modalAbout?.classList.remove('active'));
+  el.modalAbout?.addEventListener('click', (e) => {
+    if (e.target === el.modalAbout) el.modalAbout.classList.remove('active');
+  });
+
+  // Agency picker backdrop close
+  el.modalAgency?.addEventListener('click', (e) => {
+    if (e.target === el.modalAgency) {
+      el.modalAgency.classList.remove('active');
+      // Treat as "Surprise me" — pick first candidate or fall back to home
+      goHome();
+    }
+  });
+
+  el.recordList?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const key = btn.dataset.key;
+    if (action === 'record') {
+      await startRecordingFor(key);
+      renderRecordList();
+    } else if (action === 'stop') {
+      stopActiveRecording();
+    } else if (action === 'play') {
+      await playRecording(key);
+    } else if (action === 'delete') {
+      if (confirm('Delete this recording?')) {
+        await deleteRecording(key);
+        renderRecordList();
+      }
+    }
+  });
+
+  el.recordTabs?.forEach((b) => {
+    b.addEventListener('click', () => {
+      el.recordTabs.forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      activeRecordTab = b.dataset.recordTab;
+      stopActiveRecording();
+      renderRecordList();
+    });
+  });
+
+  el.recordBtn?.addEventListener('click', () => {
+    closeSettings();
+    el.modalRecord.classList.add('active');
+    activeRecordTab = 'letter-name';
+    el.recordTabs?.forEach((x) => x.setAttribute('aria-pressed', x.dataset.recordTab === 'letter-name' ? 'true' : 'false'));
+    renderRecordList();
+  });
+
+  el.recordClose?.addEventListener('click', () => {
+    stopActiveRecording();
+    releaseMic();
+    el.modalRecord.classList.remove('active');
+  });
+  el.modalRecord?.addEventListener('click', (e) => {
+    if (e.target === el.modalRecord) {
+      stopActiveRecording();
+      releaseMic();
+      el.modalRecord.classList.remove('active');
+    }
+  });
+
+  // v3 break-suggestion wiring
+  el.breakContinue?.addEventListener('click', () => {
+    el.modalBreak.classList.remove('active');
+    startNewSession(); // reset clock; next break in another full window
+  });
+  el.breakDone?.addEventListener('click', () => {
+    el.modalBreak.classList.remove('active');
+    goHome();
+  });
+  el.modalBreak?.addEventListener('click', (e) => {
+    if (e.target === el.modalBreak) el.modalBreak.classList.remove('active');
+  });
+
+  // ============================================================
+  //  PROFILE PICKER + EDIT
+  // ============================================================
+  function renderProfileList() {
+    el.profileList.innerHTML = '';
+    state.profiles.forEach((p) => {
+      const stats = computeProfileStats(p);
+      const row = document.createElement('div');
+      row.className = 'profile-row' + (p.id === state.activeProfileId ? ' active' : '');
+
+      const main = document.createElement('button');
+      main.className = 'profile-row-main';
+      main.innerHTML = `
+        <span class="profile-row-name">${escapeHtml(p.name)}</span>
+        <span class="profile-row-meta">${Math.floor(p.ageMonths / 12)}y · ${stats.abilityLevel} · ${stats.masteredSkills}/${stats.availableSkills}</span>
+      `;
+      main.addEventListener('click', () => {
+        state.activeProfileId = p.id;
+        saveStorage();
+        applyTheme();
+        VoiceEngine.pick();
+        refreshHeader();
+        el.modalProfile.classList.remove('active');
+      });
+
+      const edit = document.createElement('button');
+      edit.className = 'profile-row-edit';
+      edit.setAttribute('aria-label', 'Edit profile');
+      edit.textContent = '✎';
+      edit.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openProfileEdit(p);
+      });
+
+      row.appendChild(main);
+      row.appendChild(edit);
+      el.profileList.appendChild(row);
+    });
+  }
+
+  function openProfilePicker() {
+    renderProfileList();
+    el.modalProfile.classList.add('active');
+  }
+
+  el.profileSwitchBtn?.addEventListener('click', () => {
+    closeSettings();
+    openProfilePicker();
+  });
+  el.profileChip?.addEventListener('click', () => {
+    openGate(openProfilePicker);
+  });
+  el.profileClose?.addEventListener('click', () => el.modalProfile.classList.remove('active'));
+  el.modalProfile?.addEventListener('click', (e) => {
+    if (e.target === el.modalProfile) el.modalProfile.classList.remove('active');
+  });
+  el.profileAdd?.addEventListener('click', () => {
+    openProfileEdit(null);
+  });
+
+  let editingProfileId = null;
+  function openProfileEdit(profile) {
+    editingProfileId = profile?.id || null;
+    el.profileEditTitle.textContent = profile ? 'Edit profile' : 'Add a child';
+    el.profileEditName.value = profile?.name || '';
+    setAgeButtons(el.profileEditAge, profile?.ageMonths || 48);
+    el.profileEditDelete.style.display = (profile && state.profiles.length > 1) ? '' : 'none';
+    el.modalProfile.classList.remove('active');
+    el.modalProfileEdit.classList.add('active');
+  }
+  el.profileEditCancel?.addEventListener('click', () => {
+    el.modalProfileEdit.classList.remove('active');
+    openProfilePicker();
+  });
+  el.profileEditSave?.addEventListener('click', () => {
+    const name = el.profileEditName.value.trim() || 'Friend';
+    const ageMonths = parseInt(el.profileEditAge.querySelector('button[aria-pressed="true"]')?.dataset.months || '48', 10);
+    if (editingProfileId) {
+      const p = state.profiles.find((x) => x.id === editingProfileId);
+      if (p) { p.name = name; p.ageMonths = clampAgeMonths(ageMonths); }
+    } else {
+      const p = newProfileObject(name, ageMonths);
+      state.profiles.push(p);
+      state.activeProfileId = p.id;
+      applyTheme();
+    }
+    saveStorage();
+    refreshHeader();
+    el.modalProfileEdit.classList.remove('active');
+    openProfilePicker();
+  });
+  el.profileEditDelete?.addEventListener('click', () => {
+    if (!editingProfileId) return;
+    if (state.profiles.length <= 1) return;
+    const p = state.profiles.find((x) => x.id === editingProfileId);
+    if (!p) return;
+    if (!confirm(`Delete ${p.name}'s profile and all their progress? This cannot be undone.`)) return;
+    state.profiles = state.profiles.filter((x) => x.id !== editingProfileId);
+    if (state.activeProfileId === editingProfileId) {
+      state.activeProfileId = state.profiles[0]?.id || null;
+      applyTheme();
+    }
+    saveStorage();
+    refreshHeader();
+    el.modalProfileEdit.classList.remove('active');
+    openProfilePicker();
+  });
+
+  function setAgeButtons(container, currentMonths) {
+    container.querySelectorAll('button').forEach((b) => {
+      b.setAttribute('aria-pressed', parseInt(b.dataset.months, 10) === currentMonths ? 'true' : 'false');
+    });
+  }
+  function bindAgeGroup(container) {
+    container.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-months]');
+      if (!b) return;
+      container.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    });
+  }
+  bindAgeGroup(el.welcomeAge);
+  bindAgeGroup(el.profileEditAge);
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  // ============================================================
+  //  WELCOME (first launch)
+  // ============================================================
+  el.welcomeSubmit?.addEventListener('click', () => {
+    const name = el.welcomeName.value.trim() || 'Friend';
+    const ageMonths = parseInt(el.welcomeAge.querySelector('button[aria-pressed="true"]')?.dataset.months || '48', 10);
+    const profile = newProfileObject(name, ageMonths);
+    state.profiles.push(profile);
+    state.activeProfileId = profile.id;
+    saveStorage();
+    applyTheme();
+    VoiceEngine.pick();
+    refreshHeader();
+    showScreen('home');
+  });
+
+  // ============================================================
+  //  HOME — mode launch
+  // ============================================================
+  document.querySelectorAll('.mode-card, .freeplay-cta').forEach((card) => {
+    card.addEventListener('click', () => {
+      if (!activeProfile()) return;
+      startMode(card.dataset.mode);
+    });
+  });
+
+  // Tap the prompt to re-hear the target. Replaces auto-repeat-on-wrong;
+  // gives the child (and parent) on-demand control.
+  el.findTarget?.addEventListener('click', () => {
+    if (state.advancing || !state.target) return;
+    clearHintTimer();
+    if (state.mode === 'find-letters') sayLetter(state.target);
+    else if (state.mode === 'find-numbers') sayNumber(state.target);
+  });
+  el.soundsPic?.addEventListener('click', () => {
+    if (state.advancing || !state.target) return;
+    clearHintTimer();
+    const info = LETTER_WORDS[state.target];
+    if (info) VoiceEngine.speak([info.word, '.', LETTER_SOUNDS[state.target]]);
+  });
+  el.countStage?.addEventListener('click', () => {
+    if (state.advancing) return;
+    clearHintTimer();
+    VoiceEngine.speak([phrase('countPrompt')]);
+  });
+
+  // Home button — press-and-hold (500ms) with visible progress ring.
+  // Visual feedback removes the "is this broken?" feel of pure hold-to-confirm.
+  (() => {
+    const HOLD_MS = 500;
+    let timer = null;
+    const start = (e) => {
+      // Only respond to primary pointer — prevents double-fires on touch + mouse
+      if (e.isPrimary === false) return;
+      clearTimeout(timer);
+      el.homeBtn.classList.add('holding');
+      timer = setTimeout(() => {
+        el.homeBtn.classList.remove('holding');
+        goHome();
+      }, HOLD_MS);
+    };
+    const cancel = () => {
+      clearTimeout(timer);
+      el.homeBtn.classList.remove('holding');
+    };
+    el.homeBtn.addEventListener('pointerdown', start);
+    el.homeBtn.addEventListener('pointerup', cancel);
+    el.homeBtn.addEventListener('pointerleave', cancel);
+    el.homeBtn.addEventListener('pointercancel', cancel);
+  })();
+
+  el.settingsBtn.addEventListener('click', () => openGate(openSettings));
+
+  // ============================================================
+  //  INPUT GUARDS
+  // ============================================================
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 350) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // ============================================================
+  //  PWA
+  // ============================================================
+  let deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstall = e;
+    if (el.installPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+      el.installPrompt.classList.add('active');
+    }
+  });
+  el.installBtn?.addEventListener('click', async () => {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    try { await deferredInstall.userChoice; } catch {}
+    deferredInstall = null;
+    el.installPrompt.classList.remove('active');
+  });
+  el.installDismiss?.addEventListener('click', () => el.installPrompt.classList.remove('active'));
+  window.addEventListener('appinstalled', () => el.installPrompt?.classList.remove('active'));
+
+  /* Service worker policy:
+     - On localhost: SKIP registration (so dev iteration isn't blocked by SW caching).
+       Also actively unregister any leftover SW from previous sessions.
+       Override by adding ?sw=1 to the URL to test PWA behavior locally.
+     - Everywhere else: register normally.
+     - Listen for NEW_VERSION messages from an activating SW and soft-reload once,
+       so users don't have to manually clear the SW after each deploy. */
+  const _isLocalHost = /^(localhost|127\.|\[?::1\]?)$/.test(location.hostname) || location.hostname === '';
+  const _forceSW = new URLSearchParams(location.search).has('sw');
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    if (_isLocalHost && !_forceSW) {
+      navigator.serviceWorker.getRegistrations()
+        .then((rs) => Promise.all(rs.map((r) => r.unregister())))
+        .catch(() => {});
+    } else {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    let reloadingForUpdate = false;
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data?.type === 'NEW_VERSION' && !reloadingForUpdate) {
+        try {
+          if (sessionStorage.getItem('ln.swReloaded') === e.data.version) return;
+          sessionStorage.setItem('ln.swReloaded', e.data.version);
+        } catch {}
+        reloadingForUpdate = true;
+        location.reload();
+      }
+    });
+  }
+
+  // ============================================================
+  //  INIT
+  // ============================================================
+  applyTheme();
+  refreshHeader();
+  showScreen(state.profiles.length === 0 ? 'welcome' : 'home');
+  refreshRecordedKeys(); // load IDB key index so speech can fast-path
+
+  if ('speechSynthesis' in window) {
+    let tries = 0;
+    const t = setInterval(() => {
+      VoiceEngine.refresh();
+      if (VoiceEngine.voices.length || tries++ > 20) clearInterval(t);
+    }, 250);
+  }
+})();

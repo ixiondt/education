@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generate PNG icons</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; line-height: 1.5; color: #222; }
+    h1 { margin-top: 0; }
+    button { padding: 10px 16px; font-size: 16px; border-radius: 8px; border: 1px solid #888; cursor: pointer; background: #fff; }
+    button:hover { background: #f0f0f0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+    canvas { border: 1px solid #ddd; image-rendering: pixelated; }
+    .preview { display: inline-block; margin: 8px; text-align: center; font-size: 12px; color: #666; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Generate PNG icons</h1>
+  <p>
+    Android &amp; Chrome PWAs work fine with the SVG icons that ship in <code>../icons/</code>.
+    iOS Safari prefers PNG for the home-screen icon. Click the button below to render the SVG
+    at the sizes iOS &amp; Android Play Store expect, then save each PNG into the
+    <code>icons/</code> folder next to <code>index.html</code>.
+  </p>
+  <p>
+    The manifest already references these filenames:
+    <code>icons/icon-192.png</code>, <code>icons/icon-512.png</code>,
+    <code>icons/icon-maskable-512.png</code>, and (for iOS) <code>icons/apple-touch-icon.png</code>.
+  </p>
+
+  <div class="row">
+    <button id="generate">Generate &amp; download PNGs</button>
+  </div>
+
+  <div id="preview"></div>
+
+  <script>
+    const ICONS = [
+      { src: '../icons/icon.svg',          size: 192, name: 'icon-192.png' },
+      { src: '../icons/icon.svg',          size: 512, name: 'icon-512.png' },
+      { src: '../icons/icon.svg',          size: 180, name: 'apple-touch-icon.png' },
+      { src: '../icons/icon-maskable.svg', size: 512, name: 'icon-maskable-512.png' }
+    ];
+
+    function rasterize({ src, size, name }) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, size, size);
+
+          // Preview
+          const wrap = document.createElement('div');
+          wrap.className = 'preview';
+          const previewCanvas = document.createElement('canvas');
+          previewCanvas.width = 96; previewCanvas.height = 96;
+          previewCanvas.getContext('2d').drawImage(canvas, 0, 0, 96, 96);
+          wrap.appendChild(previewCanvas);
+          const label = document.createElement('div');
+          label.textContent = `${name} (${size}×${size})`;
+          wrap.appendChild(label);
+          document.getElementById('preview').appendChild(wrap);
+
+          // Trigger download
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            resolve();
+          }, 'image/png');
+        };
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    document.getElementById('generate').addEventListener('click', async () => {
+      document.getElementById('preview').innerHTML = '';
+      for (const cfg of ICONS) {
+        // Sequential to keep download dialog manageable
+        try { await rasterize(cfg); } catch (e) { console.error(e); }
+        await new Promise(r => setTimeout(r, 200));
+      }
+      alert('Done. Save each PNG into the icons/ folder next to index.html.');
+    });
+  </script>
+</body>
+</html>

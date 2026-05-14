@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#F5EFE4" />
+  <meta name="description" content="Calm letter and number game for ages 3–5: per-child profiles, age-aware curriculum, recognize, hear, count, and trace." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Letters" />
+  <title>Letters &amp; Numbers</title>
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <button class="corner-btn home" id="homeBtn" aria-label="Hold to go home" style="display:none">
+      <svg class="hold-progress" viewBox="0 0 60 60" aria-hidden="true">
+        <circle cx="30" cy="30" r="26" />
+      </svg>
+      <span class="corner-btn-icon">🏠</span>
+    </button>
+    <button class="corner-btn settings" id="settingsBtn" aria-label="Settings">⚙️</button>
+
+    <!-- ============ WELCOME ============ -->
+    <section class="screen" id="screen-welcome">
+      <h1 class="home-title">Welcome!</h1>
+      <p style="text-align:center; color:var(--text-soft); max-width:480px;">
+        Let's set up a profile so the game can pick the right activities for each child.
+      </p>
+
+      <div class="welcome-form">
+        <div class="setting-row">
+          <label for="welcome-name">Child's name</label>
+          <input type="text" id="welcome-name" placeholder="e.g. Aiden" maxlength="30" autocomplete="off" autocapitalize="words" />
+        </div>
+
+        <div class="setting-row">
+          <label>How old are they?</label>
+          <div class="age-buttons" id="welcome-age">
+            <button data-months="30">2</button>
+            <button data-months="42">3</button>
+            <button data-months="54" aria-pressed="true">4</button>
+            <button data-months="66">5</button>
+            <button data-months="78">6+</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-large" id="welcome-submit">Start playing</button>
+        <p class="welcome-note">Profiles, settings, and progress all stay on this device. You can add more children later.</p>
+      </div>
+    </section>
+
+    <!-- ============ HOME ============ -->
+    <section class="screen" id="screen-home">
+      <h1 class="home-title" id="home-title">What would you like to play?</h1>
+      <div class="mode-grid">
+        <button class="mode-card find-l"  data-mode="find-letters">
+          <div class="icon">Aa</div>
+          <div class="label">Find Letters</div>
+        </button>
+        <button class="mode-card find-n"  data-mode="find-numbers">
+          <div class="icon">1 2</div>
+          <div class="label">Find Numbers</div>
+        </button>
+        <button class="mode-card sounds"  data-mode="sounds">
+          <div class="icon">🐝</div>
+          <div class="label">Sounds</div>
+        </button>
+        <button class="mode-card trace-l" data-mode="trace-letters">
+          <div class="icon">✍️</div>
+          <div class="label">Trace Letters</div>
+        </button>
+        <button class="mode-card trace-n" data-mode="trace-numbers">
+          <div class="icon">✏️</div>
+          <div class="label">Trace Numbers</div>
+        </button>
+        <button class="mode-card count"   data-mode="count">
+          <div class="icon">🍎</div>
+          <div class="label">Count</div>
+        </button>
+      </div>
+
+      <h2 class="mode-section-title">Listening games</h2>
+      <p class="mode-section-sub">Phonological awareness — the bridge from letters to reading.</p>
+      <div class="mode-grid">
+        <button class="mode-card phon first-sound" data-mode="first-sound">
+          <div class="icon">👂</div>
+          <div class="label">First sound</div>
+        </button>
+        <button class="mode-card phon rhyme" data-mode="rhyme">
+          <div class="icon">🎵</div>
+          <div class="label">Rhyme</div>
+        </button>
+        <button class="mode-card phon blend" data-mode="blend">
+          <div class="icon">🧩</div>
+          <div class="label">Blend</div>
+        </button>
+      </div>
+
+      <button class="freeplay-cta" data-mode="play">
+        <span class="freeplay-icon">🎨</span>
+        <span class="freeplay-text">
+          <span class="freeplay-title">Free play</span>
+          <span class="freeplay-sub">Tap and explore — no right or wrong</span>
+        </span>
+      </button>
+
+      <button class="profile-chip" id="profile-chip" aria-label="Switch profile">
+        <span class="profile-icon">👤</span>
+        <span class="profile-chip-text">
+          <span id="profile-chip-name">Friend</span>
+          <span id="profile-chip-level" class="profile-chip-level">Exploring</span>
+        </span>
+      </button>
+    </section>
+
+    <!-- ============ FIND ============ -->
+    <section class="screen" id="screen-find">
+      <div class="play-prompt">
+        <span id="find-prompt-label">Find the letter</span>
+        <span class="target" id="find-target">A</span>
+      </div>
+      <div class="choices" id="find-choices"></div>
+    </section>
+
+    <!-- ============ TRACE ============ -->
+    <section class="screen" id="screen-trace">
+      <div class="play-prompt"><span id="trace-label">Trace A</span></div>
+      <div class="trace-wrap">
+        <svg id="trace-svg" class="trace-svg" viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="trace-dots" class="trace-stroke-dots"></div>
+      </div>
+    </section>
+
+    <!-- ============ COUNT ============ -->
+    <section class="screen" id="screen-count">
+      <div class="play-prompt"><span>How many?</span></div>
+      <div class="count-stage" id="count-stage"></div>
+      <div class="choices" id="count-choices"></div>
+    </section>
+
+    <!-- ============ FIRST SOUND (phonemic) ============ -->
+    <section class="screen" id="screen-first-sound">
+      <div class="play-prompt">
+        <span class="pic" id="first-sound-emoji">🐱</span>
+        <span class="word" id="first-sound-word">cat</span>
+      </div>
+      <div class="play-prompt"><span>What sound does it start with?</span></div>
+      <div class="choices" id="first-sound-choices"></div>
+      <button class="btn btn-secondary btn-replay" id="first-sound-replay">🔊 Hear it again</button>
+    </section>
+
+    <!-- ============ RHYME ============ -->
+    <section class="screen" id="screen-rhyme">
+      <div class="play-prompt">
+        <span class="pic" id="rhyme-target-emoji">🐱</span>
+        <span class="word" id="rhyme-target-word">cat</span>
+      </div>
+      <div class="play-prompt"><span>Which one rhymes?</span></div>
+      <div class="picture-choices" id="rhyme-choices"></div>
+    </section>
+
+    <!-- ============ BLEND ============ -->
+    <section class="screen" id="screen-blend">
+      <div class="play-prompt"><span>Listen and find the word</span></div>
+      <div class="blend-phonemes" id="blend-phonemes"></div>
+      <div class="picture-choices" id="blend-choices"></div>
+      <button class="btn btn-secondary btn-replay" id="blend-replay">🔊 Hear it again</button>
+    </section>
+
+    <!-- ============ FREE PLAY ============ -->
+    <section class="screen" id="screen-play">
+      <h2 class="play-title">Tap to explore</h2>
+      <div class="play-grid" id="play-grid"></div>
+      <button class="btn btn-secondary" id="play-shuffle">🔄 New things</button>
+    </section>
+
+    <!-- ============ SOUNDS ============ -->
+    <section class="screen" id="screen-sounds">
+      <div class="play-prompt">
+        <span class="pic" id="sounds-pic">🍎</span>
+        <span class="word" id="sounds-word">Apple</span>
+      </div>
+      <div class="play-prompt"><span>Which letter?</span></div>
+      <div class="choices" id="sounds-choices"></div>
+    </section>
+  </div>
+
+  <div class="sparkles" id="sparkles" aria-hidden="true"></div>
+
+  <!-- ============ PARENT GATE ============ -->
+  <div class="modal" id="modal-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+    <div class="modal-card">
+      <h2 id="gate-title">Just for grown-ups</h2>
+      <p class="gate-prompt">Tap the number <strong id="gate-target">7</strong></p>
+      <div class="gate-numbers" id="gate-numbers"></div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="modal" id="modal-settings" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-card">
+      <h2 id="settings-title">Settings</h2>
+
+      <div class="setting-row">
+        <label>Letter speech</label>
+        <div class="segmented" data-setting="speech">
+          <button data-value="name">Names</button>
+          <button data-value="sound">Sounds</button>
+          <button data-value="both">Both</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>Letter case</label>
+        <div class="segmented" data-setting="case">
+          <button data-value="upper">ABC</button>
+          <button data-value="lower">abc</button>
+          <button data-value="both">Mix</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>Theme</label>
+        <div class="segmented" data-setting="theme">
+          <button data-value="calm">Calm</button>
+          <button data-value="bright">Bright</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>Number of choices</label>
+        <div class="segmented" data-setting="choices">
+          <button data-value="2">2</button>
+          <button data-value="3">3</button>
+          <button data-value="4">4</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>Sensory mode</label>
+        <div class="segmented" data-setting="sensoryMode">
+          <button data-value="normal">Normal</button>
+          <button data-value="low">Calm</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>Skill order</label>
+        <div class="segmented" data-setting="prereqsMode">
+          <button data-value="strict">Step by step</button>
+          <button data-value="relaxed">All at once</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label>Who picks the activity</label>
+        <div class="segmented" data-setting="agencyMode">
+          <button data-value="auto">Auto (curriculum picks)</button>
+          <button data-value="child">Child picks</button>
+        </div>
+      </div>
+
+      <div class="setting-row voice-row">
+        <label>Voice</label>
+        <select id="voice-select" aria-label="Voice"></select>
+      </div>
+
+      <div class="setting-row">
+        <label>Custom audio files</label>
+        <div class="segmented" data-setting="customAudio">
+          <button data-value="auto">Use if present</button>
+          <button data-value="off">Off</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="profile-switch-btn">Switch child</button>
+        <button class="btn btn-secondary" id="progress-btn">View progress</button>
+      </div>
+      <button class="btn btn-secondary" id="record-btn">🎙 Record your voice</button>
+      <button class="btn btn-secondary" id="about-btn">📖 About our approach</button>
+      <button class="btn btn-primary" id="settingsClose">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ AGENCY PICKER ============ -->
+  <div class="modal" id="modal-agency" role="dialog" aria-modal="true" aria-labelledby="agency-title">
+    <div class="modal-card">
+      <h2 id="agency-title">What do you want to play with?</h2>
+      <p style="font-size:14px; color:var(--text-soft);">Pick one — there's no wrong answer.</p>
+      <div class="agency-choices" id="agency-choices"></div>
+      <button class="btn btn-secondary" id="agency-surprise">🎲 Surprise me</button>
+    </div>
+  </div>
+
+  <!-- ============ ABOUT / PEDAGOGY ============ -->
+  <div class="modal" id="modal-about" role="dialog" aria-modal="true" aria-labelledby="about-title">
+    <div class="modal-card modal-card-wide about-card">
+      <h2 id="about-title">Our approach</h2>
+
+      <section class="about-section">
+        <p class="about-lead">
+          This is an early-childhood educational platform grounded in the
+          <strong>Norwegian Rammeplan</strong> — the national framework that
+          governs pre-school education for children aged 1&ndash;6 in Norway.
+          It is not a "drill the alphabet" app dressed up as a game; it is a
+          deliberate, research-grounded learning tool that happens to look
+          like one.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h3>Four pillars</h3>
+        <ul class="about-pillars">
+          <li><strong>Omsorg (Care)</strong> — emotional safety comes before any learning outcome.</li>
+          <li><strong>Lek (Play)</strong> — play is <em>the</em> primary mode of learning, not a reward for finishing work.</li>
+          <li><strong>Læring (Learning)</strong> — emerges through play and care, never drilled.</li>
+          <li><strong>Danning (Cultivation)</strong> — the holistic formation of a curious, agentic person.</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h3>What we refuse to do</h3>
+        <ul class="about-refuses">
+          <li>No standardized testing for under-6s</li>
+          <li>No leaderboards, badges, or "level up" effects</li>
+          <li>No punishing streaks ("you broke your streak!")</li>
+          <li>No comparison to other children or developmental timelines</li>
+          <li>No formal reading instruction (a Grade 1 task)</li>
+          <li>No performance anxiety as a teaching tool</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h3>The 7 Rammeplan learning areas</h3>
+        <p style="font-size:14px; color:var(--text-soft);">A digital tool can address only some of these. Your child still needs nature, embodied play, peers, food, art, and stories — none of which this screen can give them.</p>
+        <ul class="about-areas">
+          <li>✅ Communication, language & text — letters, sounds, words, tracing</li>
+          <li>✅ Quantities, spaces & shapes — numbers, counting, number tracing</li>
+          <li>⚠️ Art, culture & creativity — indirectly, through Free play</li>
+          <li>⚠️ Nature, environment & technology — animal/plant picture words</li>
+          <li>⚠️ Local community & society — home/everyday picture words</li>
+          <li>❌ Body, movement, food & health — outside digital scope</li>
+          <li>❌ Ethics, religion & philosophy — outside digital scope</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h3>Why our design feels different</h3>
+        <ul class="about-design">
+          <li>Wrong taps wiggle gently; no buzzer, no red X</li>
+          <li>Hint phrasing rotates so it never feels parrot-like</li>
+          <li>"Streak" counts <strong>play days</strong>, not days of correct answers</li>
+          <li>Mastery is hidden from the child; only parents see it</li>
+          <li>Achievement language is "Confident / Exploring / Suggested at..." — never "failed" or "behind"</li>
+          <li>"Child picks" mode lets the kid choose their target (Rammeplan §5)</li>
+          <li>Interest tracking — what your child gravitates toward shapes what appears next</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h3>Standards alignment</h3>
+        <p style="font-size:14px; color:var(--text-soft);">Every activity simultaneously satisfies codes from four international curricula:</p>
+        <ul class="about-standards">
+          <li><strong>Norwegian Rammeplan</strong> (Udir Framework Plan)</li>
+          <li><strong>EU Quality Framework for ECEC</strong> (Council of EU, 2019)</li>
+          <li><strong>CCSS-K</strong> (US Common Core, Kindergarten)</li>
+          <li><strong>NAEYC ELOF</strong> (US National Association for the Education of Young Children)</li>
+        </ul>
+        <p style="font-size:13px; color:var(--text-soft);">See Progress → By standard for the per-framework dashboard.</p>
+      </section>
+
+      <section class="about-section about-ack">
+        <h3>This app is not</h3>
+        <ul>
+          <li>A replacement for kindergarten</li>
+          <li>A school-readiness drill</li>
+          <li>A benchmarking tool to compare your child to others</li>
+          <li>A literacy program</li>
+          <li>A defense of unlimited screen time</li>
+        </ul>
+        <p style="font-size:13px; color:var(--text-soft); margin-top:8px;">
+          For the full philosophy and academic references, see the <code>PEDAGOGY.md</code> document that ships with the app.
+        </p>
+      </section>
+
+      <button class="btn btn-primary" id="about-close">Close</button>
+    </div>
+  </div>
+
+  <!-- ============ RECORD VOICE ============ -->
+  <div class="modal" id="modal-record" role="dialog" aria-modal="true" aria-labelledby="record-title">
+    <div class="modal-card modal-card-wide">
+      <h2 id="record-title">Record your voice</h2>
+      <p style="color: var(--text-soft); font-size: 14px;">
+        Tap <strong>●</strong>, say the letter / sound / word out loud, then tap <strong>⏹</strong>. The game will play your recording instead of the synthetic voice. Recordings stay on this device.
+      </p>
+      <p class="record-summary" id="record-summary"></p>
+
+      <div class="segmented record-tabs">
+        <button data-record-tab="letter-name"  aria-pressed="true">Letter names</button>
+        <button data-record-tab="letter-sound" aria-pressed="false">Sounds</button>
+        <button data-record-tab="letter-word"  aria-pressed="false">Words</button>
+        <button data-record-tab="number"       aria-pressed="false">Numbers</button>
+      </div>
+
+      <div class="record-list" id="record-list"></div>
+
+      <button class="btn btn-primary" id="record-close">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ PROGRESS ============ -->
+  <div class="modal" id="modal-progress" role="dialog" aria-modal="true" aria-labelledby="progress-title">
+    <div class="modal-card modal-card-wide">
+      <h2 id="progress-title">Progress</h2>
+
+      <div class="progress-summary" id="progress-summary"></div>
+      <div class="progress-streak" id="progress-streak" style="display:none"></div>
+
+      <div class="segmented progress-tabs">
+        <button data-progress-tab="target"   aria-pressed="true">By letter / number</button>
+        <button data-progress-tab="standard" aria-pressed="false">By standard</button>
+      </div>
+
+      <div id="progress-view-target">
+        <p style="color: var(--text-soft); font-size: 14px; margin-bottom: 4px;">
+          Stars show how much each one has been explored: ★ tried it, ★★ growing comfortable, ★★★ confident. Tap any cell for detail.
+        </p>
+        <div class="setting-row">
+          <label>Letters explored</label>
+          <div class="progress-grid" id="progress-letters"></div>
+        </div>
+        <div class="setting-row">
+          <label>Numbers explored</label>
+          <div class="progress-grid" id="progress-numbers"></div>
+        </div>
+      </div>
+
+      <div id="progress-view-standard" style="display:none">
+        <p style="color: var(--text-soft); font-size: 14px; margin-bottom: 4px;">
+          Skills grouped by the educational standard they teach. Helpful when comparing notes with a preschool teacher.
+        </p>
+        <div class="standards-list" id="progress-standards-list"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="export-progress-btn">Export JSON</button>
+        <button class="btn btn-secondary" id="print-progress-btn">Print / Save PDF</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger"  id="reset-progress-btn">Reset progress</button>
+        <button class="btn btn-primary" id="progressClose">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SKILL DETAIL ============ -->
+  <div class="modal" id="modal-skill" role="dialog" aria-modal="true" aria-labelledby="skill-title">
+    <div class="modal-card">
+      <h2 id="skill-title">Skill detail</h2>
+      <div id="skill-details"></div>
+      <button class="btn btn-primary" id="skill-close">Back to progress</button>
+    </div>
+  </div>
+
+  <!-- ============ BREAK SUGGESTION ============ -->
+  <div class="modal" id="modal-break" role="dialog" aria-modal="true" aria-labelledby="break-title">
+    <div class="modal-card">
+      <h2 id="break-title">Great work! 🌟</h2>
+      <p style="font-size: 16px; color: var(--text);">
+        You've been playing for <strong id="break-minutes">10</strong> minutes.
+        That's enough for one session — your brain works better with breaks.
+      </p>
+      <p id="break-stats" style="font-size: 14px; color: var(--text-soft);"></p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="break-continue">Keep playing</button>
+        <button class="btn btn-primary"   id="break-done">All done for now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PROFILE PICKER ============ -->
+  <div class="modal" id="modal-profile" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+    <div class="modal-card">
+      <h2 id="profile-title">Who's playing?</h2>
+      <div class="profile-list" id="profile-list"></div>
+      <button class="btn btn-secondary" id="profile-add">+ Add a child</button>
+      <button class="btn btn-primary" id="profile-close">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ PROFILE EDIT ============ -->
+  <div class="modal" id="modal-profile-edit" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2 id="profile-edit-title">Add a child</h2>
+
+      <div class="setting-row">
+        <label for="profile-edit-name">Name</label>
+        <input type="text" id="profile-edit-name" placeholder="Their name" maxlength="30" autocomplete="off" autocapitalize="words" />
+      </div>
+
+      <div class="setting-row">
+        <label>Age</label>
+        <div class="age-buttons" id="profile-edit-age">
+          <button data-months="30">2</button>
+          <button data-months="42">3</button>
+          <button data-months="54" aria-pressed="true">4</button>
+          <button data-months="66">5</button>
+          <button data-months="78">6+</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="profile-edit-cancel">Cancel</button>
+        <button class="btn btn-primary"   id="profile-edit-save">Save</button>
+      </div>
+      <button class="btn btn-danger" id="profile-edit-delete" style="display:none">Delete profile</button>
+    </div>
+  </div>
+
+  <!-- ============ INSTALL PROMPT ============ -->
+  <div class="install-prompt" id="install-prompt">
+    <span>Install on this device?</span>
+    <button id="install-btn">Install</button>
+    <button id="install-dismiss" aria-label="Dismiss" style="opacity:.6">✕</button>
+  </div>
+
+  <script src="letters.js"></script>
+  <script src="curriculum.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

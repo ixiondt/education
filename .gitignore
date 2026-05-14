@@ -1,0 +1,31 @@
+# Dependencies (no required deps; npm scripts use npx)
+node_modules/
+
+# Build artifacts (none today, reserved for future build step)
+dist/
+build/
+
+# Local dev / OS junk
+.DS_Store
+Thumbs.db
+*.log
+
+# Editor state
+.vscode/
+.idea/
+
+# Claude Code state (project memory lives under ~/.claude, never in repo)
+.claude/
+
+# Parent-recorded audio drop-ins (device-local, never committed)
+audio/
+
+# Generated icon PNGs (regenerate via tools/make-icons.html when needed)
+icons/icon-192.png
+icons/icon-512.png
+icons/icon-maskable-512.png
+icons/apple-touch-icon.png
+
+# Local secrets / env (none today, reserved for future backend)
+.env
+.env.local
