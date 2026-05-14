@@ -73,54 +73,50 @@ body {
 }
 
 /* ---------- LAYOUT ---------- */
+/* #app is the single scroll container. Drop flex centering here —
+   it caused vertical clipping when content (the now-tall home screen)
+   exceeded viewport height. Each .screen handles its own layout. */
 #app {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  display: flex;
-  /* `safe center` keeps content centered when it fits, but switches to
-     flex-start when the content is taller than the viewport — so the
-     home screen (now ~5 sections of mode cards + free play + chip)
-     stays accessible by scrolling instead of being clipped at the top.
-     `align-items` keyword `safe` is supported in all modern browsers. */
-  align-items: safe center;
-  justify-content: center;
-  padding: 20px;
+  padding: 16px 20px;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-}
-/* Play screens (Find/Trace/Count/Sounds/Phon/Whole-child) lock their height
-   so a kid can't accidentally scroll past the interactive area mid-game.
-   Home and Welcome remain scrollable. */
-#app:has(.screen.active#screen-find),
-#app:has(.screen.active#screen-trace),
-#app:has(.screen.active#screen-count),
-#app:has(.screen.active#screen-sounds),
-#app:has(.screen.active#screen-first-sound),
-#app:has(.screen.active#screen-rhyme),
-#app:has(.screen.active#screen-blend),
-#app:has(.screen.active#screen-feelings),
-#app:has(.screen.active#screen-body),
-#app:has(.screen.active#screen-shapes),
-#app:has(.screen.active#screen-colors),
-#app:has(.screen.active#screen-patterns),
-#app:has(.screen.active#screen-animals),
-#app:has(.screen.active#screen-helpers),
-#app:has(.screen.active#screen-play) {
-  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .screen {
   display: none;
   width: 100%;
   max-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.screen.active {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
+  /* Default: fill the viewport and vertically center children. This
+     keeps short play screens (Find / Trace / Count / etc.) looking
+     balanced rather than glued to the top. */
+  min-height: calc(100dvh - 32px);
+  justify-content: center;
+  padding: 8px 0 24px;
 }
-.screen.active { display: flex; }
+
+/* Home + Welcome are tall and should flow from the top with normal
+   document scroll. Override the play-screen centering. */
+#screen-home.active,
+#screen-welcome.active {
+  min-height: 0;
+  justify-content: flex-start;
+  padding-top: 56px;          /* leaves room for corner buttons */
+  padding-bottom: 80px;       /* leaves room for install prompt */
+}
 
 /* ---------- CORNER BUTTONS ---------- */
 .corner-btn {

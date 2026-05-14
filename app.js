@@ -388,6 +388,10 @@
 
     speak(parts, opts = {}) {
       if (!('speechSynthesis' in window)) return;
+      // Stop any in-flight MP3 playback before starting TTS — this
+      // is half of the multi-voice fix (the other half is audioPlayer
+      // stopping TTS when starting MP3).
+      if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
       speechSynthesis.cancel();
       const list = Array.isArray(parts) ? parts : [parts];
       list.filter((p) => p != null && p !== '').forEach((p) => {
@@ -400,7 +404,10 @@
       });
     },
 
-    stop() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+    stop() {
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      if (typeof audioPlayer !== 'undefined') audioPlayer.stop();
+    }
   };
 
   if ('speechSynthesis' in window) {
@@ -417,6 +424,79 @@
     speechPrimed = true;
   }
   document.addEventListener('pointerdown', primeSpeech, { once: true });
+
+  // ============================================================
+  //  AUDIO PLAYER  (single shared controller — prevents overlap)
+  //  Before this existed, a round-start MP3 could still be playing
+  //  when the kid tapped a correct answer; the answer's TTS would
+  //  speak while the MP3 was mid-letter → two voices overlapping.
+  //  Now every audio path (MP3, IDB recording, synth TTS) routes
+  //  through stops here, so any new utterance interrupts the prior.
+  // ============================================================
+  const audioPlayer = {
+    current: null,         // active HTMLAudioElement, or null
+    pendingResolve: null,  // resolve fn for the in-flight play() promise
+
+    /* Stop any in-flight audio file playback. Marks it as aborted so
+       the path isn't falsely flagged as missing. */
+    stop() {
+      const a = this.current;
+      if (!a) return;
+      a._aborted = true;
+      this.current = null;
+      try { a.pause(); a.removeAttribute('src'); a.load(); } catch {}
+      if (typeof this.pendingResolve === 'function') {
+        const r = this.pendingResolve;
+        this.pendingResolve = null;
+        r(false);
+      }
+    },
+
+    /* Play an audio resource (MP3 URL, or blob: URL from IDB recording).
+       Stops any previous audio first. Resolves true on natural end,
+       false on error / abort / timeout. */
+    play(url, opts = {}) {
+      this.stop();
+      if (typeof VoiceEngine !== 'undefined') VoiceEngine.stop();
+
+      return new Promise((resolve) => {
+        const a = new Audio();
+        this.current = a;
+        this.pendingResolve = resolve;
+        let settled = false;
+
+        const finish = (result, kind = 'normal') => {
+          if (settled) return;
+          settled = true;
+          if (this.current === a) this.current = null;
+          if (this.pendingResolve === resolve) this.pendingResolve = null;
+          if (kind === 'error' && !a._aborted && typeof opts.onError === 'function') opts.onError();
+          if (typeof opts.onCleanup === 'function') opts.onCleanup();
+          resolve(result);
+        };
+
+        a.addEventListener('canplaythrough', () => {
+          if (settled) return;
+          a.play().catch(() => finish(false));
+        }, { once: true });
+        a.addEventListener('ended', () => finish(true), { once: true });
+        a.addEventListener('error', () => finish(false, 'error'), { once: true });
+
+        a.preload = 'auto';
+        a.src = url;
+
+        /* Safety timeout — if a slow / failing fetch never fires
+           canplaythrough, treat as missing after 4 seconds. Longer than
+           the previous 1.5s so we don't false-trigger on cold caches. */
+        setTimeout(() => {
+          if (!settled) {
+            try { a.pause(); } catch {}
+            finish(false);
+          }
+        }, 4000);
+      });
+    }
+  };
 
   // ============================================================
   //  RECORDED AUDIO (IndexedDB — parent records voice in-app)
@@ -494,11 +574,10 @@
     const blob = await getRecording(key);
     if (!blob) return false;
     const url = URL.createObjectURL(blob);
-    const a = new Audio(url);
-    return new Promise((resolve) => {
-      a.addEventListener('ended', () => { URL.revokeObjectURL(url); resolve(true); }, { once: true });
-      a.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(false); }, { once: true });
-      a.play().catch(() => { URL.revokeObjectURL(url); resolve(false); });
+    // Route through the shared audioPlayer so any in-flight TTS or
+    // MP3 is interrupted first — prevents the multi-voice bug.
+    return audioPlayer.play(url, {
+      onCleanup: () => URL.revokeObjectURL(url)
     });
   }
 
@@ -515,28 +594,9 @@
   function tryAudio(path) {
     if (profileSettings().customAudio === 'off') return Promise.resolve(false);
     if (audioMissing.has(path)) return Promise.resolve(false);
-    return new Promise((resolve) => {
-      const a = new Audio();
-      let settled = false;
-      const onOk = () => {
-        if (settled) return;
-        settled = true;
-        a.play().then(() => {
-          a.addEventListener('ended', () => resolve(true), { once: true });
-          a.addEventListener('error', () => resolve(false), { once: true });
-        }).catch(() => resolve(false));
-      };
-      const onErr = () => {
-        if (settled) return;
-        settled = true;
-        audioMissing.add(path);
-        resolve(false);
-      };
-      a.addEventListener('canplaythrough', onOk, { once: true });
-      a.addEventListener('error', onErr, { once: true });
-      a.preload = 'auto';
-      a.src = path;
-      setTimeout(() => { if (!settled) { settled = true; resolve(false); } }, 1500);
+    // Route through the shared audioPlayer to prevent multi-voice overlap
+    return audioPlayer.play(path, {
+      onError: () => audioMissing.add(path)
     });
   }
 
