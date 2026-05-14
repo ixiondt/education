@@ -1576,7 +1576,6 @@
     if (correct) {
       state.advancing = true;
       btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! ${word} rhymes!`]);
       spawnSparkles(btn);
       advanceAfterSpeech(startRhymeRound);
     } else {
@@ -1584,9 +1583,7 @@
       btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
       const cueWord = el.rhymeTargetWord.textContent;
-      scheduleHint('soundsHint', {}, () => {
-        VoiceEngine.speak([`Listen for the rhyme. ${cueWord}.`]);
-      });
+      scheduleHint(null, null, () => sayConcept('voc', cueWord, cueWord));
     }
   }
 
@@ -1654,7 +1651,6 @@
       state.advancing = true;
       btn.classList.add('correct');
       /* The big reveal: phonemes blended into the whole word */
-      VoiceEngine.speak([`Yes! ${state.blendWord}!`]);
       spawnSparkles(btn);
       advanceAfterSpeech(startBlendRound);
     } else {
@@ -1731,12 +1727,11 @@
     const target = FEELINGS.find((f) => f.key === state.target);
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! That's ${target.label}.`]);
       spawnSparkles(btn); advanceAfterSpeech(startFeelingsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Find the ${target.label} face.`]));
+      scheduleHint(null, null, () => sayPromptKey(`find-${state.target}`, `Find the ${target.label} face.`));
     }
   }
 
@@ -1772,12 +1767,11 @@
     const target = BODY_PARTS.find((b) => b.key === state.target);
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! That's the ${target.label}.`]);
       spawnSparkles(btn); advanceAfterSpeech(startBodyRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([target.prompt]));
+      scheduleHint(null, null, () => sayPromptKey(`where-is-the-${state.target}`, target.prompt));
     }
   }
 
@@ -1816,12 +1810,11 @@
     const target = SHAPES.find((s) => s.key === state.target);
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! ${target.label}.`]);
       spawnSparkles(btn); advanceAfterSpeech(startShapesRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Find the ${target.label}.`]));
+      scheduleHint(null, null, () => sayPromptKey(`find-the-${state.target}`, `Find the ${target.label}.`));
     }
   }
 
@@ -1857,12 +1850,11 @@
     const target = COLORS.find((c) => c.key === state.target);
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! ${target.label}.`]);
       spawnSparkles(btn); advanceAfterSpeech(startColorsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Find ${target.label}.`]));
+      scheduleHint(null, null, () => sayPromptKey(`find-${state.target}`, `Find ${target.label}.`));
     }
   }
 
@@ -1924,12 +1916,11 @@
     recordAttempt(state.currentSkill.id, correct, roundDuration());
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak(['Yes! You got the pattern.']);
       spawnSparkles(btn); advanceAfterSpeech(startPatternsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak(['Look at the pattern. What comes next?']));
+      scheduleHint(null, null, () => sayPromptKey('whats-next', 'What comes next?'));
     }
   }
 
@@ -1976,13 +1967,15 @@
     recordAttempt(state.currentSkill.id, correct, roundDuration());
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! It lives in the ${name}.`]);
       spawnSparkles(btn); advanceAfterSpeech(startAnimalsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
       const pair = ANIMAL_HABITATS.find((a) => a.key === state.target);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([`Where does the ${pair.animal.name} live?`]));
+      scheduleHint(null, null, async () => {
+        await sayConcept('animals', pair.animal.name, pair.animal.name);
+        sayPromptKey('where-does-it-live', 'Where does it live?');
+      });
     }
   }
 
@@ -2041,13 +2034,21 @@
     recordAttempt(state.currentSkill.id, correct, roundDuration());
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! The ${name} does that.`]);
       spawnSparkles(btn); advanceAfterSpeech(startHelpersRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
       const item = COMMUNITY_HELPERS.find((h) => h.key === state.target);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([item.scenario.q]));
+      scheduleHint(null, null, () => {
+        const phraseKey = ({
+          firefighter:'fire-question', doctor:'sick-question',
+          teacher:'learn-question',    police:'safety-question',
+          chef:'food-question',        farmer:'grow-question',
+          mechanic:'car-question',     mail:'mail-question'
+        })[item.key];
+        if (phraseKey) sayPromptKey(phraseKey, item.scenario.q);
+        else VoiceEngine.speak([item.scenario.q]);
+      });
     }
   }
 
@@ -3288,16 +3289,21 @@
     if (state.mode === 'find-letters') sayLetter(state.target);
     else if (state.mode === 'find-numbers') sayNumber(state.target);
   });
-  el.soundsPic?.addEventListener('click', () => {
+  el.soundsPic?.addEventListener('click', async () => {
     if (state.advancing || !state.target) return;
     clearHintTimer();
-    const info = LETTER_WORDS[state.target];
-    if (info) VoiceEngine.speak([info.word, '.', LETTER_SOUNDS[state.target]]);
+    // MP3 chain — word, then sound
+    await sayWord(state.target);
+    sayLetter(state.target, { mode: 'sound' });
   });
   el.countStage?.addEventListener('click', () => {
     if (state.advancing) return;
     clearHintTimer();
-    VoiceEngine.speak([phrase('countPrompt')]);
+    /* Rotating MP3 prompt (matches startCountRound) */
+    const prompts = ['how-many', 'count-them', 'lets-count', 'how-many-do-you-see'];
+    const fallbacks = ['How many?', 'Count them.', "Let's count.", 'How many do you see?'];
+    const i = Math.floor(Math.random() * prompts.length);
+    sayPromptKey(prompts[i], fallbacks[i]);
   });
 
   // Home button — press-and-hold (500ms) with visible progress ring.
