@@ -1171,6 +1171,7 @@
     skillClose:    $('skill-close'),
 
     progressStreak:        $('progress-streak'),
+    progressRecs:          $('progress-recommendations'),
     progressStandardsList: $('progress-standards-list'),
     progressTabs:          document.querySelectorAll('[data-progress-tab]'),
     progressViewTarget:    $('progress-view-target'),
@@ -3811,11 +3812,57 @@
   function openProgress() {
     renderProgressSummary();
     renderStreak();
+    renderRecommendations();      // v5.10 — adaptive parent panel
     renderProgressCells(el.progressLetters, LETTERS, (sym) => `letter-recognize-${sym.toUpperCase()}`);
     renderProgressCells(el.progressNumbers, NUMBERS, (sym) => `number-recognize-${sym}`);
-    setProgressTab('area');   // v5.2 — Rammeplan area is the default parent view
+    setProgressTab('area');
     el.modalSettings.classList.remove('active');
     el.modalProgress.classList.add('active');
+  }
+
+  /* v5.10 — Parent recommendations panel.
+     Surfaces "ready to advance" and "needs practice" insights based
+     on recent error rates. Empty state is hidden entirely; if there
+     are no patterns yet (fewer than 3 attempts on most skills) the
+     panel doesn't appear, avoiding noise. */
+  function renderRecommendations() {
+    if (!el.progressRecs) return;
+    const profile = activeProfile();
+    if (!profile) { el.progressRecs.style.display = 'none'; return; }
+    const recs = computeRecommendations(profile, 4);
+    if (!recs.stuck.length && !recs.advancing.length) {
+      el.progressRecs.style.display = 'none';
+      return;
+    }
+    el.progressRecs.style.display = '';
+    el.progressRecs.innerHTML = '';
+
+    if (recs.stuck.length) {
+      const card = document.createElement('div');
+      card.className = 'rec-card rec-stuck';
+      const items = recs.stuck.map((r) => {
+        const pct = Math.round(r.errorRate * 100);
+        return `<li><strong>${escapeHtml(r.skill.label)}</strong> <span class="rec-meta">${pct}% off recently</span></li>`;
+      }).join('');
+      card.innerHTML = `
+        <div class="rec-head"><span class="rec-icon">🌱</span><span class="rec-title">Could use more practice</span></div>
+        <p class="rec-intro">These skills have been tricky in the last few rounds. The picker is already showing them more — you can also try them off-screen.</p>
+        <ul class="rec-list">${items}</ul>
+      `;
+      el.progressRecs.appendChild(card);
+    }
+
+    if (recs.advancing.length) {
+      const card = document.createElement('div');
+      card.className = 'rec-card rec-advancing';
+      const items = recs.advancing.map((r) => `<li><strong>${escapeHtml(r.skill.label)}</strong> <span class="rec-meta">confident</span></li>`).join('');
+      card.innerHTML = `
+        <div class="rec-head"><span class="rec-icon">📈</span><span class="rec-title">Ready for more</span></div>
+        <p class="rec-intro">These are settled. The Norwegian way is not to push faster — just notice and celebrate.</p>
+        <ul class="rec-list">${items}</ul>
+      `;
+      el.progressRecs.appendChild(card);
+    }
   }
 
   // ============================================================

@@ -1508,6 +1508,71 @@ body {
 }
 
 /* ============================================================
+   v5.10 — Parent recommendations panel
+   ============================================================ */
+
+.progress-recommendations {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0;
+}
+.rec-card {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-left: 6px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rec-card.rec-stuck     { border-left-color: var(--warning); }
+.rec-card.rec-advancing { border-left-color: var(--success); }
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rec-icon { font-size: 20px; }
+.rec-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rec-intro {
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+.rec-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rec-list li {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.rec-list li:last-child { border-bottom: none; }
+.rec-meta {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+/* ============================================================
    v5.9 — Time of day mode
    ============================================================ */
 .time-scenario {

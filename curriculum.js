@@ -628,17 +628,25 @@ function pickNextSkill(profile, mode, excludeId = null) {
     const successFactor = 1 / Math.sqrt(1 + p.successes);
     const minutesSince = p.lastSeen ? (now - p.lastSeen) / 60000 : 10000;
     const recencyFactor = Math.min(1, Math.max(0.1, minutesSince / 30));
-    // Mastered skills get 0.2x to keep them in light rotation, but FADING skills
-    // (mastered + >30 days untouched) get 1.5x so they resurface for refresh.
     const mastered = isSkillMastered(s, profile);
     const fading   = mastered && isSkillFading(s, profile);
     const masteryFactor = fading ? 1.5 : (mastered ? 0.2 : 1.0);
-    /* Interest-aware picker (Rammeplan: children's interests drive content).
-       Letters/numbers a child gravitates toward — in Free play or any mode —
-       appear more often. Capped via sqrt so heavy interests don't dominate. */
     const interestLevel = interests[String(s.target).toUpperCase()] || 0;
     const interestFactor = 1 + Math.sqrt(interestLevel) / 4;
-    return successFactor * recencyFactor * masteryFactor * interestFactor + 0.01;
+    /* v5.10 — Adaptive: if the child is recently struggling with this
+       skill (≥50% of last 5 attempts wrong), boost the weight so the
+       picker surfaces it more often AND deprioritizes shiny-new
+       skills that would compound their frustration. The base mastery
+       factor already pulls untouched skills up, so we don't double-
+       boost — we only apply when there's meaningful recent data. */
+    const errorRate = recentErrorRate(profile, s.id, 5);
+    let adaptiveBoost = 1.0;
+    if (errorRate !== null) {
+      if (errorRate >= 0.6)      adaptiveBoost = 2.4;  // genuinely stuck
+      else if (errorRate >= 0.4) adaptiveBoost = 1.6;  // somewhat stuck
+      else if (errorRate === 0)  adaptiveBoost = 0.7;  // mastering — drop weight a bit
+    }
+    return successFactor * recencyFactor * masteryFactor * interestFactor * adaptiveBoost + 0.01;
   });
 
   const total = weights.reduce((a, b) => a + b, 0);
@@ -658,6 +666,54 @@ function recordSkillAttempt(profile, skillId, success) {
   s.attempts++;
   if (success) s.successes++;
   s.lastSeen = Date.now();
+}
+
+/* ============================================================
+   v5.10 — Adaptive helpers (recent error rate + recommendations)
+   ============================================================ */
+
+/* Look at the last N events for a given skill and compute its
+   recent error rate. Returns null when not enough data to be
+   meaningful (so the picker doesn't react to a single wrong tap). */
+function recentErrorRate(profile, skillId, windowSize = 5) {
+  const events = (profile?.progress?.events) || [];
+  const recent = [];
+  // Walk backwards through events for efficiency
+  for (let i = events.length - 1; i >= 0 && recent.length < windowSize; i--) {
+    if (events[i].skillId === skillId) recent.push(events[i]);
+  }
+  if (recent.length < 3) return null;
+  const wrong = recent.filter((e) => !e.success).length;
+  return wrong / recent.length;
+}
+
+/* Return a {stuck: [...], advancing: [...]} structure for the
+   parent recommendations panel. Stuck = mastery progress under
+   way but recent error rate high. Advancing = mastered + recent
+   100% — ready for harder content. */
+function computeRecommendations(profile, maxPerBucket = 3) {
+  if (!profile?.progress?.skills) return { stuck: [], advancing: [] };
+  const stuck = [];
+  const advancing = [];
+  for (const skill of SKILLS) {
+    if (!isSkillAvailable(skill, profile, { relaxPrereqs: true })) continue;
+    const p = getSkillProgress(skill, profile);
+    if (p.attempts < 3) continue;
+    const errorRate = recentErrorRate(profile, skill.id, 5);
+    const mastered = isSkillMastered(skill, profile);
+    if (errorRate !== null && errorRate >= 0.5 && !mastered) {
+      stuck.push({ skill, errorRate, lastSeen: p.lastSeen });
+    } else if (mastered && errorRate !== null && errorRate === 0 && p.attempts >= skill.masteryThreshold + 2) {
+      advancing.push({ skill, lastSeen: p.lastSeen });
+    }
+  }
+  // Sort: stuck → most-recently-seen first; advancing → also most-recent
+  stuck.sort((a, b) => b.lastSeen - a.lastSeen);
+  advancing.sort((a, b) => b.lastSeen - a.lastSeen);
+  return {
+    stuck:     stuck.slice(0, maxPerBucket),
+    advancing: advancing.slice(0, maxPerBucket)
+  };
 }
 
 function computeProfileStats(profile) {
