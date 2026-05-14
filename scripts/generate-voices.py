@@ -232,6 +232,9 @@ PHRASES = {
     "mail-question":    "Who brings the mail?",
     "pick-what":        "Pick what you want to play with.",
     "surprise":         "Surprise me!",
+    "plus":             "plus",
+    "minus":            "minus",
+    "equals":           "equals",
 }
 
 

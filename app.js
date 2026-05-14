@@ -953,7 +953,10 @@
       sessionComplete: $('screen-session-complete'),
       // v5.2
       sightWords:  $('screen-sight-words'),
-      calmCorner:  $('screen-calm-corner')
+      calmCorner:  $('screen-calm-corner'),
+      // v5.3
+      addition:    $('screen-addition'),
+      subtraction: $('screen-subtraction')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1045,6 +1048,21 @@
     sightWordsPrompt:   $('sight-words-prompt'),
     sightWordsChoices:  $('sight-words-choices'),
     sightWordsReplay:   $('sight-words-replay'),
+
+    // v5.3 — arithmetic
+    addA:      $('add-a'),
+    addB:      $('add-b'),
+    addObjsA:  $('add-objs-a'),
+    addObjsB:  $('add-objs-b'),
+    addChoices:$('add-choices'),
+    addReplay: $('add-replay'),
+
+    subA:      $('sub-a'),
+    subB:      $('sub-b'),
+    subObjsA:  $('sub-objs-a'),
+    subObjsRemoved: $('sub-objs-removed'),
+    subChoices:$('sub-choices'),
+    subReplay: $('sub-replay'),
 
     calmCornerBtn:     $('calm-corner-btn'),
     calmStop:          $('calm-stop'),
@@ -1372,6 +1390,9 @@
         case 'helpers':       showScreen('helpers');  startHelpersRound();  break;
         // v5.2
         case 'sight-words':   showScreen('sightWords'); startSightWordsRound(); break;
+        // v5.3 — arithmetic
+        case 'addition':      showScreen('addition');    startAdditionRound();    break;
+        case 'subtraction':   showScreen('subtraction'); startSubtractionRound(); break;
       }
     };
 
@@ -2532,6 +2553,178 @@
     if (state.advancing || !state.target) return;
     clearHintTimer();
     saySightWord(state.target);
+  });
+
+  // ============================================================
+  //  v5.3 — SIMPLE ARITHMETIC (Addition + Subtraction)
+  //  Object-supported equations: shows the operands as visual
+  //  counters (apples, etc.) so the child can count to verify.
+  //  Skill is per-sum / per-difference (not per-fact) so a kid
+  //  who's confident with "things adding to 5" gets credit across
+  //  every equation that sums to 5.
+  // ============================================================
+
+  const _mathState = { a: 0, b: 0, target: 0, op: '+' };
+
+  function renderCounters(container, count, emoji) {
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('span');
+      s.className = 'math-counter';
+      s.textContent = emoji;
+      s.style.animationDelay = (i * 60) + 'ms';
+      container.appendChild(s);
+    }
+  }
+
+  function pickMathDistractors(target, count, maxVal) {
+    /* Pick numerically-near distractors. ±1, ±2 if in range. */
+    const t = parseInt(target, 10);
+    const pool = [];
+    for (const d of [-2, -1, 1, 2, 3]) {
+      const v = t + d;
+      if (v >= 0 && v <= maxVal) pool.push(String(v));
+    }
+    return shuffle(pool).slice(0, Math.max(1, count - 1));
+  }
+
+  async function speakEquation(a, op, b) {
+    /* Audio chain: number(a) + op-phrase + number(b). MP3 if pack
+       is enabled, TTS fallback otherwise. Visual carries the rest. */
+    await sayNumber(String(a));
+    await sayPromptKey(op === '+' ? 'plus' : 'minus', op === '+' ? 'plus' : 'minus');
+    sayNumber(String(b));
+  }
+
+  /* ─── Addition ─── */
+  function startAdditionRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'addition', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const sum = parseInt(skill.target, 10);
+    // Pick a random (a, b) where 1 ≤ a ≤ sum-1
+    const a = 1 + Math.floor(Math.random() * (sum - 1));
+    const b = sum - a;
+    _mathState.a = a; _mathState.b = b; _mathState.target = sum; _mathState.op = '+';
+
+    if (el.addA) el.addA.textContent = a;
+    if (el.addB) el.addB.textContent = b;
+    const emoji = MATH_COUNTERS[Math.floor(Math.random() * MATH_COUNTERS.length)];
+    renderCounters(el.addObjsA, a, emoji);
+    renderCounters(el.addObjsB, b, emoji);
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const distractors = pickMathDistractors(skill.target, count, 12);
+    const ordered = shuffle([String(sum), ...distractors]);
+
+    el.addChoices.innerHTML = '';
+    ordered.forEach((n) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice math-choice';
+      btn.textContent = n;
+      btn.addEventListener('click', () => onAdditionChoice(btn, n));
+      el.addChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => speakEquation(a, '+', b), 280);
+  }
+  function onAdditionChoice(btn, num) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = parseInt(num, 10) === _mathState.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      spawnSparkles(btn);
+      advanceAfterSpeech(startAdditionRound);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint(null, null, () => speakEquation(_mathState.a, '+', _mathState.b));
+    }
+  }
+  el.addReplay?.addEventListener('click', () => {
+    if (state.advancing) return;
+    clearHintTimer();
+    speakEquation(_mathState.a, '+', _mathState.b);
+  });
+
+  /* ─── Subtraction ─── */
+  function startSubtractionRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'subtraction', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    const diff = parseInt(skill.target, 10);
+    // a − b = diff where a ≤ 10. Pick b from 1..(10-diff).
+    const maxB = 10 - diff;
+    const b = 1 + Math.floor(Math.random() * Math.max(1, maxB));
+    const a = diff + b;
+    _mathState.a = a; _mathState.b = b; _mathState.target = diff; _mathState.op = '−';
+
+    if (el.subA) el.subA.textContent = a;
+    if (el.subB) el.subB.textContent = b;
+    const emoji = MATH_COUNTERS[Math.floor(Math.random() * MATH_COUNTERS.length)];
+    /* Show all `a` objects, with the last `b` of them visually crossed out.
+       The "stage" has 'a' items; CSS class on the last b marks them removed. */
+    renderCounters(el.subObjsA, a, emoji);
+    if (el.subObjsA) {
+      const items = el.subObjsA.children;
+      for (let i = items.length - b; i < items.length; i++) {
+        if (items[i]) items[i].classList.add('subtracted');
+      }
+    }
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const distractors = pickMathDistractors(skill.target, count, 10);
+    const ordered = shuffle([String(diff), ...distractors]);
+
+    el.subChoices.innerHTML = '';
+    ordered.forEach((n) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice math-choice';
+      btn.textContent = n;
+      btn.addEventListener('click', () => onSubtractionChoice(btn, n));
+      el.subChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    setTimeout(() => speakEquation(a, '−', b), 280);
+  }
+  function onSubtractionChoice(btn, num) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = parseInt(num, 10) === _mathState.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      spawnSparkles(btn);
+      advanceAfterSpeech(startSubtractionRound);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint(null, null, () => speakEquation(_mathState.a, '−', _mathState.b));
+    }
+  }
+  el.subReplay?.addEventListener('click', () => {
+    if (state.advancing) return;
+    clearHintTimer();
+    speakEquation(_mathState.a, '−', _mathState.b);
   });
 
   // ============================================================

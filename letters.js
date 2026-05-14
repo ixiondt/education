@@ -105,6 +105,24 @@ const CVC_WORDS = [
 ];
 
 /* ============================================================
+   v5.3 — Simple arithmetic (Skolestart, ~4.5–6y)
+   ADDITION_SUMS: each target SUM that can be reached with two
+     addends ≥ 1. We track mastery per sum, not per fact, so
+     a child confident with "things that add to 5" gets credit
+     across 1+4, 2+3, 3+2, 4+1.
+   SUBTRACTION_DIFFS: each target DIFFERENCE for the same reason.
+   The mode handler generates a random equation per round whose
+   sum/difference matches the picker's chosen skill target.
+   ============================================================ */
+const ADDITION_SUMS = ['2', '3', '4', '5', '6', '7', '8', '9', '10'];
+const SUBTRACTION_DIFFS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+/* Pool of emoji used as visual counters for addition/subtraction.
+   Same-category emoji within one round so the kid is adding apples
+   to apples rather than apples to dogs. */
+const MATH_COUNTERS = ['🍎','🍓','⭐','🐝','🐟','🦋','🚗','🎈','🌸','🌟'];
+
+/* ============================================================
    v5.2 — Sight words (Dolch pre-primer list)
    These are the highest-frequency words in English text — the
    words a child needs to recognize on sight to read fluently

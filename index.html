@@ -143,6 +143,14 @@
           <div class="icon">🔁</div>
           <div class="label">Patterns</div>
         </button>
+        <button class="mode-card whole addition" data-mode="addition">
+          <div class="icon">➕</div>
+          <div class="label">Add</div>
+        </button>
+        <button class="mode-card whole subtraction" data-mode="subtraction">
+          <div class="icon">➖</div>
+          <div class="label">Subtract</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">Self &amp; feelings</h2>
@@ -290,6 +298,43 @@
       <div class="sight-words-display" id="sight-words-prompt">the</div>
       <div class="choices" id="sight-words-choices"></div>
       <button class="btn btn-secondary btn-replay" id="sight-words-replay">🔊 Hear it again</button>
+    </section>
+
+    <!-- ============ ADDITION (v5.3) ============ -->
+    <section class="screen" id="screen-addition">
+      <div class="play-prompt"><span>How many in all?</span></div>
+      <div class="math-equation">
+        <div class="math-group">
+          <div class="math-objs" id="add-objs-a"></div>
+          <div class="math-num" id="add-a">2</div>
+        </div>
+        <div class="math-op">+</div>
+        <div class="math-group">
+          <div class="math-objs" id="add-objs-b"></div>
+          <div class="math-num" id="add-b">3</div>
+        </div>
+        <div class="math-op">=</div>
+        <div class="math-num math-q">?</div>
+      </div>
+      <div class="choices" id="add-choices"></div>
+      <button class="btn btn-secondary btn-replay" id="add-replay">🔊 Hear it again</button>
+    </section>
+
+    <!-- ============ SUBTRACTION (v5.3) ============ -->
+    <section class="screen" id="screen-subtraction">
+      <div class="play-prompt"><span>How many are left?</span></div>
+      <div class="math-equation">
+        <div class="math-group">
+          <div class="math-objs" id="sub-objs-a"></div>
+          <div class="math-num" id="sub-a">5</div>
+        </div>
+        <div class="math-op">−</div>
+        <div class="math-num" id="sub-b">2</div>
+        <div class="math-op">=</div>
+        <div class="math-num math-q">?</div>
+      </div>
+      <div class="choices" id="sub-choices"></div>
+      <button class="btn btn-secondary btn-replay" id="sub-replay">🔊 Hear it again</button>
     </section>
 
     <!-- ============ CALM CORNER (v5.2) ============ -->

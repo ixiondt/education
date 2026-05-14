@@ -72,10 +72,14 @@ const STANDARDS_REFERENCE = {
   'CCSS-K.G.A.2':  'Correctly name shapes regardless of their orientations or overall size (CCSS Kindergarten, Geometry A.2)',
   'CCSS-K.G.A.3':  'Identify shapes as two-dimensional or three-dimensional (CCSS Kindergarten, Geometry A.3)',
   'CCSS-K.OA.A':   'Understand addition and subtraction; recognize patterns and quantity relationships (CCSS Kindergarten, Operations & Algebraic Thinking)',
+  'CCSS-K.OA.A.1': 'Represent addition and subtraction with objects, fingers, and drawings (CCSS Kindergarten, OA A.1)',
+  'CCSS-K.OA.A.5': 'Fluently add and subtract within 5 (CCSS Kindergarten, OA A.5)',
 
   /* NAEYC additions for v5 */
   'NAEYC-Math-3.1':       'Patterning and algebraic thinking — recognizing, copying, and extending patterns (NAEYC ELOF, Mathematics)',
   'NAEYC-Math-4.1':       'Geometry and spatial sense — recognizing and naming basic two-dimensional shapes (NAEYC ELOF, Mathematics)',
+  'NAEYC-Math-5.1':       'Operations — combining and separating quantities (simple addition / subtraction with objects) (NAEYC ELOF, Mathematics)',
+  'RAMMEPLAN-QUANT-2.3':  'Norwegian Rammeplan — Quantities, Spaces & Shapes: combining and separating quantities; emerging arithmetic',
   'NAEYC-Soc-Em-1.1':     'Social & emotional development — recognizing and naming emotions (NAEYC ELOF, Social Emotional)',
   'NAEYC-Soc-Em-2.1':     'Social & emotional development — self-regulation precursors (NAEYC ELOF, Social Emotional)',
   'NAEYC-Health-1.1':     'Health, safety & physical development — body awareness (NAEYC ELOF)',
@@ -412,6 +416,49 @@ if (typeof CVC_WORDS !== 'undefined') {
   });
 }
 
+/* ---------- Addition (Eldre/Skolestart) ---------- */
+if (typeof ADDITION_SUMS !== 'undefined') {
+  ADDITION_SUMS.forEach((sum) => {
+    SKILLS.push({
+      id: `addition-sum-${sum}`,
+      category: 'addition',
+      mode: 'addition',
+      target: sum,
+      label: `addition to ${sum}`,
+      minAgeMonths: 54,           // ~4.5y — late eldre / early skolestart
+      masteryThreshold: 5,
+      prereqs: [],
+      standards: [
+        'CCSS-K.OA.A.1', 'CCSS-K.OA.A.5', 'NAEYC-Math-5.1',
+        'EU-ECEC-CURR-NUMER',
+        'RAMMEPLAN-QUANT-2.3'
+      ]
+    });
+  });
+}
+
+/* ---------- Subtraction (Skolestart) ---------- */
+if (typeof SUBTRACTION_DIFFS !== 'undefined') {
+  SUBTRACTION_DIFFS.forEach((diff) => {
+    SKILLS.push({
+      id: `subtraction-diff-${diff}`,
+      category: 'subtraction',
+      mode: 'subtraction',
+      target: diff,
+      label: `subtraction with difference ${diff}`,
+      minAgeMonths: 60,           // ~5y — skolestart only
+      masteryThreshold: 5,
+      // Prereq: comfortable with the same-numbered addition first
+      prereqs: [`addition-sum-${diff}`],
+      standards: [
+        'CCSS-K.OA.A.1', 'CCSS-K.OA.A.5', 'NAEYC-Math-5.1',
+        'EU-ECEC-CURR-NUMER',
+        'RAMMEPLAN-QUANT-2.3'
+      ]
+    });
+  });
+}
+
 /* ---------- Sight words (Dolch pre-primer) — Skolestart band ---------- */
 if (typeof SIGHT_WORDS !== 'undefined') {
   SIGHT_WORDS.forEach((w) => {
@@ -671,7 +718,7 @@ function modeMinAge(mode) {
    of three letter-recognition rounds in a row. */
 const MODE_AREAS = {
   language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words'],
-  math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors'],
+  math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction'],
   selfWorld: ['feelings', 'body', 'animals', 'helpers']
 };
 
@@ -718,7 +765,9 @@ const RAMMEPLAN_AREAS = [
       { label: 'Number formation (tracing)',  category: 'number-trace' },
       { label: 'Counting (1-to-1)',           category: 'count' },
       { label: 'Shapes',                      category: 'shape' },
-      { label: 'Patterns',                    category: 'pattern' }
+      { label: 'Patterns',                    category: 'pattern' },
+      { label: 'Addition (within 10)',        category: 'addition' },
+      { label: 'Subtraction (within 8)',      category: 'subtraction' }
     ]
   },
   {

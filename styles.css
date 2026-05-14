@@ -1215,6 +1215,8 @@ body {
 .mode-card.body .icon    { color: var(--accent); }
 .mode-card.animals .icon { color: var(--success); }
 .mode-card.helpers .icon { color: var(--secondary); }
+.mode-card.addition .icon, .mode-card.subtraction .icon { color: var(--accent); }
+.mode-card.sight-words .icon { color: var(--success); }
 
 /* Shape SVG inside picture-choice */
 .pc-shape {
@@ -1503,6 +1505,67 @@ body {
   align-self: center;
   padding: 12px 24px;
   font-size: 15px;
+}
+
+/* ============================================================
+   v5.3 — Math equation display (addition + subtraction)
+   ============================================================ */
+
+.math-equation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.6vw, 16px);
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 720px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 22px;
+  padding: 18px 14px;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.math-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.math-objs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  max-width: 180px;
+  min-height: 36px;
+}
+.math-counter {
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1;
+  animation: pop-in 350ms ease backwards;
+}
+.math-counter.subtracted {
+  opacity: 0.25;
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.55 0.18 25);
+  text-decoration-thickness: 3px;
+}
+.math-num {
+  font-size: clamp(40px, 7vw, 62px);
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'Andika', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  line-height: 1;
+}
+.math-num.math-q { color: var(--text-soft); }
+.math-op {
+  font-size: clamp(36px, 6vw, 52px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.math-choice {
+  font-size: clamp(48px, 9vw, 88px) !important;
 }
 
 /* ============================================================
