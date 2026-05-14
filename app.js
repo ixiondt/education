@@ -2816,20 +2816,44 @@
   function openReadingLibrary() {
     if (!el.readingLibraryList) return;
     el.readingLibraryList.innerHTML = '';
-    (typeof READING_BOOKS !== 'undefined' ? READING_BOOKS : []).forEach((book) => {
-      const profile = activeProfile();
-      const skill = SKILLS_BY_ID[`reading-${book.id}`];
-      const reads = profile && skill ? getSkillProgress(skill, profile).successes : 0;
-      const card = document.createElement('button');
-      card.className = `library-book color-${book.color || 'accent'}`;
-      card.innerHTML = `
-        <div class="library-cover">${book.cover}</div>
-        <div class="library-title">${escapeHtml(book.title)}</div>
-        <div class="library-meta">${book.pages.length} pages${reads > 0 ? ' · ' + reads + ' read' + (reads === 1 ? '' : 's') : ''}</div>
-      `;
-      card.addEventListener('click', () => openReadingBook(book));
-      el.readingLibraryList.appendChild(card);
-    });
+    const books = (typeof READING_BOOKS !== 'undefined' ? READING_BOOKS : []);
+    /* Group by level so the library displays as a clear progression */
+    const grouped = { 1: [], 2: [], 3: [] };
+    books.forEach((b) => { (grouped[b.level || 1] ||= []).push(b); });
+
+    const levelNames = {
+      1: 'Beginner',
+      2: 'Getting comfortable',
+      3: 'Reading along'
+    };
+
+    for (const lvl of [1, 2, 3]) {
+      if (!grouped[lvl].length) continue;
+      const header = document.createElement('h3');
+      header.className = 'library-level-header';
+      header.innerHTML = `${'★'.repeat(lvl)}${'☆'.repeat(3 - lvl)} <span>${levelNames[lvl]}</span>`;
+      el.readingLibraryList.appendChild(header);
+
+      const rowGrid = document.createElement('div');
+      rowGrid.className = 'library-level-grid';
+      grouped[lvl].forEach((book) => {
+        const profile = activeProfile();
+        const skill = SKILLS_BY_ID[`reading-${book.id}`];
+        const reads = profile && skill ? getSkillProgress(skill, profile).successes : 0;
+        const mastered = profile && skill ? isSkillMastered(skill, profile) : false;
+        const card = document.createElement('button');
+        card.className = `library-book color-${book.color || 'accent'}` + (mastered ? ' mastered' : '');
+        card.innerHTML = `
+          <div class="library-cover">${book.cover}</div>
+          <div class="library-title">${escapeHtml(book.title)}</div>
+          <div class="library-meta">${book.pages.length} pages${reads > 0 ? ' · read ' + reads + 'x' : ''}</div>
+          ${mastered ? '<div class="library-mastered-badge">✓ confident</div>' : ''}
+        `;
+        card.addEventListener('click', () => openReadingBook(book));
+        rowGrid.appendChild(card);
+      });
+      el.readingLibraryList.appendChild(rowGrid);
+    }
     showScreen('readingLibrary');
   }
 

@@ -1512,11 +1512,54 @@ body {
    ============================================================ */
 
 .library-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
   width: 100%;
-  max-width: 720px;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.library-level-header {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 4px 0 -2px;
+  align-self: flex-start;
+  width: 100%;
+}
+.library-level-header span {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.library-level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+.library-book {
+  position: relative;
+}
+.library-book.mastered {
+  border-color: var(--success);
+  background: oklch(from var(--success) 0.97 0.02 h);
+}
+.library-mastered-badge {
+  position: absolute;
+  top: -10px; right: 8px;
+  background: var(--success);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 .library-book {
   background: var(--surface);

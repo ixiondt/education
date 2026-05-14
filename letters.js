@@ -147,11 +147,15 @@ const SIGHT_WORDS = [
    or lets the kid tap any word to re-hear.
    ============================================================ */
 const READING_BOOKS = [
+  /* ── Level 1 — one-sentence-per-page, very repetitive frame ──
+     Beginner reader. Use the same syntactic pattern across pages
+     so the child can predict each line before they read it. */
   {
     id:    'i-see',
     title: 'I See',
     cover: '👀',
     color: 'accent',
+    level: 1,
     pages: [
       { text: 'I see a cat.',   emoji: '🐱' },
       { text: 'I see a dog.',   emoji: '🐶' },
@@ -165,6 +169,7 @@ const READING_BOOKS = [
     title: 'I Can',
     cover: '💪',
     color: 'secondary',
+    level: 1,
     pages: [
       { text: 'I can run.',     emoji: '🏃' },
       { text: 'I can jump.',    emoji: '🤸' },
@@ -178,12 +183,107 @@ const READING_BOOKS = [
     title: 'Look at the…',
     cover: '🔭',
     color: 'success',
+    level: 1,
     pages: [
       { text: 'Look at the cat.',   emoji: '🐱' },
       { text: 'Look at the bee.',   emoji: '🐝' },
       { text: 'Look at the moon.',  emoji: '🌙' },
       { text: 'Look at the star.',  emoji: '⭐' },
       { text: 'Look at me!',        emoji: '👋' }
+    ]
+  },
+
+  /* ── Level 2 — one-sentence pages, varied syntax ──
+     Reader knows the basic frame and can decode new words within
+     a sentence. Pattern still repetitive within each book but no
+     single sentence repeats. */
+  {
+    id:    'big-cat',
+    title: 'A Big Cat',
+    cover: '🐈',
+    color: 'accent',
+    level: 2,
+    pages: [
+      { text: 'A cat.',                emoji: '🐱' },
+      { text: 'A big cat.',            emoji: '🐈' },
+      { text: 'Look at the cat.',      emoji: '👀' },
+      { text: 'The cat can jump.',     emoji: '🤸' },
+      { text: 'The cat is my cat!',    emoji: '❤️' }
+    ]
+  },
+  {
+    id:    'up-the-tree',
+    title: 'Up the Tree',
+    cover: '🌳',
+    color: 'success',
+    level: 2,
+    pages: [
+      { text: 'Look! A tree.',       emoji: '🌳' },
+      { text: 'I see a bee.',        emoji: '🐝' },
+      { text: 'The bee is up.',      emoji: '⬆️' },
+      { text: 'Up the tree.',        emoji: '🌲' },
+      { text: 'See you, bee!',       emoji: '👋' }
+    ]
+  },
+  {
+    id:    'red-yellow-blue',
+    title: 'Red, Yellow, Blue',
+    cover: '🎨',
+    color: 'warning',
+    level: 2,
+    pages: [
+      { text: 'I see a ball.',          emoji: '⚽' },
+      { text: 'The ball is red.',       emoji: '🔴' },
+      { text: 'I see a sun.',           emoji: '☀️' },
+      { text: 'The sun is yellow.',     emoji: '🟡' },
+      { text: 'I see a fish.',          emoji: '🐟' },
+      { text: 'The fish is blue.',      emoji: '🔵' }
+    ]
+  },
+  {
+    id:    'find-it',
+    title: 'Find It',
+    cover: '🔍',
+    color: 'secondary',
+    level: 2,
+    pages: [
+      { text: 'Find the cat.',  emoji: '🐱' },
+      { text: 'Find the dog.',  emoji: '🐶' },
+      { text: 'Find the bee.',  emoji: '🐝' },
+      { text: 'Find the sun.',  emoji: '☀️' },
+      { text: 'I find it!',     emoji: '🎉' }
+    ]
+  },
+
+  /* ── Level 3 — multi-sentence pages, micro-narrative ──
+     Reader can sustain meaning across two sentences. Pages tell
+     a small connected story rather than a list. */
+  {
+    id:    'mama-baby',
+    title: 'Mama and Baby',
+    cover: '👩‍👶',
+    color: 'warning',
+    level: 3,
+    pages: [
+      { text: 'I see mama. Mama is big.',    emoji: '👩' },
+      { text: 'I see baby. Baby is little.', emoji: '👶' },
+      { text: 'Mama can help baby.',         emoji: '🤱' },
+      { text: 'Baby can see mama.',          emoji: '👀' },
+      { text: 'I see you, mama!',            emoji: '❤️' }
+    ]
+  },
+  {
+    id:    'big-and-little',
+    title: 'Big and Little',
+    cover: '🐻',
+    color: 'accent',
+    level: 3,
+    pages: [
+      { text: 'Look! A bee. A little bee.',           emoji: '🐝' },
+      { text: 'Look! A bear. A big bear.',            emoji: '🐻' },
+      { text: 'The bee is on the bear.',              emoji: '🐝' },
+      { text: 'The bear is big. The bee is little.',  emoji: '🐻' },
+      { text: 'Little bee, big bear!',                emoji: '🐝' }
     ]
   }
 ];
