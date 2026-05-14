@@ -579,6 +579,86 @@ function ageBandForMonths(months) {
 }
 
 /* ============================================================
+   v5.1 — AGE BANDS (Norwegian Rammeplan style)
+   These replace the numeric 2/3/4/5/6+ selection in the UI.
+   Each band corresponds to a recognized Norwegian kindergarten
+   life-stage with its own pedagogical emphasis. Mode visibility
+   on the home screen is filtered by which modes are age-eligible
+   for the active profile's band.
+   ============================================================ */
+const AGE_BANDS = [
+  {
+    id: 'smabarn',
+    labelNo: 'Småbarn',
+    labelEn: 'Toddler',
+    minMonths: 18,
+    maxMonths: 36,           // up to ~3y
+    description: 'Exploration and recognition through play. Big targets, fewer choices, lots of free play.'
+  },
+  {
+    id: 'yngre',
+    labelNo: 'Yngre barnehagebarn',
+    labelEn: 'Younger preschool',
+    minMonths: 36,
+    maxMonths: 48,           // 3-4y
+    description: 'Letter and number recognition, picture-supported sounds, counting.'
+  },
+  {
+    id: 'eldre',
+    labelNo: 'Eldre barnehagebarn',
+    labelEn: 'Older preschool',
+    minMonths: 48,
+    maxMonths: 60,           // 4-5y
+    description: 'Tracing, phonemic awareness, patterns, deeper categorization.'
+  },
+  {
+    id: 'skolestart',
+    labelNo: 'Skolestart',
+    labelEn: 'Pre-school year',
+    minMonths: 60,
+    maxMonths: 96,           // 5-8y (room to grow)
+    description: 'Bridging to reading: blending, sight words, decoding, school readiness.'
+  }
+];
+
+/* Map a profile age (months) to its band. Defaults to the closest
+   band if the age falls outside any explicit range. */
+function bandForMonths(months) {
+  const m = Math.max(0, months || 0);
+  for (const b of AGE_BANDS) {
+    if (m >= b.minMonths && m < b.maxMonths) return b;
+  }
+  if (m < AGE_BANDS[0].minMonths) return AGE_BANDS[0];
+  return AGE_BANDS[AGE_BANDS.length - 1];
+}
+
+/* Lowest minAgeMonths among all skills registered for a mode.
+   Used to decide whether a mode card should appear / be locked
+   on the home screen for the current profile. */
+function modeMinAge(mode) {
+  if (mode === 'play') return 0; // free play is always available
+  const skills = SKILLS_BY_MODE[mode] || [];
+  if (!skills.length) return 0;
+  return Math.min(...skills.map((s) => s.minAgeMonths));
+}
+
+/* Group modes by pedagogical area — used by the session builder
+   so a "Today's session" includes one activity per area instead
+   of three letter-recognition rounds in a row. */
+const MODE_AREAS = {
+  language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters'],
+  math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors'],
+  selfWorld: ['feelings', 'body', 'animals', 'helpers']
+};
+
+function areaForMode(mode) {
+  for (const [area, modes] of Object.entries(MODE_AREAS)) {
+    if (modes.includes(mode)) return area;
+  }
+  return 'other';
+}
+
+/* ============================================================
    v3 — mastery decay (forgetting curve)
    A skill is "fading" if it was mastered, but hasn't been seen
    for FADE_DAYS days. The picker up-weights fading skills so they

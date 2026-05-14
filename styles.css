@@ -1506,6 +1506,175 @@ body {
 }
 
 /* ============================================================
+   v5.1 — Age bands, mode locks, today's session, session-complete
+   ============================================================ */
+
+/* Mode-card locking — by-age visibility */
+.mode-card.hidden, .freeplay-cta.hidden { display: none; }
+.mode-card.locked {
+  opacity: 0.55;
+  position: relative;
+}
+.mode-card.locked:active { transform: none; }
+.lock-pill {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: var(--text-soft);
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* Today's session card (above mode grid on home) */
+.today-session-card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 20px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 6px 18px var(--shadow);
+}
+.today-session-card.hidden { display: none; }
+
+.today-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.today-title {
+  font-size: clamp(18px, 2.6vw, 22px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.today-date {
+  font-size: 13px;
+  color: var(--text-soft);
+  text-transform: capitalize;
+  margin-top: 2px;
+}
+.today-rebuild {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms ease;
+}
+.today-rebuild:active { transform: scale(0.94) rotate(120deg); }
+.today-rebuild:hover  { border-color: var(--accent); }
+
+.today-activities {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.today-step {
+  flex: 1 1 0;
+  min-width: 92px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: border-color 200ms ease, background 200ms ease;
+  position: relative;
+}
+.today-step.active {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) 0.96 0.02 h);
+}
+.today-step.done {
+  border-color: var(--success);
+  background: oklch(from var(--success) 0.96 0.02 h);
+  opacity: 0.8;
+}
+.today-step.done::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: var(--success);
+  font-weight: 700;
+}
+.today-step-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+.today-step-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+.today-step-rounds {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+.today-start { padding: 14px; }
+
+/* Session complete screen */
+.session-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.sc-emoji {
+  font-size: clamp(60px, 11vw, 96px);
+  line-height: 1;
+  animation: sc-pop 700ms ease;
+}
+@keyframes sc-pop {
+  0%   { transform: scale(0.2); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.sc-greeting {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  color: var(--text);
+}
+.sc-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+}
+.sc-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.sc-row-icon { font-size: 22px; }
+.sc-row-label { font-weight: 700; color: var(--text); text-align: left; }
+.sc-row-count { font-size: 13px; color: var(--text-soft); }
+
+/* ============================================================
    v3.3 — Agency picker + Pedagogy modal (educational platform polish)
    ============================================================ */
 

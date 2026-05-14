@@ -20,7 +20,8 @@
     customAudio:   'off',     // auto | off — MP3 drop-ins (advanced); default off to avoid 404s
     sensoryMode:   'normal',  // normal | low (low = fewer sparkles + shorter break cap)
     prereqsMode:   'strict',  // strict | relaxed
-    agencyMode:    'auto'     // auto | child — when 'child', kid picks their target at mode start (Rammeplan §5)
+    agencyMode:    'auto',    // auto | child — when 'child', kid picks their target at mode start (Rammeplan §5)
+    showAllModes:  'off'      // v5.1 — 'on' = ignore age band, show every mode card regardless
   };
 
   function newProfileObject(name, ageMonths) {
@@ -265,7 +266,10 @@
 
     // v3.1 — wrong-answer UX
     wrongInRound: 0,
-    hintTimer: null
+    hintTimer: null,
+
+    // v5.1 — daily session state (in-memory pointer to profile.dailySession)
+    session: null
   };
 
   function clearHintTimer() {
@@ -523,7 +527,179 @@
   /* Schedule the next round to start after any in-flight speech ends.
      Used in every correct-tap handler so transitions never clip audio. */
   function advanceAfterSpeech(callback, celebrationMs = 700) {
-    waitForSpeech().then(() => setTimeout(callback, celebrationMs));
+    waitForSpeech().then(() => setTimeout(() => {
+      // If in a guided session, the session decides what comes next.
+      // Otherwise fall through to the per-mode callback.
+      if (state.session && advanceSession()) return;
+      callback();
+    }, celebrationMs));
+  }
+
+  /* ─── v5.1 — Daily session orchestration ─────────────────────
+     A session is a fixed sequence of activities (mode + roundsTarget).
+     After each correct answer, advanceSession() ticks the counter;
+     when an activity hits its roundsTarget, we transition to the
+     next mode in the sequence; when the last activity completes,
+     we show the session-complete screen.
+     The session is stored on the profile so it survives reloads. */
+
+  function buildSession(profile) {
+    const age = profile.ageMonths || 48;
+    /* Younger profiles get fewer rounds per activity, total ~5 min.
+       Older profiles get 3 rounds per activity, total ~10 min. */
+    const rounds = age < 48 ? 2 : 3;
+
+    const activities = [];
+    for (const [area, modes] of Object.entries(MODE_AREAS)) {
+      const eligible = modes.filter((m) => modeMinAge(m) <= age);
+      if (!eligible.length) continue;
+      const pick = eligible[Math.floor(Math.random() * eligible.length)];
+      activities.push({ mode: pick, area, rounds });
+    }
+    return activities;
+  }
+
+  function getOrCreateDailySession(profile) {
+    const today = todayString();
+    if (!profile.dailySession || profile.dailySession.date !== today) {
+      profile.dailySession = {
+        date: today,
+        activities: buildSession(profile),
+        currentIdx: 0,
+        roundsCompleted: 0,
+        completed: false
+      };
+      saveStorage();
+    }
+    return profile.dailySession;
+  }
+
+  function startTodaysSession() {
+    const profile = activeProfile();
+    if (!profile) return;
+    const session = getOrCreateDailySession(profile);
+    if (!session.activities.length) {
+      // No age-eligible mode in any area — fall back to free play
+      startMode('play');
+      return;
+    }
+    // Reset progress on a fresh start
+    session.currentIdx = 0;
+    session.roundsCompleted = 0;
+    session.completed = false;
+    saveStorage();
+    state.session = session;
+    startMode(session.activities[0].mode);
+  }
+
+  /* Returns true if the session orchestrator handled the transition
+     (caller should NOT do its own startXRound call). */
+  function advanceSession() {
+    if (!state.session) return false;
+    const s = state.session;
+    s.roundsCompleted++;
+    const current = s.activities[s.currentIdx];
+    if (s.roundsCompleted < current.rounds) {
+      // Still rounds left in this activity — let mode's own callback run
+      saveStorage();
+      return false;
+    }
+    // Activity done. Advance.
+    s.currentIdx++;
+    s.roundsCompleted = 0;
+    if (s.currentIdx >= s.activities.length) {
+      s.completed = true;
+      saveStorage();
+      state.session = null;
+      showSessionComplete(s);
+      return true;
+    }
+    saveStorage();
+    startMode(s.activities[s.currentIdx].mode);
+    return true;
+  }
+
+  function endSessionEarly() {
+    // Called from goHome — keeps the session record but exits flow
+    state.session = null;
+  }
+
+  function showSessionComplete(session) {
+    const profile = activeProfile();
+    if (!el.screens.sessionComplete || !profile) {
+      showScreen('home');
+      return;
+    }
+    // Render summary
+    const summary = el.scSummary;
+    if (summary) {
+      summary.innerHTML = '';
+      session.activities.forEach((a) => {
+        const row = document.createElement('div');
+        row.className = 'sc-row';
+        row.innerHTML = `<span class="sc-row-icon">${iconForMode(a.mode)}</span><span class="sc-row-label">${labelForMode(a.mode)}</span><span class="sc-row-count">${a.rounds} rounds</span>`;
+        summary.appendChild(row);
+      });
+    }
+    if (el.scGreeting) {
+      const cheers = ['Great session!', 'Wonderful work!', 'Nicely done!', 'Lovely exploration today!'];
+      el.scGreeting.textContent = cheers[Math.floor(Math.random() * cheers.length)];
+    }
+    showScreen('sessionComplete');
+  }
+
+  function iconForMode(mode) {
+    return ({
+      'find-letters': 'Aa', 'find-numbers': '12', 'sounds': '🐝',
+      'trace-letters': '✍️', 'trace-numbers': '✏️', 'count': '🍎',
+      'first-sound': '👂', 'rhyme': '🎵', 'blend': '🧩',
+      feelings: '😀', body: '👃', shapes: '🔷', colors: '🎨',
+      patterns: '🔁', animals: '🐻', helpers: '👩‍⚕️', play: '🎨'
+    })[mode] || '•';
+  }
+  function labelForMode(mode) {
+    return ({
+      'find-letters': 'Find letters', 'find-numbers': 'Find numbers', 'sounds': 'Sounds',
+      'trace-letters': 'Trace letters', 'trace-numbers': 'Trace numbers', 'count': 'Count',
+      'first-sound': 'First sound', 'rhyme': 'Rhyme', 'blend': 'Blend',
+      feelings: 'Feelings', body: 'My body', shapes: 'Shapes', colors: 'Colors',
+      patterns: 'Patterns', animals: 'Animals', helpers: 'Helpers', play: 'Free play'
+    })[mode] || mode;
+  }
+
+  function refreshTodaySessionCard() {
+    if (!el.todaySessionCard) return;
+    const profile = activeProfile();
+    if (!profile) return;
+    const session = getOrCreateDailySession(profile);
+    if (el.todayDate) el.todayDate.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long' });
+    if (!session.activities.length) {
+      el.todaySessionCard.classList.add('hidden');
+      return;
+    }
+    el.todaySessionCard.classList.remove('hidden');
+    if (el.todayActivities) {
+      el.todayActivities.innerHTML = '';
+      session.activities.forEach((a, idx) => {
+        const isDone = session.completed || idx < session.currentIdx;
+        const isActive = !session.completed && idx === session.currentIdx;
+        const step = document.createElement('div');
+        step.className = 'today-step' + (isDone ? ' done' : '') + (isActive ? ' active' : '');
+        step.innerHTML = `
+          <div class="today-step-icon">${iconForMode(a.mode)}</div>
+          <div class="today-step-label">${labelForMode(a.mode)}</div>
+          <div class="today-step-rounds">${a.rounds} rounds</div>
+        `;
+        el.todayActivities.appendChild(step);
+      });
+    }
+    if (el.todayStartBtn) {
+      el.todayStartBtn.textContent = session.completed
+        ? 'Play today\'s session again'
+        : session.currentIdx > 0
+          ? 'Continue today\'s session'
+          : "Start today's session";
+    }
   }
 
   // ============================================================
@@ -772,7 +948,9 @@
       colors:      $('screen-colors'),
       patterns:    $('screen-patterns'),
       animals:     $('screen-animals'),
-      helpers:     $('screen-helpers')
+      helpers:     $('screen-helpers'),
+      // v5.1
+      sessionComplete: $('screen-session-complete')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -859,6 +1037,17 @@
     readingAddBtn:     $('reading-add-btn'),
     readingStats:      $('reading-stats'),
     readingClose:      $('reading-close'),
+
+    // v5.1 — today's session
+    todaySessionCard:  $('today-session-card'),
+    todayDate:         $('today-date'),
+    todayActivities:   $('today-activities'),
+    todayStartBtn:     $('today-start'),
+    todayRebuildBtn:   $('today-rebuild'),
+    scGreeting:        $('sc-greeting'),
+    scSummary:         $('sc-summary'),
+    scDoneBtn:         $('sc-done'),
+    scAgainBtn:        $('sc-again'),
 
     // v3.3 — agency picker + about/pedagogy modal
     modalAgency:    $('modal-agency'),
@@ -950,9 +1139,64 @@
     el.profileChip?.classList.remove('hidden');
     if (el.profileChipName) el.profileChipName.textContent = p.name;
     if (el.profileChipLvl) {
-      const stats = computeProfileStats(p);
-      el.profileChipLvl.textContent = `${stats.abilityLevel} · ${stats.masteredSkills}/${stats.availableSkills}`;
+      /* v5.1 — show age band + Rammeplan label so parents see which
+         stage their child is in and what content is currently unlocked. */
+      const band = bandForMonths(p.ageMonths);
+      el.profileChipLvl.textContent = `${band.labelEn} · ${Math.floor(p.ageMonths/12)}y`;
     }
+    refreshModeLocks();
+  }
+
+  /* v5.1 — Mode-card visibility per profile age band.
+     - showAllModes=false (default): hide cards for modes not yet
+       age-appropriate. Cleaner home screen.
+     - showAllModes=true: show every card; locked ones get a pill
+       saying "ready at Xy+". For curious parents who want to see
+       the whole curriculum.
+     Also marks the active band on each mode card so styling can
+     emphasize what's age-aligned. */
+  function refreshModeLocks() {
+    const p = activeProfile();
+    if (!p) return;
+    const age = p.ageMonths || 0;
+    const showAll = profileSettings().showAllModes === 'on';
+    document.querySelectorAll('#screen-home .mode-card, .freeplay-cta').forEach((card) => {
+      const mode = card.dataset.mode;
+      if (!mode) return;
+      const min = modeMinAge(mode);
+      const locked = age < min;
+      card.classList.toggle('locked', locked);
+      // hide if locked AND not in show-all mode (free play is never locked since min=0)
+      if (locked && !showAll) {
+        card.classList.add('hidden');
+      } else {
+        card.classList.remove('hidden');
+      }
+      // Add or update the "ready at" pill
+      let pill = card.querySelector('.lock-pill');
+      if (locked && showAll) {
+        const years = Math.ceil(min / 12);
+        if (!pill) {
+          pill = document.createElement('span');
+          pill.className = 'lock-pill';
+          card.appendChild(pill);
+        }
+        pill.textContent = `ready at ${years}y+`;
+      } else if (pill) {
+        pill.remove();
+      }
+    });
+    // Hide section headers if all their modes are hidden
+    document.querySelectorAll('#screen-home .mode-section-title').forEach((title) => {
+      const sub = title.nextElementSibling?.classList.contains('mode-section-sub')
+        ? title.nextElementSibling : null;
+      const grid = sub?.nextElementSibling || title.nextElementSibling;
+      if (!grid || !grid.classList.contains('mode-grid')) return;
+      const anyVisible = [...grid.children].some((c) => !c.classList.contains('hidden'));
+      title.style.display = anyVisible ? '' : 'none';
+      if (sub) sub.style.display = anyVisible ? '' : 'none';
+      grid.style.display = anyVisible ? '' : 'none';
+    });
   }
 
   // ============================================================
@@ -1137,7 +1381,9 @@
     clearHintTimer();
     setPulse(el.findTarget, false);
     setPulse(el.soundsPic, false);
+    endSessionEarly();  // v5.1 — exits the daily-session flow if active
     refreshHeader();
+    refreshTodaySessionCard();
     showScreen('home');
   }
 
@@ -2580,7 +2826,8 @@
       profile.settings[key] = b.dataset.value;
       saveStorage();
       seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
-      if (key === 'theme') applyTheme();
+      if (key === 'theme')        applyTheme();
+      if (key === 'showAllModes') { refreshModeLocks(); }
     });
   });
 
@@ -3150,7 +3397,8 @@
         saveStorage();
         applyTheme();
         VoiceEngine.pick();
-        refreshHeader();
+        refreshHeader();          // band + mode locks
+        refreshTodaySessionCard();
         el.modalProfile.classList.remove('active');
       });
 
@@ -3208,7 +3456,12 @@
     const ageMonths = parseInt(el.profileEditAge.querySelector('button[aria-pressed="true"]')?.dataset.months || '48', 10);
     if (editingProfileId) {
       const p = state.profiles.find((x) => x.id === editingProfileId);
-      if (p) { p.name = name; p.ageMonths = clampAgeMonths(ageMonths); }
+      if (p) {
+        p.name = name;
+        p.ageMonths = clampAgeMonths(ageMonths);
+        // Age changed → rebuild today's session for the new band
+        delete p.dailySession;
+      }
     } else {
       const p = newProfileObject(name, ageMonths);
       state.profiles.push(p);
@@ -3216,7 +3469,8 @@
       applyTheme();
     }
     saveStorage();
-    refreshHeader();
+    refreshHeader();           // updates band display + mode locks
+    refreshTodaySessionCard(); // rebuild for new age
     el.modalProfileEdit.classList.remove('active');
     openProfilePicker();
   });
@@ -3278,9 +3532,27 @@
   document.querySelectorAll('.mode-card, .freeplay-cta').forEach((card) => {
     card.addEventListener('click', () => {
       if (!activeProfile()) return;
+      /* Tapping a single mode card cancels any in-flight daily session;
+         the kid wants to do their own thing. */
+      endSessionEarly();
       startMode(card.dataset.mode);
     });
   });
+
+  // v5.1 — daily-session wiring
+  el.todayStartBtn?.addEventListener('click', () => {
+    if (!activeProfile()) return;
+    startTodaysSession();
+  });
+  el.todayRebuildBtn?.addEventListener('click', () => {
+    const p = activeProfile();
+    if (!p) return;
+    delete p.dailySession;            // force rebuild
+    saveStorage();
+    refreshTodaySessionCard();
+  });
+  el.scDoneBtn?.addEventListener('click', goHome);
+  el.scAgainBtn?.addEventListener('click', startTodaysSession);
 
   // Tap the prompt to re-hear the target. Replaces auto-repeat-on-wrong;
   // gives the child (and parent) on-demand control.
@@ -3405,6 +3677,7 @@
   // ============================================================
   applyTheme();
   refreshHeader();
+  refreshTodaySessionCard();
   showScreen(state.profiles.length === 0 ? 'welcome' : 'home');
   refreshRecordedKeys(); // load IDB key index so speech can fast-path
 
