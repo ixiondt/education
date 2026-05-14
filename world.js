@@ -143,6 +143,41 @@ const COMMUNITY_HELPERS = [
 ];
 
 /* -----------------------------------------------------------
+   SMÅBARN-TAP — cause-effect exploration set for the toddler band
+   (1-3y). No right/wrong, no skill tracking. Tap → hear word in
+   Aria's voice + button pops. Pure sensory + naming.
+   Mixes common animals + everyday objects + family/people that a
+   toddler is already learning to recognize and name.
+   ----------------------------------------------------------- */
+const SMABARN_TAPS = [
+  // Common animals (most familiar to toddlers)
+  { e: '🐶', name: 'dog',     category: 'animal' },
+  { e: '🐱', name: 'cat',     category: 'animal' },
+  { e: '🐮', name: 'cow',     category: 'animal' },
+  { e: '🐷', name: 'pig',     category: 'animal' },
+  { e: '🐑', name: 'sheep',   category: 'animal' },
+  { e: '🐰', name: 'rabbit',  category: 'animal' },
+  { e: '🦆', name: 'duck',    category: 'animal' },
+  { e: '🐝', name: 'bee',     category: 'animal' },
+  { e: '🐟', name: 'fish',    category: 'animal' },
+  { e: '🦋', name: 'butterfly',category: 'animal' },
+  // Everyday objects (Rammeplan: Local community & society)
+  { e: '⚽', name: 'ball',    category: 'object' },
+  { e: '🥛', name: 'milk',    category: 'object' },
+  { e: '🍎', name: 'apple',   category: 'object' },
+  { e: '🚗', name: 'car',     category: 'object' },
+  { e: '🛁', name: 'bath',    category: 'object' },
+  { e: '👟', name: 'shoe',    category: 'object' },
+  { e: '🛏️', name: 'bed',     category: 'object' },
+  { e: '☀️', name: 'sun',     category: 'object' },
+  { e: '🌙', name: 'moon',    category: 'object' },
+  // People / family
+  { e: '👶', name: 'baby',    category: 'people' },
+  { e: '👩', name: 'mama',    category: 'people' },
+  { e: '👨', name: 'dada',    category: 'people' }
+];
+
+/* -----------------------------------------------------------
    PATTERNS — generative
    Pattern modes don't need a fixed dataset; we generate the
    pattern at round-start from COLORS or SHAPES, vary the rule

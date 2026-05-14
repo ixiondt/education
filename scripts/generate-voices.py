@@ -136,6 +136,9 @@ ANIMALS = {
     "bear": "bear", "fish": "fish", "bird": "bird", "lion": "lion",
     "penguin": "penguin", "camel": "camel", "cow": "cow",
     "monkey": "monkey", "frog": "frog", "butterfly": "butterfly",
+    # v5.5 — toddler-tap additions
+    "dog": "dog", "cat": "cat", "pig": "pig", "sheep": "sheep",
+    "rabbit": "rabbit", "duck": "duck", "bee": "bee",
 }
 
 HABITATS = {
@@ -148,6 +151,14 @@ HELPERS = {
     "firefighter": "firefighter", "doctor": "doctor", "teacher": "teacher",
     "police": "police officer", "chef": "chef", "farmer": "farmer",
     "mechanic": "mechanic", "mail": "mail carrier",
+}
+
+# v5.5 — toddler-tap everyday objects + people (first words)
+SMABARN = {
+    "ball": "ball", "milk": "milk", "apple": "apple", "car": "car",
+    "bath": "bath", "shoe": "shoe", "bed": "bed",
+    "sun": "sun", "moon": "moon",
+    "baby": "baby", "mama": "mama", "dada": "dada",
 }
 
 # Sight words (Dolch pre-primer) — 40 high-frequency reading words.
@@ -291,6 +302,7 @@ async def main():
             ("helpers",    HELPERS),
             ("voc",        VOC),
             ("sight-words", SIGHT),
+            ("smabarn",    SMABARN),
         ]:
             for key, text in items.items():
                 work.append((root / category / f"{key}.mp3", text))

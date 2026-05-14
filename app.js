@@ -956,7 +956,9 @@
       calmCorner:  $('screen-calm-corner'),
       // v5.3
       addition:    $('screen-addition'),
-      subtraction: $('screen-subtraction')
+      subtraction: $('screen-subtraction'),
+      // v5.5
+      tap:         $('screen-tap')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1063,6 +1065,10 @@
     subObjsRemoved: $('sub-objs-removed'),
     subChoices:$('sub-choices'),
     subReplay: $('sub-replay'),
+
+    // v5.5 — toddler tap
+    tapGrid:   $('tap-grid'),
+    tapShuffle:$('tap-shuffle'),
 
     calmCornerBtn:     $('calm-corner-btn'),
     calmStop:          $('calm-stop'),
@@ -1393,6 +1399,8 @@
         // v5.3 — arithmetic
         case 'addition':      showScreen('addition');    startAdditionRound();    break;
         case 'subtraction':   showScreen('subtraction'); startSubtractionRound(); break;
+        // v5.5 — toddler tap
+        case 'tap':           showScreen('tap');         startTapMode();          break;
       }
     };
 
@@ -2725,6 +2733,62 @@
     if (state.advancing) return;
     clearHintTimer();
     speakEquation(_mathState.a, '−', _mathState.b);
+  });
+
+  // ============================================================
+  //  v5.5 — SMÅBARN TAP (toddler band, 1-3y)
+  //  Cause-effect exploration. Big grid of emoji buttons (animals,
+  //  objects, people). Tap → speak word in Aria + button pops.
+  //  No rounds, no rights/wrongs, no skill tracking. Pure sensory
+  //  + naming. Always available (every age band).
+  // ============================================================
+
+  async function sayTapItem(item) {
+    const key = String(item.name).toLowerCase();
+    if (profileSettings().customAudio === 'auto') {
+      const cat = item.category === 'animal' ? 'animals' : 'smabarn';
+      const ok = await tryAudio(`./audio/${cat}/${key}.mp3`);
+      if (ok) return;
+    }
+    VoiceEngine.speak([item.name]);
+  }
+
+  function startTapMode() {
+    if (!el.tapGrid) return;
+    el.tapGrid.innerHTML = '';
+    if (typeof SMABARN_TAPS === 'undefined') return;
+    /* Show a generous 12 tiles, shuffled, mixing animals + objects + people */
+    const tiles = shuffle(SMABARN_TAPS).slice(0, 12);
+    tiles.forEach((item, i) => {
+      const btn = document.createElement('button');
+      btn.className = `tap-tile cat-${item.category}`;
+      btn.innerHTML = `<span class="tap-emoji">${item.e}</span><span class="tap-word">${escapeHtml(item.name)}</span>`;
+      btn.style.animationDelay = (i * 40) + 'ms';
+      btn.addEventListener('click', () => onTapItem(btn, item));
+      el.tapGrid.appendChild(btn);
+    });
+  }
+
+  function onTapItem(btn, item) {
+    btn.classList.remove('tapped');
+    void btn.offsetWidth;
+    btn.classList.add('tapped');
+    setTimeout(() => btn.classList.remove('tapped'), 700);
+    sayTapItem(item);
+    /* Bump interest in the underlying symbol — useful signal even though
+       there are no formal skills here. */
+    const profile = activeProfile();
+    if (profile) {
+      profile.interests = profile.interests || {};
+      const k = String(item.name).toUpperCase();
+      profile.interests[k] = (profile.interests[k] || 0) + 1;
+      saveStorage();
+    }
+  }
+
+  el.tapShuffle?.addEventListener('click', () => {
+    VoiceEngine.stop();
+    startTapMode();
   });
 
   // ============================================================

@@ -1508,6 +1508,65 @@ body {
 }
 
 /* ============================================================
+   v5.5 — Toddler tap mode (cause-effect, no rounds)
+   ============================================================ */
+
+.tap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 920px;
+}
+.tap-tile {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 3px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 4px 12px var(--shadow);
+  font-weight: 700;
+  color: var(--text);
+  transition: transform 150ms ease, border-color 250ms ease, background 250ms ease;
+  animation: tap-tile-in 400ms ease backwards;
+  padding: 8px;
+  overflow: hidden;
+}
+@keyframes tap-tile-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.tap-tile:active { transform: scale(0.93); }
+.tap-tile.cat-animal { border-color: oklch(0.85 0.05 145); }
+.tap-tile.cat-object { border-color: oklch(0.85 0.05 230); }
+.tap-tile.cat-people { border-color: oklch(0.85 0.05 35); }
+.tap-emoji {
+  font-size: clamp(50px, 9vw, 80px);
+  line-height: 1;
+}
+.tap-word {
+  font-size: clamp(14px, 2vw, 18px);
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+.tap-tile.tapped {
+  animation: tap-pulse 700ms ease;
+  border-color: var(--accent);
+  background: oklch(from var(--accent) 0.96 0.03 h);
+}
+@keyframes tap-pulse {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.18); box-shadow: 0 0 0 0 var(--accent); }
+  60%  { transform: scale(1.05); box-shadow: 0 0 0 16px oklch(from var(--accent) l c h / 0); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================
    v5.3 — Math equation display (addition + subtraction)
    ============================================================ */
 
