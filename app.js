@@ -958,7 +958,10 @@
       addition:    $('screen-addition'),
       subtraction: $('screen-subtraction'),
       // v5.5
-      tap:         $('screen-tap')
+      tap:         $('screen-tap'),
+      // v5.7
+      readingLibrary: $('screen-reading-library'),
+      readingBook:    $('screen-reading-book')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1069,6 +1072,17 @@
     // v5.5 — toddler tap
     tapGrid:   $('tap-grid'),
     tapShuffle:$('tap-shuffle'),
+
+    // v5.7 — reading
+    readingLibraryList: $('reading-library-list'),
+    readingTitle:       $('reading-book-title'),
+    readingEmoji:       $('reading-book-emoji'),
+    readingSentence:    $('reading-sentence'),
+    readingPageInd:     $('reading-page-indicator'),
+    readingReadBtn:     $('reading-read-btn'),
+    readingPrevBtn:     $('reading-prev-btn'),
+    readingNextBtn:     $('reading-next-btn'),
+    readingLibBtn:      $('reading-library-btn'),
 
     // v5.6 — printable worksheets
     worksheetsBtn:    $('worksheets-btn'),
@@ -1408,6 +1422,8 @@
         case 'subtraction':   showScreen('subtraction'); startSubtractionRound(); break;
         // v5.5 — toddler tap
         case 'tap':           showScreen('tap');         startTapMode();          break;
+        // v5.7 — reading
+        case 'reading':       openReadingLibrary(); break;
       }
     };
 
@@ -2741,6 +2757,169 @@
     clearHintTimer();
     speakEquation(_mathState.a, '−', _mathState.b);
   });
+
+  // ============================================================
+  //  v5.7 — DECODABLE READING BOOKS (Skolestart, 5y+)
+  //  Library → book → page-by-page with word-level audio.
+  //  Words light up as Aria reads each one (tracking eye to ear);
+  //  any word is individually tappable for re-hear.
+  // ============================================================
+
+  /* Resolve a word to its MP3 path. Tries sight-words, voc,
+     smabarn, animals folders in priority order. Returns null if
+     no MP3 exists for that word — caller falls back to TTS. */
+  const _audioWordCache = {};
+  async function resolveWordAudio(word) {
+    const key = (typeof normalizeWord === 'function') ? normalizeWord(word) : String(word).toLowerCase().replace(/[^a-z]/g, '');
+    if (!key) return null;
+    if (_audioWordCache[key] !== undefined) return _audioWordCache[key];
+    if (profileSettings().customAudio !== 'auto') {
+      _audioWordCache[key] = null;
+      return null;
+    }
+    for (const folder of (typeof WORD_AUDIO_FOLDERS !== 'undefined' ? WORD_AUDIO_FOLDERS : ['sight-words', 'voc', 'smabarn', 'animals'])) {
+      const path = `./audio/${folder}/${key}.mp3`;
+      if (audioMissing.has(path)) continue;
+      // HEAD-style probe via short fetch+abort is unreliable across browsers;
+      // we just try to play and let audioPlayer mark missing on error.
+      return new Promise((resolve) => {
+        const a = new Audio();
+        let settled = false;
+        const finish = (ok) => {
+          if (settled) return;
+          settled = true;
+          if (!ok) audioMissing.add(path);
+          if (ok) _audioWordCache[key] = path;
+          resolve(ok ? path : null);
+        };
+        a.addEventListener('canplaythrough', () => finish(true), { once: true });
+        a.addEventListener('error', () => finish(false), { once: true });
+        a.preload = 'metadata';
+        a.src = path;
+        setTimeout(() => finish(false), 2000);
+      });
+    }
+    _audioWordCache[key] = null;
+    return null;
+  }
+
+  async function sayWordPath(word) {
+    const path = await resolveWordAudio(word);
+    if (path) {
+      return audioPlayer.play(path);
+    }
+    VoiceEngine.speak([word]);
+    return Promise.resolve(true);
+  }
+
+  /* ── Library view ── */
+  function openReadingLibrary() {
+    if (!el.readingLibraryList) return;
+    el.readingLibraryList.innerHTML = '';
+    (typeof READING_BOOKS !== 'undefined' ? READING_BOOKS : []).forEach((book) => {
+      const profile = activeProfile();
+      const skill = SKILLS_BY_ID[`reading-${book.id}`];
+      const reads = profile && skill ? getSkillProgress(skill, profile).successes : 0;
+      const card = document.createElement('button');
+      card.className = `library-book color-${book.color || 'accent'}`;
+      card.innerHTML = `
+        <div class="library-cover">${book.cover}</div>
+        <div class="library-title">${escapeHtml(book.title)}</div>
+        <div class="library-meta">${book.pages.length} pages${reads > 0 ? ' · ' + reads + ' read' + (reads === 1 ? '' : 's') : ''}</div>
+      `;
+      card.addEventListener('click', () => openReadingBook(book));
+      el.readingLibraryList.appendChild(card);
+    });
+    showScreen('readingLibrary');
+  }
+
+  /* ── Book view ── */
+  let currentBook = null;
+  let currentPageIdx = 0;
+  let isReadingAloud = false;
+
+  function openReadingBook(book) {
+    currentBook = book;
+    currentPageIdx = 0;
+    renderReadingPage();
+    showScreen('readingBook');
+  }
+
+  function renderReadingPage() {
+    if (!currentBook) return;
+    const page = currentBook.pages[currentPageIdx];
+    if (el.readingTitle) el.readingTitle.textContent = currentBook.title;
+    if (el.readingEmoji) el.readingEmoji.textContent = page.emoji;
+    if (el.readingPageInd) {
+      el.readingPageInd.textContent = `${currentPageIdx + 1} / ${currentBook.pages.length}`;
+    }
+    if (el.readingSentence) {
+      el.readingSentence.innerHTML = '';
+      /* Split into word tokens (preserving trailing punctuation as a
+         non-tappable suffix so "cat." reads as "cat" + ".") */
+      page.text.split(/\s+/).forEach((token, i) => {
+        const wordOnly = token.replace(/[.,!?]+$/, '');
+        const punct    = token.slice(wordOnly.length);
+        const span = document.createElement('span');
+        span.className = 'reading-word';
+        span.dataset.word = wordOnly;
+        span.innerHTML = `<span class="reading-word-text">${escapeHtml(wordOnly)}</span>${punct ? `<span class="reading-punct">${escapeHtml(punct)}</span>` : ''}`;
+        span.addEventListener('click', () => onWordTap(span));
+        el.readingSentence.appendChild(span);
+        // small spacer between words (CSS gap handles it)
+      });
+    }
+    /* Update nav button states */
+    if (el.readingPrevBtn) el.readingPrevBtn.disabled = currentPageIdx === 0;
+    if (el.readingNextBtn) {
+      el.readingNextBtn.textContent = (currentPageIdx === currentBook.pages.length - 1) ? 'Done ✓' : 'Next →';
+    }
+  }
+
+  async function onWordTap(span) {
+    if (isReadingAloud) return;
+    span.classList.add('lit');
+    setTimeout(() => span.classList.remove('lit'), 700);
+    await sayWordPath(span.dataset.word);
+  }
+
+  async function readPageAloud() {
+    if (!currentBook || isReadingAloud) return;
+    isReadingAloud = true;
+    if (el.readingReadBtn) el.readingReadBtn.disabled = true;
+    const wordSpans = [...el.readingSentence.querySelectorAll('.reading-word')];
+    for (const span of wordSpans) {
+      span.classList.add('lit');
+      await sayWordPath(span.dataset.word);
+      span.classList.remove('lit');
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    isReadingAloud = false;
+    if (el.readingReadBtn) el.readingReadBtn.disabled = false;
+  }
+
+  el.readingReadBtn?.addEventListener('click', readPageAloud);
+  el.readingPrevBtn?.addEventListener('click', () => {
+    if (currentPageIdx > 0) { currentPageIdx--; renderReadingPage(); }
+  });
+  el.readingNextBtn?.addEventListener('click', () => {
+    if (!currentBook) return;
+    if (currentPageIdx === currentBook.pages.length - 1) {
+      // Book complete — record one read-through
+      const profile = activeProfile();
+      const skill = SKILLS_BY_ID[`reading-${currentBook.id}`];
+      if (profile && skill) {
+        recordAttempt(skill.id, true, 0);
+        spawnSparkles(el.readingEmoji);
+      }
+      // Bounce back to library after a short celebration
+      setTimeout(() => openReadingLibrary(), 900);
+    } else {
+      currentPageIdx++;
+      renderReadingPage();
+    }
+  });
+  el.readingLibBtn?.addEventListener('click', openReadingLibrary);
 
   // ============================================================
   //  v5.5 — SMÅBARN TAP (toddler band, 1-3y)

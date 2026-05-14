@@ -166,14 +166,16 @@ SMABARN = {
 # so the app requests audio/sight-words/<lowercase>.mp3.
 # Values are what TTS actually says (preserves "I" capitalization for natural reading).
 SIGHT = {
-    "a":"a", "and":"and", "away":"away", "big":"big", "blue":"blue",
-    "can":"can", "come":"come", "down":"down", "find":"find", "for":"for",
-    "funny":"funny", "go":"go", "help":"help", "here":"here", "i":"I",
-    "in":"in", "is":"is", "it":"it", "jump":"jump", "little":"little",
-    "look":"look", "make":"make", "me":"me", "my":"my", "not":"not",
-    "one":"one", "play":"play", "red":"red", "run":"run", "said":"said",
-    "see":"see", "the":"the", "three":"three", "to":"to", "two":"two",
-    "up":"up", "we":"we", "where":"where", "yellow":"yellow", "you":"you",
+    "a":"a", "and":"and", "at":"at", "away":"away", "big":"big",
+    "blue":"blue", "can":"can", "come":"come", "down":"down",
+    "find":"find", "for":"for", "funny":"funny", "go":"go",
+    "help":"help", "here":"here", "i":"I", "in":"in", "is":"is",
+    "it":"it", "jump":"jump", "little":"little", "look":"look",
+    "make":"make", "me":"me", "my":"my", "not":"not", "on":"on",
+    "one":"one", "play":"play", "red":"red", "run":"run",
+    "said":"said", "see":"see", "the":"the", "three":"three",
+    "to":"to", "two":"two", "up":"up", "we":"we", "where":"where",
+    "yellow":"yellow", "you":"you",
 }
 
 # Vocabulary words used in Rhyme + Blend + animals/helpers names spoken inline

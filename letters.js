@@ -131,12 +131,70 @@ const MATH_COUNTERS = ['🍎','🍓','⭐','🐝','🐟','🦋','🚗','🎈','�
    Dolch's classic list.
    ============================================================ */
 const SIGHT_WORDS = [
-  'a', 'and', 'away', 'big', 'blue', 'can', 'come', 'down',
+  'a', 'and', 'at', 'away', 'big', 'blue', 'can', 'come', 'down',
   'find', 'for', 'funny', 'go', 'help', 'here', 'I', 'in',
   'is', 'it', 'jump', 'little', 'look', 'make', 'me', 'my',
-  'not', 'one', 'play', 'red', 'run', 'said', 'see', 'the',
+  'not', 'on', 'one', 'play', 'red', 'run', 'said', 'see', 'the',
   'three', 'to', 'two', 'up', 'we', 'where', 'yellow', 'you'
 ];
+
+/* ============================================================
+   v5.7 — Decodable reading books (Skolestart, 5-6y)
+   Each book uses ONLY words the child has audio for (sight words,
+   voc, smabarn, animals). One book = ~5 pages, each page is a big
+   picture + a short sentence. The reading mode walks through them
+   word-by-word with the matching MP3 lighting up, then auto-advances
+   or lets the kid tap any word to re-hear.
+   ============================================================ */
+const READING_BOOKS = [
+  {
+    id:    'i-see',
+    title: 'I See',
+    cover: '👀',
+    color: 'accent',
+    pages: [
+      { text: 'I see a cat.',   emoji: '🐱' },
+      { text: 'I see a dog.',   emoji: '🐶' },
+      { text: 'I see the sun.', emoji: '☀️' },
+      { text: 'I see a bee.',   emoji: '🐝' },
+      { text: 'I see you!',     emoji: '👶' }
+    ]
+  },
+  {
+    id:    'i-can',
+    title: 'I Can',
+    cover: '💪',
+    color: 'secondary',
+    pages: [
+      { text: 'I can run.',     emoji: '🏃' },
+      { text: 'I can jump.',    emoji: '🤸' },
+      { text: 'I can play.',    emoji: '⚽' },
+      { text: 'I can help.',    emoji: '🤝' },
+      { text: 'I can see you!', emoji: '👀' }
+    ]
+  },
+  {
+    id:    'look-at',
+    title: 'Look at the…',
+    cover: '🔭',
+    color: 'success',
+    pages: [
+      { text: 'Look at the cat.',   emoji: '🐱' },
+      { text: 'Look at the bee.',   emoji: '🐝' },
+      { text: 'Look at the moon.',  emoji: '🌙' },
+      { text: 'Look at the star.',  emoji: '⭐' },
+      { text: 'Look at me!',        emoji: '👋' }
+    ]
+  }
+];
+
+/* Build a map of every word → its audio path. Used by the reading
+   mode to play each word as it's highlighted. Tries multiple folders
+   so the same lookup works regardless of where a word's audio lives. */
+const WORD_AUDIO_FOLDERS = ['sight-words', 'voc', 'smabarn', 'animals'];
+function normalizeWord(w) {
+  return String(w).toLowerCase().replace(/[^a-z]/g, '');
+}
 
 /* Picture-word categories mapped to Norwegian Rammeplan learning areas.
    Lets the Sounds mode (and themed Free play) rotate through one area at a

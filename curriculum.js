@@ -459,6 +459,29 @@ if (typeof SUBTRACTION_DIFFS !== 'undefined') {
   });
 }
 
+/* ---------- Decodable books (Skolestart, 5-6y) ---------- */
+if (typeof READING_BOOKS !== 'undefined') {
+  READING_BOOKS.forEach((book) => {
+    SKILLS.push({
+      id: `reading-${book.id}`,
+      category: 'reading',
+      mode: 'reading',
+      target: book.id,
+      label: book.title,
+      minAgeMonths: 60,
+      masteryThreshold: 3, // 3 read-throughs = "confident"
+      prereqs: [],         // intentionally loose — let kids try when curious
+      standards: [
+        'CCSS-RF.K.3c',  // sight words
+        'CCSS-RF.K.2',   // phonological awareness
+        'NAEYC-LL-1.2',  // emergent reading
+        'EU-ECEC-CURR-LANG',
+        'RAMMEPLAN-COMM-1.5'
+      ]
+    });
+  });
+}
+
 /* ---------- Sight words (Dolch pre-primer) — Skolestart band ---------- */
 if (typeof SIGHT_WORDS !== 'undefined') {
   SIGHT_WORDS.forEach((w) => {
@@ -717,7 +740,7 @@ function modeMinAge(mode) {
    so a "Today's session" includes one activity per area instead
    of three letter-recognition rounds in a row. */
 const MODE_AREAS = {
-  language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words'],
+  language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
   math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction'],
   selfWorld: ['feelings', 'body', 'animals', 'helpers']
 };
@@ -751,7 +774,8 @@ const RAMMEPLAN_AREAS = [
       { label: 'First-sound identification',  category: 'first-sound' },
       { label: 'Rhyming',                     category: 'rhyme' },
       { label: 'Blending sounds into words',  category: 'blend' },
-      { label: 'Sight words',                 category: 'sight-word' }
+      { label: 'Sight words',                 category: 'sight-word' },
+      { label: 'Reading short books',         category: 'reading' }
     ]
   },
   {

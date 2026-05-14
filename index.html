@@ -126,6 +126,10 @@
           <div class="icon">📖</div>
           <div class="label">Sight words</div>
         </button>
+        <button class="mode-card phon reading" data-mode="reading">
+          <div class="icon">📚</div>
+          <div class="label">Read books</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">Math &amp; shapes</h2>
@@ -364,6 +368,34 @@
           That's a good stopping point. The Rammeplan recommends short, varied sessions —
           embodied, social, and outdoor play matter just as much as a tablet.
         </p>
+      </div>
+    </section>
+
+    <!-- ============ READING LIBRARY (v5.7) ============ -->
+    <section class="screen" id="screen-reading-library">
+      <h2 class="play-title">📚 Choose a book to read</h2>
+      <p style="font-size:13px; color:var(--text-soft); text-align:center; max-width:480px;">
+        Short books using words you already know. Tap any word to hear it,
+        or press "Read it" to hear the whole sentence.
+      </p>
+      <div class="library-grid" id="reading-library-list"></div>
+    </section>
+
+    <!-- ============ READING BOOK (v5.7) ============ -->
+    <section class="screen" id="screen-reading-book">
+      <div class="reading-header">
+        <button class="btn btn-secondary reading-back" id="reading-library-btn">← Library</button>
+        <div class="reading-title" id="reading-book-title">I See</div>
+        <div class="reading-page-indicator" id="reading-page-indicator">1 / 5</div>
+      </div>
+      <div class="reading-page">
+        <div class="reading-emoji" id="reading-book-emoji">🐱</div>
+        <div class="reading-sentence" id="reading-sentence"></div>
+      </div>
+      <button class="btn btn-primary reading-read" id="reading-read-btn">▶ Read it</button>
+      <div class="reading-nav">
+        <button class="btn btn-secondary" id="reading-prev-btn">← Back</button>
+        <button class="btn btn-primary" id="reading-next-btn">Next →</button>
       </div>
     </section>
 

@@ -1508,6 +1508,135 @@ body {
 }
 
 /* ============================================================
+   v5.7 — Reading mode (decodable books)
+   ============================================================ */
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 720px;
+}
+.library-book {
+  background: var(--surface);
+  border: 3px solid var(--border);
+  border-radius: 24px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: transform 120ms ease, border-color 200ms ease;
+}
+.library-book:active { transform: scale(0.96); }
+.library-book.color-accent    { border-color: var(--accent); }
+.library-book.color-secondary { border-color: var(--secondary); }
+.library-book.color-success   { border-color: var(--success); }
+.library-book.color-warning   { border-color: var(--warning); }
+.library-cover {
+  font-size: clamp(56px, 10vw, 84px);
+  line-height: 1;
+}
+.library-title {
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+.library-meta {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+/* Reading book page */
+.reading-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+}
+.reading-back { padding: 8px 14px; font-size: 14px; }
+.reading-title {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: var(--text);
+}
+.reading-page-indicator {
+  font-size: 14px;
+  color: var(--text-soft);
+  font-weight: 700;
+}
+.reading-page {
+  background: var(--surface);
+  border: 3px solid var(--border);
+  border-radius: 28px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 6px 18px var(--shadow);
+  width: 100%;
+  max-width: 760px;
+}
+.reading-emoji {
+  font-size: clamp(120px, 22vw, 180px);
+  line-height: 1;
+}
+.reading-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: baseline;
+}
+.reading-word {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: clamp(32px, 5.5vw, 48px);
+  font-weight: 700;
+  font-family: 'Andika', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease, transform 120ms ease;
+}
+.reading-word:hover { border-color: var(--border); }
+.reading-word:active { transform: scale(0.95); }
+.reading-word.lit {
+  background: oklch(from var(--accent) l c h / 0.18);
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: word-lit 700ms ease;
+}
+@keyframes word-lit {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.reading-punct {
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.reading-read { padding: 14px 28px; font-size: 17px; }
+.reading-nav {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+}
+.reading-nav > .btn { flex: 1; }
+
+.mode-card.reading .icon { color: var(--success); }
+
+/* ============================================================
    v5.6 — Printable worksheets
    ============================================================ */
 
