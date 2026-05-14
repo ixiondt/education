@@ -248,6 +248,23 @@ PHRASES = {
     "plus":             "plus",
     "minus":            "minus",
     "equals":           "equals",
+    # v5.9 — time of day
+    "time-morning":     "morning",
+    "time-noon":        "noon",
+    "time-evening":     "evening",
+    "time-night":       "night",
+}
+
+# v5.9 — time-of-day scenario vocabulary (single-word entries only, so the
+# resolveWordAudio function in app.js can find them by normalized key)
+TIME_VOC = {
+    "sunrise":   "sunrise",
+    "pancakes":  "pancakes",
+    "eggs":      "eggs",
+    "sandwich":  "sandwich",
+    "sunset":    "sunset",
+    "dinner":    "dinner",
+    "sleep":     "sleep",
 }
 
 
@@ -305,6 +322,7 @@ async def main():
             ("voc",        VOC),
             ("sight-words", SIGHT),
             ("smabarn",    SMABARN),
+            ("voc",        TIME_VOC),  # piggyback on voc/ for time scenarios
         ]:
             for key, text in items.items():
                 work.append((root / category / f"{key}.mp3", text))

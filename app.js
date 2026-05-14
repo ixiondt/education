@@ -961,7 +961,9 @@
       tap:         $('screen-tap'),
       // v5.7
       readingLibrary: $('screen-reading-library'),
-      readingBook:    $('screen-reading-book')
+      readingBook:    $('screen-reading-book'),
+      // v5.9
+      timeOfDay:      $('screen-time-of-day')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1083,6 +1085,11 @@
     readingPrevBtn:     $('reading-prev-btn'),
     readingNextBtn:     $('reading-next-btn'),
     readingLibBtn:      $('reading-library-btn'),
+
+    // v5.9 — time of day
+    timeScenarioEmoji: $('time-scenario-emoji'),
+    timeScenarioWord:  $('time-scenario-word'),
+    timeChoices:       $('time-choices'),
 
     // v5.6 — printable worksheets
     worksheetsBtn:    $('worksheets-btn'),
@@ -1424,6 +1431,8 @@
         case 'tap':           showScreen('tap');         startTapMode();          break;
         // v5.7 — reading
         case 'reading':       openReadingLibrary(); break;
+        // v5.9 — time of day
+        case 'time-of-day':   showScreen('timeOfDay'); startTimeOfDayRound(); break;
       }
     };
 
@@ -2757,6 +2766,72 @@
     clearHintTimer();
     speakEquation(_mathState.a, '−', _mathState.b);
   });
+
+  // ============================================================
+  //  v5.9 — TIME OF DAY (Skolestart, 5y+)
+  //  Show an activity-emoji scenario, child picks the matching
+  //  time-of-day from 3-4 emoji+label tiles. Concrete cause→time
+  //  mapping, like a Norwegian kindergarten "daily rhythm" wall.
+  // ============================================================
+
+  function startTimeOfDayRound() {
+    state.advancing = false; state.wrongInRound = 0;
+    clearHintTimer();
+    const profile = activeProfile();
+    if (!profile) return;
+
+    let skill = state.chosenForRound; state.chosenForRound = null;
+    if (!skill) skill = pickNextSkill(profile, 'time-of-day', state.lastSkillId);
+    if (!skill) return;
+    state.currentSkill = skill; state.lastSkillId = skill.id; state.target = skill.target;
+
+    /* Pick a random scenario whose .time matches the target */
+    const matching = (typeof TIME_SCENARIOS !== 'undefined' ? TIME_SCENARIOS : []).filter((s) => s.time === skill.target);
+    if (!matching.length) return;
+    const scenario = matching[Math.floor(Math.random() * matching.length)];
+    el.timeScenarioEmoji.textContent = scenario.emoji;
+    el.timeScenarioWord.textContent  = scenario.word;
+    state.timeWord = scenario.word;
+
+    const count = parseInt(profileSettings().choices, 10) || 3;
+    const allTimes = (typeof TIMES_OF_DAY !== 'undefined' ? TIMES_OF_DAY : []);
+    const target = allTimes.find((t) => t.key === skill.target);
+    const distractors = shuffle(allTimes.filter((t) => t.key !== skill.target)).slice(0, count - 1);
+    const ordered = shuffle([target, ...distractors]);
+
+    el.timeChoices.innerHTML = '';
+    ordered.forEach((t) => {
+      const btn = document.createElement('button');
+      btn.className = 'picture-choice time-choice';
+      btn.innerHTML = `<span class="pc-emoji">${t.emoji}</span><span class="pc-word">${escapeHtml(t.label)}</span>`;
+      btn.addEventListener('click', () => onTimeOfDayChoice(btn, t.key));
+      el.timeChoices.appendChild(btn);
+    });
+
+    state.roundStartedAt = Date.now();
+    /* Voice: speak the scenario word so kid hears what they're seeing */
+    setTimeout(async () => {
+      // Try to play the scenario word via the word audio chain
+      await sayWordPath(scenario.word);
+    }, 280);
+  }
+  function onTimeOfDayChoice(btn, key) {
+    if (state.advancing) return;
+    clearHintTimer();
+    const correct = key === state.target;
+    recordAttempt(state.currentSkill.id, correct, roundDuration());
+    if (correct) {
+      state.advancing = true; btn.classList.add('correct');
+      spawnSparkles(btn);
+      // Speak the time-of-day name (target) as confirmation
+      sayConcept('phrases', `time-${state.target}`, state.target);
+      advanceAfterSpeech(startTimeOfDayRound);
+    } else {
+      state.wrongInRound++; btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 400);
+      scheduleHint(null, null, () => sayWordPath(state.timeWord));
+    }
+  }
 
   // ============================================================
   //  v5.7 — DECODABLE READING BOOKS (Skolestart, 5y+)

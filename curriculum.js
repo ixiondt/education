@@ -80,6 +80,7 @@ const STANDARDS_REFERENCE = {
   'NAEYC-Math-4.1':       'Geometry and spatial sense — recognizing and naming basic two-dimensional shapes (NAEYC ELOF, Mathematics)',
   'NAEYC-Math-5.1':       'Operations — combining and separating quantities (simple addition / subtraction with objects) (NAEYC ELOF, Mathematics)',
   'RAMMEPLAN-QUANT-2.3':  'Norwegian Rammeplan — Quantities, Spaces & Shapes: combining and separating quantities; emerging arithmetic',
+  'RAMMEPLAN-QUANT-2.4':  'Norwegian Rammeplan — Quantities, Spaces & Shapes: temporal awareness — recognizing times of day and sequence',
   'NAEYC-Soc-Em-1.1':     'Social & emotional development — recognizing and naming emotions (NAEYC ELOF, Social Emotional)',
   'NAEYC-Soc-Em-2.1':     'Social & emotional development — self-regulation precursors (NAEYC ELOF, Social Emotional)',
   'NAEYC-Health-1.1':     'Health, safety & physical development — body awareness (NAEYC ELOF)',
@@ -459,6 +460,27 @@ if (typeof SUBTRACTION_DIFFS !== 'undefined') {
   });
 }
 
+/* ---------- Time of day (Skolestart, 5-6y) ---------- */
+if (typeof TIMES_OF_DAY !== 'undefined') {
+  TIMES_OF_DAY.forEach((t) => {
+    SKILLS.push({
+      id: `time-${t.key}`,
+      category: 'time',
+      mode: 'time-of-day',
+      target: t.key,
+      label: t.label,
+      minAgeMonths: 54,          // ~4.5y — late eldre / skolestart
+      masteryThreshold: 4,
+      prereqs: [],
+      standards: [
+        'NAEYC-Math-1.1',        // number sense + temporal awareness
+        'EU-ECEC-CURR-HOLISTIC',
+        'RAMMEPLAN-QUANT-2.4'    // (new) time + sequence
+      ]
+    });
+  });
+}
+
 /* ---------- Decodable books (Skolestart, 5-6y) ---------- */
 if (typeof READING_BOOKS !== 'undefined') {
   READING_BOOKS.forEach((book) => {
@@ -741,7 +763,7 @@ function modeMinAge(mode) {
    of three letter-recognition rounds in a row. */
 const MODE_AREAS = {
   language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
-  math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction'],
+  math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
   selfWorld: ['feelings', 'body', 'animals', 'helpers']
 };
 
@@ -791,7 +813,8 @@ const RAMMEPLAN_AREAS = [
       { label: 'Shapes',                      category: 'shape' },
       { label: 'Patterns',                    category: 'pattern' },
       { label: 'Addition (within 10)',        category: 'addition' },
-      { label: 'Subtraction (within 8)',      category: 'subtraction' }
+      { label: 'Subtraction (within 8)',      category: 'subtraction' },
+      { label: 'Time of day',                 category: 'time' }
     ]
   },
   {

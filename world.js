@@ -143,6 +143,41 @@ const COMMUNITY_HELPERS = [
 ];
 
 /* -----------------------------------------------------------
+   TIME OF DAY (v5.9, Skolestart 5y+)
+   Four times-of-day + a pool of activity scenarios each linked
+   to one of them. Mode mechanic: show a scenario emoji, child
+   picks the matching time. Concrete cause→time mapping is the
+   pedagogically standard way to teach this concept (every Norwegian
+   kindergarten does it on a "what do we do at this time" wall).
+   ----------------------------------------------------------- */
+const TIMES_OF_DAY = [
+  { key: 'morning', emoji: '🌅', label: 'morning' },
+  { key: 'noon',    emoji: '🌞', label: 'noon' },
+  { key: 'evening', emoji: '🌆', label: 'evening' },
+  { key: 'night',   emoji: '🌙', label: 'night' }
+];
+
+const TIME_SCENARIOS = [
+  // morning
+  { emoji: '🌅', word: 'sunrise',  time: 'morning' },
+  { emoji: '🥞', word: 'pancakes', time: 'morning' },
+  { emoji: '🍳', word: 'eggs',     time: 'morning' },
+  // noon — bright daylight, lunch
+  { emoji: '🌞', word: 'sun',      time: 'noon' },
+  { emoji: '🥪', word: 'sandwich', time: 'noon' },
+  { emoji: '🍎', word: 'apple',    time: 'noon' },
+  // evening — sunset, dinner
+  { emoji: '🌆', word: 'sunset',   time: 'evening' },
+  { emoji: '🍝', word: 'dinner',   time: 'evening' },
+  { emoji: '🛁', word: 'bath',     time: 'evening' },
+  // night — moon, stars, sleep
+  { emoji: '🌙', word: 'moon',     time: 'night' },
+  { emoji: '⭐', word: 'star',     time: 'night' },
+  { emoji: '😴', word: 'sleep',    time: 'night' },
+  { emoji: '🛏️', word: 'bed',      time: 'night' }
+];
+
+/* -----------------------------------------------------------
    SMÅBARN-TAP — cause-effect exploration set for the toddler band
    (1-3y). No right/wrong, no skill tracking. Tap → hear word in
    Aria's voice + button pops. Pure sensory + naming.
