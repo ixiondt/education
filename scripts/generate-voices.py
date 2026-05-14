@@ -102,6 +102,115 @@ NUMBER_WORDS = {
     "9": "nine",  "10": "ten",
 }
 
+# v5 — concept labels for whole-child modes. Path: audio/<category>/<key>.mp3
+# Spoken text is the human-readable label; key is the filename.
+FEELINGS = {
+    "happy": "happy", "sad": "sad", "angry": "angry", "surprised": "surprised",
+    "scared": "scared", "tired": "tired", "excited": "excited", "calm": "calm",
+}
+
+BODY = {
+    "eye": "eye", "nose": "nose", "ear": "ear", "mouth": "mouth",
+    "hand": "hand", "foot": "foot", "arm": "arm", "leg": "leg",
+}
+
+SHAPES_LBL = {
+    "circle": "circle", "square": "square", "triangle": "triangle",
+    "rectangle": "rectangle", "oval": "oval", "star": "star",
+    "heart": "heart", "hexagon": "hexagon",
+}
+
+COLORS_LBL = {
+    "red": "red", "blue": "blue", "yellow": "yellow", "green": "green",
+    "orange": "orange", "purple": "purple", "pink": "pink",
+    "brown": "brown", "black": "black", "white": "white",
+}
+
+ANIMALS = {
+    "bear": "bear", "fish": "fish", "bird": "bird", "lion": "lion",
+    "penguin": "penguin", "camel": "camel", "cow": "cow",
+    "monkey": "monkey", "frog": "frog", "butterfly": "butterfly",
+}
+
+HABITATS = {
+    "forest": "forest", "water": "water", "tree": "tree",
+    "grassland": "grassland", "ice": "ice", "desert": "desert",
+    "farm": "farm", "jungle": "jungle", "pond": "pond", "flower": "flower",
+}
+
+HELPERS = {
+    "firefighter": "firefighter", "doctor": "doctor", "teacher": "teacher",
+    "police": "police officer", "chef": "chef", "farmer": "farmer",
+    "mechanic": "mechanic", "mail": "mail carrier",
+}
+
+# Vocabulary words used in Rhyme + Blend + animals/helpers names spoken inline
+VOC = {
+    "cat":"cat", "hat":"hat", "bat":"bat",
+    "dog":"dog", "frog":"frog", "log":"log",
+    "sun":"sun", "bun":"bun",
+    "bee":"bee", "tree":"tree",
+    "car":"car", "star":"star", "jar":"jar",
+    "cake":"cake", "snake":"snake",
+    "ball":"ball", "wall":"wall",
+    "ring":"ring", "king":"king",
+    "pig":"pig", "bus":"bus", "bug":"bug", "cup":"cup",
+    "jam":"jam", "leg":"leg", "web":"web", "net":"net",
+    "fox":"fox", "van":"van",
+}
+
+# Reusable spoken phrases — round-start prompts, etc.
+PHRASES = {
+    "how-many":   "How many?",
+    "count-them": "Count them.",
+    "lets-count": "Let's count.",
+    "how-many-do-you-see": "How many do you see?",
+    "whats-next": "What comes next?",
+    "where-does-it-live": "Where does it live?",
+    "find-the-circle":    "Find the circle.",
+    "find-the-square":    "Find the square.",
+    "find-the-triangle":  "Find the triangle.",
+    "find-the-rectangle": "Find the rectangle.",
+    "find-the-oval":      "Find the oval.",
+    "find-the-star":      "Find the star.",
+    "find-the-heart":     "Find the heart.",
+    "find-the-hexagon":   "Find the hexagon.",
+    "find-red":     "Find red.",
+    "find-blue":    "Find blue.",
+    "find-yellow":  "Find yellow.",
+    "find-green":   "Find green.",
+    "find-orange":  "Find orange.",
+    "find-purple":  "Find purple.",
+    "find-pink":    "Find pink.",
+    "find-brown":   "Find brown.",
+    "find-black":   "Find black.",
+    "find-white":   "Find white.",
+    "find-happy":     "Find the happy face.",
+    "find-sad":       "Find the sad face.",
+    "find-angry":     "Find the angry face.",
+    "find-surprised": "Find the surprised face.",
+    "find-scared":    "Find the scared face.",
+    "find-tired":     "Find the tired face.",
+    "find-excited":   "Find the excited face.",
+    "find-calm":      "Find the calm face.",
+    "where-is-the-eye":   "Where is the eye?",
+    "where-is-the-nose":  "Where is the nose?",
+    "where-is-the-ear":   "Where is the ear?",
+    "where-is-the-mouth": "Where is the mouth?",
+    "where-is-the-hand":  "Where is the hand?",
+    "where-is-the-foot":  "Where is the foot?",
+    "where-is-the-arm":   "Where is the arm?",
+    "where-is-the-leg":   "Where is the leg?",
+    "fire-question":    "Who helps when there is a fire?",
+    "sick-question":    "Who helps when you are sick?",
+    "learn-question":   "Who helps you learn at school?",
+    "safety-question":  "Who keeps people safe on the street?",
+    "food-question":    "Who makes food in a restaurant?",
+    "grow-question":    "Who grows our food?",
+    "car-question":     "Who fixes cars?",
+    "mail-question":    "Who brings the mail?",
+}
+
 
 async def synth_one(voice: str, text: str, out_path: Path, rate: str = "-10%", volume: str = "+0%"):
     """Generate one MP3 and write to disk."""
@@ -115,8 +224,12 @@ async def main():
     parser.add_argument("--voice", default="en-US-AriaNeural", help="Edge TTS voice name (default: en-US-AriaNeural)")
     parser.add_argument("--rate", default="-10%", help="Speech rate adjustment (default: -10%% for kid clarity)")
     parser.add_argument("--out", default="audio", help="Output root directory (default: ./audio)")
-    parser.add_argument("--only", choices=["names", "sounds", "words", "numbers", "all"], default="all",
-                        help="Which subset to generate")
+    parser.add_argument(
+        "--only",
+        choices=["names", "sounds", "words", "numbers", "concepts", "phrases", "all"],
+        default="all",
+        help="Which subset to generate"
+    )
     parser.add_argument("--skip-existing", action="store_true", help="Skip files that already exist")
     args = parser.parse_args()
 
@@ -141,6 +254,22 @@ async def main():
     if args.only in ("numbers", "all"):
         for N in NUMBERS:
             work.append((root / "numbers" / f"{N}.mp3", NUMBER_WORDS[N]))
+    if args.only in ("concepts", "all"):
+        for category, items in [
+            ("feelings", FEELINGS),
+            ("body",     BODY),
+            ("shapes",   SHAPES_LBL),
+            ("colors",   COLORS_LBL),
+            ("animals",  ANIMALS),
+            ("habitats", HABITATS),
+            ("helpers",  HELPERS),
+            ("voc",      VOC),
+        ]:
+            for key, text in items.items():
+                work.append((root / category / f"{key}.mp3", text))
+    if args.only in ("phrases", "all"):
+        for key, text in PHRASES.items():
+            work.append((root / "phrases" / f"{key}.mp3", text))
 
     total = len(work)
     done = 0

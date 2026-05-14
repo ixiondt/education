@@ -702,6 +702,28 @@
     VoiceEngine.speak([text]);
   }
 
+  /* v5.0.4 — concept / phrase MP3 chain
+     For modes whose targets aren't letters/numbers/words, we still want
+     the nice neural voice. The audio pack has `audio/<category>/<key>.mp3`
+     for feelings, body, shapes, colors, animals, habitats, helpers, plus
+     `audio/phrases/<key>.mp3` for reusable round-start prompts.
+
+     If the MP3 isn't found (or customAudio is off), we fall back to TTS
+     speaking the human-readable label / text — robotic on Windows
+     without a local neural voice installed, but functionally correct. */
+  async function sayConcept(category, key, fallbackText) {
+    if (profileSettings().customAudio === 'auto') {
+      const ok = await tryAudio(`./audio/${category}/${key}.mp3`);
+      if (ok) return;
+    }
+    VoiceEngine.speak([fallbackText || key]);
+  }
+
+  /* Play a prompt phrase by key (e.g. "how-many", "whats-next"). */
+  async function sayPromptKey(key, fallbackText) {
+    return sayConcept('phrases', key, fallbackText);
+  }
+
   // ============================================================
   //  PHRASE BANKS (variation so it stops sounding repetitive)
   // ============================================================
@@ -1237,7 +1259,14 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([phrase('countPrompt')]), 250);
+    setTimeout(() => {
+      /* Rotate through 4 prompt MP3s for variety. Each falls back
+         to TTS speaking the human phrase when audio is unavailable. */
+      const prompts = ['how-many', 'count-them', 'lets-count', 'how-many-do-you-see'];
+      const fallbacks = ['How many?', 'Count them.', "Let's count.", 'How many do you see?'];
+      const i = Math.floor(Math.random() * prompts.length);
+      sayPromptKey(prompts[i], fallbacks[i]);
+    }, 250);
   }
 
   function onCountChoice(btn, num) {
@@ -1295,7 +1324,12 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([info.word, '.', LETTER_SOUNDS[skill.target]]), 250);
+    /* MP3 chain: word ("Apple") then letter-sound ("ah"). Both already
+       in the audio pack from the original generate run. */
+    setTimeout(async () => {
+      await sayWord(skill.target);
+      sayLetter(skill.target, { mode: 'sound' });
+    }, 250);
   }
 
   function onSoundsChoice(btn, letter) {
@@ -1385,11 +1419,12 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => {
-      /* Speak word, emphasize first phoneme, repeat word. The repeated
-         start-phoneme is how kindergarten teachers cue this skill:
-         "cat starts with ccc... cat." */
-      VoiceEngine.speak([info.word, '. ', LETTER_SOUNDS[skill.target], '. ', info.word, '.']);
+    /* MP3 chain: word, then letter-sound, then word again. Same cue pattern
+       a kindergarten teacher would use: "Apple. ah. Apple." */
+    setTimeout(async () => {
+      await sayWord(skill.target);
+      await sayLetter(skill.target, { mode: 'sound' });
+      sayWord(skill.target);
     }, 250);
   }
 
@@ -1402,7 +1437,6 @@
     if (correct) {
       state.advancing = true;
       btn.classList.add('correct');
-      VoiceEngine.speak([`Yes! ${info.word} starts with ${letter}!`]);
       spawnSparkles(btn);
       advanceAfterSpeech(startFirstSoundRound);
     } else {
@@ -1410,17 +1444,20 @@
       btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
       if (state.wrongInRound >= 2) setPulse(el.firstSoundEmoji, true);
-      scheduleHint('soundsHint', {}, () => {
-        VoiceEngine.speak([info.word, '. ', LETTER_SOUNDS[state.target], '. ', info.word, '.']);
+      scheduleHint(null, null, async () => {
+        await sayWord(state.target);
+        await sayLetter(state.target, { mode: 'sound' });
+        sayWord(state.target);
       });
     }
   }
 
-  el.firstSoundReplay?.addEventListener('click', () => {
+  el.firstSoundReplay?.addEventListener('click', async () => {
     if (state.advancing || !state.target) return;
     clearHintTimer();
-    const info = LETTER_WORDS[state.target];
-    if (info) VoiceEngine.speak([info.word, '. ', LETTER_SOUNDS[state.target], '. ', info.word, '.']);
+    await sayWord(state.target);
+    await sayLetter(state.target, { mode: 'sound' });
+    sayWord(state.target);
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -1473,7 +1510,11 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([`Find what rhymes with ${cue.w}. ${cue.w}.`]), 300);
+    setTimeout(async () => {
+      // Speak cue word twice using MP3 if available
+      await sayConcept('voc', cue.w, cue.w);
+      sayConcept('voc', cue.w, cue.w);
+    }, 300);
   }
 
   function onRhymeChoice(btn, word) {
@@ -1629,7 +1670,7 @@
       (f) => `<span class="pc-emoji">${f.emoji}</span><span class="pc-word">${escapeHtml(f.label)}</span>`);
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([`Find the ${feeling.label} face.`]), 280);
+    setTimeout(() => sayPromptKey(`find-${feeling.key}`, `Find the ${feeling.label} face.`), 280);
   }
   function onFeelingsChoice(btn, key) {
     if (state.advancing) return;
@@ -1670,7 +1711,7 @@
       (b) => `<span class="pc-emoji">${b.emoji}</span><span class="pc-word">${escapeHtml(b.label)}</span>`);
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([part.prompt]), 280);
+    setTimeout(() => sayPromptKey(`where-is-the-${part.key}`, part.prompt), 280);
   }
   function onBodyChoice(btn, key) {
     if (state.advancing) return;
@@ -1714,7 +1755,7 @@
       (s) => `<span class="pc-shape">${renderShapeSVG(s)}</span>`);
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([`Find the ${shape.label}.`]), 280);
+    setTimeout(() => sayPromptKey(`find-the-${shape.key}`, `Find the ${shape.label}.`), 280);
   }
   function onShapesChoice(btn, key) {
     if (state.advancing) return;
@@ -1755,7 +1796,7 @@
       (c) => `<span class="pc-swatch" style="background:${c.oklch};background:${c.fallback}"></span><span class="pc-word">${escapeHtml(c.label)}</span>`);
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([`Find ${color.label}.`]), 280);
+    setTimeout(() => sayPromptKey(`find-${color.key}`, `Find ${color.label}.`), 280);
   }
   function onColorsChoice(btn, key) {
     if (state.advancing) return;
@@ -1823,7 +1864,7 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak(['What comes next?']), 280);
+    setTimeout(() => sayPromptKey('whats-next', 'What comes next?'), 280);
   }
   function onPatternsChoice(btn, key) {
     if (state.advancing) return;
@@ -1872,7 +1913,10 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([`Where does the ${pair.animal.name} live?`]), 280);
+    setTimeout(async () => {
+      await sayConcept('animals', pair.animal.name, pair.animal.name);
+      sayPromptKey('where-does-it-live', 'Where does it live?');
+    }, 280);
   }
   function onAnimalsChoice(btn, name) {
     if (state.advancing) return;
@@ -1923,7 +1967,21 @@
     });
 
     state.roundStartedAt = Date.now();
-    setTimeout(() => VoiceEngine.speak([item.scenario.q]), 280);
+    setTimeout(() => {
+      /* Map helper key to phrase MP3 key */
+      const phraseKey = ({
+        firefighter: 'fire-question',
+        doctor:      'sick-question',
+        teacher:     'learn-question',
+        police:      'safety-question',
+        chef:        'food-question',
+        farmer:      'grow-question',
+        mechanic:    'car-question',
+        mail:        'mail-question'
+      })[item.key] || null;
+      if (phraseKey) sayPromptKey(phraseKey, item.scenario.q);
+      else VoiceEngine.speak([item.scenario.q]);
+    }, 280);
   }
   function onHelpersChoice(btn, name) {
     if (state.advancing) return;
