@@ -616,11 +616,20 @@
       <div class="progress-streak" id="progress-streak" style="display:none"></div>
 
       <div class="segmented progress-tabs">
-        <button data-progress-tab="target"   aria-pressed="true">By letter / number</button>
+        <button data-progress-tab="area"     aria-pressed="true">By Rammeplan area</button>
+        <button data-progress-tab="target"   aria-pressed="false">By letter / number</button>
         <button data-progress-tab="standard" aria-pressed="false">By standard</button>
       </div>
 
-      <div id="progress-view-target">
+      <div id="progress-view-area">
+        <p style="color: var(--text-soft); font-size: 14px; margin-bottom: 4px;">
+          Where your child is across the 7 Norwegian Rammeplan learning areas.
+          No percentages — this is breadth of exploration, not benchmark.
+        </p>
+        <div class="rammeplan-list" id="progress-areas-list"></div>
+      </div>
+
+      <div id="progress-view-target" style="display:none">
         <p style="color: var(--text-soft); font-size: 14px; margin-bottom: 4px;">
           Stars show how much each one has been explored: ★ tried it, ★★ growing comfortable, ★★★ confident. Tap any cell for detail.
         </p>

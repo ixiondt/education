@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v5.1';
+const VERSION = 'lnum-v5.2';
 const SHELL = [
   './',
   './index.html',

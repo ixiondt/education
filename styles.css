@@ -1506,6 +1506,104 @@ body {
 }
 
 /* ============================================================
+   v5.2 — Rammeplan-area progress dashboard
+   ============================================================ */
+
+.rammeplan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+.area-card {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-left: 6px solid var(--accent);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.area-card:nth-child(1) { border-left-color: var(--accent); }
+.area-card:nth-child(2) { border-left-color: var(--secondary); }
+.area-card:nth-child(3) { border-left-color: var(--warning); }
+.area-card:nth-child(4) { border-left-color: var(--success); }
+.area-card:nth-child(5) { border-left-color: oklch(0.62 0.18 28); }
+.area-card:nth-child(6) { border-left-color: oklch(0.65 0.18 305); }
+.area-card:nth-child(7) { border-left-color: oklch(0.55 0.18 245); }
+
+.area-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.area-emoji {
+  font-size: 32px;
+  line-height: 1;
+}
+.area-titles { flex: 1; min-width: 0; }
+.area-en {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.area-no {
+  font-size: 12px;
+  color: var(--text-soft);
+  font-style: italic;
+}
+.area-intro {
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.4;
+}
+.area-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.area-group {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+.area-group-label {
+  color: var(--text);
+  font-weight: 700;
+}
+.area-group-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.area-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+}
+.area-dot.empty  { background: var(--bg); }
+.area-dot.half   { background: var(--warning); border-color: var(--warning); }
+.area-dot.full   { background: var(--success); border-color: var(--success); }
+.area-dot.locked { background: transparent; border-style: dashed; opacity: 0.4; }
+.area-group-meta {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.area-totals {
+  font-size: 12px;
+  color: var(--text-soft);
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+
+/* ============================================================
    v5.1 — Age bands, mode locks, today's session, session-complete
    ============================================================ */
 

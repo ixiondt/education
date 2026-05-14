@@ -659,6 +659,131 @@ function areaForMode(mode) {
 }
 
 /* ============================================================
+   v5.2 — RAMMEPLAN AREA MAP
+   The 7 Norwegian learning areas, each mapped to the skill
+   categories from our curriculum. Powers the "By area" tab in
+   the progress dashboard — a Norwegian-style parent view that
+   shows breadth of exploration across the framework's 7 areas
+   rather than performance percentages.
+   ============================================================ */
+const RAMMEPLAN_AREAS = [
+  {
+    id:  'comm-lang',
+    no:  'Kommunikasjon, språk og tekst',
+    en:  'Communication, Language & Text',
+    emoji: '🅰️',
+    intro: 'Letters, sounds, words, and the bridge to reading.',
+    groups: [
+      { label: 'Letter recognition',          category: 'letter-recognize' },
+      { label: 'Letter sounds (phonics)',     category: 'letter-sound' },
+      { label: 'Letter formation (tracing)',  category: 'letter-trace' },
+      { label: 'First-sound identification',  category: 'first-sound' },
+      { label: 'Rhyming',                     category: 'rhyme' },
+      { label: 'Blending sounds into words',  category: 'blend' }
+    ]
+  },
+  {
+    id:  'quant-space',
+    no:  'Antall, rom og form',
+    en:  'Quantity, Space & Shape',
+    emoji: '🔢',
+    intro: 'Numbers, counting, shapes, and patterns.',
+    groups: [
+      { label: 'Number recognition',          category: 'number-recognize' },
+      { label: 'Number formation (tracing)',  category: 'number-trace' },
+      { label: 'Counting (1-to-1)',           category: 'count' },
+      { label: 'Shapes',                      category: 'shape' },
+      { label: 'Patterns',                    category: 'pattern' }
+    ]
+  },
+  {
+    id:  'art-creative',
+    no:  'Kunst, kultur og kreativitet',
+    en:  'Art, Culture & Creativity',
+    emoji: '🎨',
+    intro: 'Colors and creative exploration.',
+    groups: [
+      { label: 'Colors',                      category: 'color' }
+    ]
+  },
+  {
+    id:  'nature',
+    no:  'Natur, miljø og teknologi',
+    en:  'Nature, Environment & Technology',
+    emoji: '🌳',
+    intro: 'Animals and habitats; a peek at the natural world.',
+    groups: [
+      { label: 'Animals & their habitats',    category: 'animal' }
+    ]
+  },
+  {
+    id:  'body-health',
+    no:  'Kropp, bevegelse, mat og helse',
+    en:  'Body, Movement, Food & Health',
+    emoji: '👃',
+    intro: 'Naming parts of the body. (Real movement happens off-screen.)',
+    groups: [
+      { label: 'Body parts',                  category: 'body' }
+    ]
+  },
+  {
+    id:  'ethics',
+    no:  'Etikk, religion og filosofi',
+    en:  'Ethics, Feelings & Philosophy',
+    emoji: '😀',
+    intro: 'Recognizing and naming emotions — the start of self-regulation.',
+    groups: [
+      { label: 'Feelings & emotions',         category: 'feeling' }
+    ]
+  },
+  {
+    id:  'community',
+    no:  'Nærmiljø og samfunn',
+    en:  'Local Community & Society',
+    emoji: '👩‍⚕️',
+    intro: 'Who does what in our community.',
+    groups: [
+      { label: 'Community helpers',           category: 'helper' }
+    ]
+  }
+];
+
+/* Helpers for the area dashboard */
+function skillsInCategory(category) {
+  return SKILLS.filter((s) => s.category === category);
+}
+function computeAreaProgress(area, profile) {
+  let total = 0, available = 0, mastered = 0, practiced = 0;
+  area.groups.forEach((g) => {
+    const skills = skillsInCategory(g.category);
+    total += skills.length;
+    skills.forEach((s) => {
+      if (isSkillAvailable(s, profile, { relaxPrereqs: true })) {
+        available++;
+        if (isSkillMastered(s, profile)) mastered++;
+        else if (getSkillProgress(s, profile).successes > 0) practiced++;
+      }
+    });
+  });
+  return { total, available, mastered, practiced };
+}
+function computeCategoryProgress(category, profile) {
+  const skills = skillsInCategory(category);
+  let total = skills.length, available = 0, mastered = 0, practiced = 0;
+  const dots = [];
+  skills.forEach((s) => {
+    const isAvail = isSkillAvailable(s, profile, { relaxPrereqs: true });
+    const p = getSkillProgress(s, profile);
+    if (isAvail) available++;
+    if (isSkillMastered(s, profile)) { mastered++; dots.push('full'); }
+    else if (p.successes > 0)         { practiced++; dots.push('half'); }
+    else if (isAvail)                  dots.push('empty');
+    else                                dots.push('locked');
+  });
+  return { total, available, mastered, practiced, dots };
+}
+
+/* ============================================================
    v3 — mastery decay (forgetting curve)
    A skill is "fading" if it was mastered, but hasn't been seen
    for FADE_DAYS days. The picker up-weights fading skills so they

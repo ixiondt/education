@@ -1110,6 +1110,8 @@
     progressTabs:          document.querySelectorAll('[data-progress-tab]'),
     progressViewTarget:    $('progress-view-target'),
     progressViewStandard:  $('progress-view-standard'),
+    progressViewArea:      $('progress-view-area'),
+    progressAreasList:     $('progress-areas-list'),
 
     exportProgressBtn: $('export-progress-btn'),
     printProgressBtn:  $('print-progress-btn'),
@@ -2714,8 +2716,22 @@
     state.target = skill.target;
 
     const isLetters = state.mode === 'trace-letters';
-    const strokes = (isLetters ? LETTER_PATHS : NUMBER_PATHS)[skill.target];
-    el.traceLabel.textContent = `Trace ${skill.target}`;
+    /* v5.2 — case-aware tracing.
+       case = 'upper' → uppercase paths
+       case = 'lower' → lowercase paths
+       case = 'both'  → 50/50 random per round */
+    let strokes, displayLabel;
+    if (isLetters) {
+      const caseSetting = profileSettings().case;
+      const useLower = caseSetting === 'lower' ||
+                       (caseSetting === 'both' && Math.random() < 0.5);
+      strokes = (useLower ? LOWERCASE_LETTER_PATHS : LETTER_PATHS)[skill.target];
+      displayLabel = useLower ? skill.target.toLowerCase() : skill.target;
+    } else {
+      strokes = NUMBER_PATHS[skill.target];
+      displayLabel = skill.target;
+    }
+    el.traceLabel.textContent = `Trace ${displayLabel}`;
 
     if (state.tracer) state.tracer.destroy();
     state.tracer = new Tracer(el.traceSvg, strokes, onTraceComplete);
@@ -2930,9 +2946,55 @@
     el.progressTabs.forEach((b) => {
       b.setAttribute('aria-pressed', b.dataset.progressTab === name ? 'true' : 'false');
     });
+    if (el.progressViewArea)     el.progressViewArea.style.display     = name === 'area'     ? '' : 'none';
     if (el.progressViewTarget)   el.progressViewTarget.style.display   = name === 'target'   ? '' : 'none';
     if (el.progressViewStandard) el.progressViewStandard.style.display = name === 'standard' ? '' : 'none';
     if (name === 'standard') renderProgressStandards();
+    if (name === 'area')     renderProgressByArea();
+  }
+
+  /* v5.2 — Rammeplan-area dashboard.
+     Renders each of the 7 Norwegian learning areas as a section
+     with progress dots per skill category. Norwegian framing:
+     breadth of exploration, not percentage benchmarks. */
+  function renderProgressByArea() {
+    if (!el.progressAreasList) return;
+    const profile = activeProfile();
+    if (!profile) return;
+    el.progressAreasList.innerHTML = '';
+    RAMMEPLAN_AREAS.forEach((area) => {
+      const totals = computeAreaProgress(area, profile);
+      const card = document.createElement('div');
+      card.className = 'area-card';
+      card.innerHTML = `
+        <div class="area-head">
+          <span class="area-emoji">${area.emoji}</span>
+          <div class="area-titles">
+            <div class="area-en">${escapeHtml(area.en)}</div>
+            <div class="area-no">${escapeHtml(area.no)}</div>
+          </div>
+        </div>
+        <div class="area-intro">${escapeHtml(area.intro)}</div>
+        <div class="area-groups"></div>
+        <div class="area-totals">
+          ${totals.mastered} confident · ${totals.practiced} exploring · ${totals.available} of ${totals.total} available at this age
+        </div>
+      `;
+      const groupsContainer = card.querySelector('.area-groups');
+      area.groups.forEach((g) => {
+        const stats = computeCategoryProgress(g.category, profile);
+        const row = document.createElement('div');
+        row.className = 'area-group';
+        const dotsHTML = stats.dots.map((kind) => `<span class="area-dot ${kind}"></span>`).join('');
+        row.innerHTML = `
+          <div class="area-group-label">${escapeHtml(g.label)}</div>
+          <div class="area-group-dots">${dotsHTML}</div>
+          <div class="area-group-meta">${stats.mastered}/${stats.available || stats.total}</div>
+        `;
+        groupsContainer.appendChild(row);
+      });
+      el.progressAreasList.appendChild(card);
+    });
   }
 
   function renderProgressSummary() {
@@ -2983,7 +3045,7 @@
     renderStreak();
     renderProgressCells(el.progressLetters, LETTERS, (sym) => `letter-recognize-${sym.toUpperCase()}`);
     renderProgressCells(el.progressNumbers, NUMBERS, (sym) => `number-recognize-${sym}`);
-    setProgressTab('target');
+    setProgressTab('area');   // v5.2 — Rammeplan area is the default parent view
     el.modalSettings.classList.remove('active');
     el.modalProgress.classList.add('active');
   }
