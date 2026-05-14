@@ -278,16 +278,18 @@
     else    element.classList.remove('hint-pulse');
   }
 
-  /* Schedule a gentle delayed hint. If they tap before it fires (right or wrong),
-     it's cleared. Phrasing rotates so it doesn't feel like the same recording. */
-  function scheduleHint(bankKey, vars, sayTargetFn) {
+  /* Schedule a gentle delayed hint. If they tap before it fires it's
+     cleared. In the MP3-pack era we no longer speak a TTS "Try again"
+     phrase — that brought back the robotic local voice in modes that
+     otherwise use MP3 Aria. The hint is now a silent 3-second pause
+     followed by a target re-cue (which uses the full MP3/IDB/TTS
+     priority chain via sayLetter / sayNumber / sayWord). */
+  function scheduleHint(_bankKey, _vars, sayTargetFn) {
     clearHintTimer();
     state.hintTimer = setTimeout(() => {
       state.hintTimer = null;
       if (state.advancing) return;
-      VoiceEngine.speak([phrase(bankKey, vars)], { rate: 0.78, pitch: 1.12 });
-      // After saying the hint, also re-cue the target softly
-      setTimeout(() => { if (!state.advancing && sayTargetFn) sayTargetFn(); }, 700);
+      if (sayTargetFn) sayTargetFn();
     }, 3000);
   }
 
@@ -497,6 +499,32 @@
       });
     }
   };
+
+  /* Speech-busy poll — used to defer round transitions until any
+     in-flight speech (MP3 or synth TTS) has finished naturally.
+     Without this, advancing to the next round mid-utterance cuts
+     the current letter / cheer off, which the user-experience
+     reads as "it cut off what it was saying". */
+  function speechBusy() {
+    if (audioPlayer.current) return true;
+    if ('speechSynthesis' in window && speechSynthesis.speaking) return true;
+    return false;
+  }
+  function waitForSpeech(maxWaitMs = 5000) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const check = () => {
+        if (!speechBusy() || Date.now() - start > maxWaitMs) resolve();
+        else setTimeout(check, 80);
+      };
+      check();
+    });
+  }
+  /* Schedule the next round to start after any in-flight speech ends.
+     Used in every correct-tap handler so transitions never clip audio. */
+  function advanceAfterSpeech(callback, celebrationMs = 700) {
+    waitForSpeech().then(() => setTimeout(callback, celebrationMs));
+  }
 
   // ============================================================
   //  RECORDED AUDIO (IndexedDB — parent records voice in-app)
@@ -1145,19 +1173,21 @@
       state.advancing = true;
       btn.classList.add('correct');
       setPulse(el.findTarget, false);
-      // Short rotating cheer + the letter; not the same line every time
-      VoiceEngine.speak([phrase('correctEcho', { target: sym })]);
+      /* No TTS cheer — the sparkles are the celebration. Wait for any
+         in-flight round-start audio to finish naturally before advancing,
+         so we never cut the kid off mid-letter. */
       spawnSparkles(btn);
-      setTimeout(startFindRound, 1500);
+      advanceAfterSpeech(startFindRound);
     } else {
       state.wrongInRound++;
       btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      // After the second wrong: visual hint by pulsing the target in the prompt
       if (state.wrongInRound >= 2) setPulse(el.findTarget, true);
-      // No immediate re-speak. Schedule a gentle, rotating-phrase hint
-      // that fires only if they don't tap again within 3s.
-      scheduleHint('findHint', {}, () => {
+      /* Hint: silently re-cue the target after 3s of inactivity. No TTS
+         "Try again" phrase — it was robotic in the absence of a local
+         neural voice, and the target re-cue (via MP3 chain) is what's
+         actually useful. */
+      scheduleHint(null, null, () => {
         if (state.mode === 'find-letters') sayLetter(state.target);
         else sayNumber(state.target);
       });
@@ -1218,14 +1248,13 @@
     if (correct) {
       state.advancing = true;
       btn.classList.add('correct');
-      VoiceEngine.speak([phrase('countCorrect', { n: num })]);
       spawnSparkles(btn);
-      setTimeout(startCountRound, 1600);
+      advanceAfterSpeech(startCountRound);
     } else {
       state.wrongInRound++;
       btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
-      scheduleHint('countHint', {}, () => sayNumber(state.target));
+      scheduleHint(null, null, () => sayNumber(state.target));
     }
   }
 
@@ -1279,15 +1308,14 @@
       state.advancing = true;
       btn.classList.add('correct');
       setPulse(el.soundsPic, false);
-      VoiceEngine.speak([phrase('soundsCorrect', { target: letter, word: info.word })]);
       spawnSparkles(btn);
-      setTimeout(startSoundsRound, 1700);
+      advanceAfterSpeech(startSoundsRound);
     } else {
       state.wrongInRound++;
       btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
       if (state.wrongInRound >= 2) setPulse(el.soundsPic, true);
-      scheduleHint('soundsHint', {}, () => VoiceEngine.speak([info.word, '.', LETTER_SOUNDS[state.target]]));
+      scheduleHint(null, null, () => sayWord(state.target));
     }
   }
 
@@ -1376,7 +1404,7 @@
       btn.classList.add('correct');
       VoiceEngine.speak([`Yes! ${info.word} starts with ${letter}!`]);
       spawnSparkles(btn);
-      setTimeout(startFirstSoundRound, 1800);
+      advanceAfterSpeech(startFirstSoundRound);
     } else {
       state.wrongInRound++;
       btn.classList.add('wrong');
@@ -1458,7 +1486,7 @@
       btn.classList.add('correct');
       VoiceEngine.speak([`Yes! ${word} rhymes!`]);
       spawnSparkles(btn);
-      setTimeout(startRhymeRound, 1700);
+      advanceAfterSpeech(startRhymeRound);
     } else {
       state.wrongInRound++;
       btn.classList.add('wrong');
@@ -1536,7 +1564,7 @@
       /* The big reveal: phonemes blended into the whole word */
       VoiceEngine.speak([`Yes! ${state.blendWord}!`]);
       spawnSparkles(btn);
-      setTimeout(startBlendRound, 1800);
+      advanceAfterSpeech(startBlendRound);
     } else {
       state.wrongInRound++;
       btn.classList.add('wrong');
@@ -1612,7 +1640,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak([`Yes! That's ${target.label}.`]);
-      spawnSparkles(btn); setTimeout(startFeelingsRound, 1700);
+      spawnSparkles(btn); advanceAfterSpeech(startFeelingsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -1653,7 +1681,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak([`Yes! That's the ${target.label}.`]);
-      spawnSparkles(btn); setTimeout(startBodyRound, 1700);
+      spawnSparkles(btn); advanceAfterSpeech(startBodyRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -1697,7 +1725,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak([`Yes! ${target.label}.`]);
-      spawnSparkles(btn); setTimeout(startShapesRound, 1700);
+      spawnSparkles(btn); advanceAfterSpeech(startShapesRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -1738,7 +1766,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak([`Yes! ${target.label}.`]);
-      spawnSparkles(btn); setTimeout(startColorsRound, 1700);
+      spawnSparkles(btn); advanceAfterSpeech(startColorsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -1805,7 +1833,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak(['Yes! You got the pattern.']);
-      spawnSparkles(btn); setTimeout(startPatternsRound, 1700);
+      spawnSparkles(btn); advanceAfterSpeech(startPatternsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -1854,7 +1882,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak([`Yes! It lives in the ${name}.`]);
-      spawnSparkles(btn); setTimeout(startAnimalsRound, 1800);
+      spawnSparkles(btn); advanceAfterSpeech(startAnimalsRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -1905,7 +1933,7 @@
     if (correct) {
       state.advancing = true; btn.classList.add('correct');
       VoiceEngine.speak([`Yes! The ${name} does that.`]);
-      spawnSparkles(btn); setTimeout(startHelpersRound, 1800);
+      spawnSparkles(btn); advanceAfterSpeech(startHelpersRound);
     } else {
       state.wrongInRound++; btn.classList.add('wrong');
       setTimeout(() => btn.classList.remove('wrong'), 400);
@@ -2351,7 +2379,7 @@
     spawnSparkles({ getBoundingClientRect: () => rect });
     if (state.mode === 'trace-letters') sayLetter(state.target);
     else sayNumber(state.target);
-    setTimeout(startTraceRound, 1700);
+    advanceAfterSpeech(startTraceRound);
   }
 
   // ============================================================
