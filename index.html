@@ -496,6 +496,7 @@
       <button class="btn btn-secondary" id="calm-corner-btn">🌬️ Calm corner</button>
       <button class="btn btn-secondary" id="activities-btn">🌳 Off-screen activities</button>
       <button class="btn btn-secondary" id="reading-btn">📚 Reading log</button>
+      <button class="btn btn-secondary" id="worksheets-btn">🖨️ Printable worksheets</button>
       <button class="btn btn-secondary" id="about-btn">📖 About our approach</button>
       <button class="btn btn-primary" id="settingsClose">Done</button>
     </div>
@@ -556,6 +557,46 @@
 
       <button class="btn btn-primary" id="reading-close">Done</button>
     </div>
+  </div>
+
+  <!-- ============ PRINTABLE WORKSHEETS (v5.6) ============ -->
+  <div class="modal" id="modal-worksheets" role="dialog" aria-modal="true" aria-labelledby="ws-title">
+    <div class="modal-card modal-card-wide">
+      <h2 id="ws-title">Printable worksheets</h2>
+      <p style="font-size:14px; color:var(--text-soft);">
+        Real-materials practice — print these or save as PDF for off-screen time.
+        The Rammeplan is emphatic that paper, crayons, and hands matter as much
+        as any screen.
+      </p>
+      <div class="worksheets-list">
+        <button class="ws-card" data-ws="alphabet">
+          <div class="ws-icon">Aa Bb</div>
+          <div class="ws-label">Alphabet reference</div>
+          <div class="ws-meta">Uppercase + lowercase, A–Z</div>
+        </button>
+        <button class="ws-card" data-ws="trace-upper">
+          <div class="ws-icon">A</div>
+          <div class="ws-label">Letter tracing (uppercase)</div>
+          <div class="ws-meta">Dotted outlines, all 26 letters</div>
+        </button>
+        <button class="ws-card" data-ws="trace-lower">
+          <div class="ws-icon">a</div>
+          <div class="ws-label">Letter tracing (lowercase)</div>
+          <div class="ws-meta">Single-story school style</div>
+        </button>
+        <button class="ws-card" data-ws="trace-numbers">
+          <div class="ws-icon">1 2 3</div>
+          <div class="ws-label">Number tracing</div>
+          <div class="ws-meta">Numerals 0–10</div>
+        </button>
+      </div>
+      <button class="btn btn-primary" id="worksheets-close">Done</button>
+    </div>
+  </div>
+
+  <!-- Printable view (hidden except during print) -->
+  <div id="printable-view" class="printable-view">
+    <div id="printable-content"></div>
   </div>
 
   <!-- ============ AGENCY PICKER ============ -->

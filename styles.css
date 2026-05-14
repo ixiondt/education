@@ -1508,6 +1508,157 @@ body {
 }
 
 /* ============================================================
+   v5.6 — Printable worksheets
+   ============================================================ */
+
+.worksheets-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.ws-card {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  transition: transform 120ms ease, border-color 200ms ease;
+}
+.ws-card:active { transform: scale(0.97); }
+.ws-card:hover  { border-color: var(--accent); }
+.ws-icon {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'Andika', system-ui, sans-serif;
+  letter-spacing: 0.05em;
+}
+.ws-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ws-meta {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+/* Printable view — hidden by default, shown only during print */
+.printable-view {
+  display: none;
+}
+body.printing .printable-view {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: white;
+  color: black;
+  overflow: auto;
+  z-index: 9999;
+  padding: 18px;
+}
+body.printing #app,
+body.printing .modal,
+body.printing .sparkles,
+body.printing .install-prompt {
+  display: none !important;
+}
+
+/* Worksheet content layout (visible only in printing or @media print) */
+.ws-h1 {
+  font-size: 22px;
+  margin-bottom: 8px;
+  color: black;
+}
+.ws-intro {
+  font-size: 13px;
+  margin-bottom: 14px;
+  color: #555;
+}
+.ws-alpha-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Andika', system-ui, serif;
+}
+.ws-alpha-table th, .ws-alpha-table td {
+  border: 1px solid #999;
+  padding: 8px 10px;
+  text-align: left;
+}
+.ws-alpha-table th { background: #f0f0f0; font-size: 13px; }
+.ws-up, .ws-low { font-size: 28px; font-weight: 700; text-align: center; width: 60px; }
+.ws-pic         { font-size: 16px; }
+.ws-pic .ws-word { font-size: 16px; }
+
+.ws-trace-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ws-trace-cell {
+  border: 1.5px solid #999;
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  break-inside: avoid;
+}
+.ws-trace-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+.ws-trace-svg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 200 / 240;
+}
+.ws-trace-path {
+  fill: none;
+  stroke: #888;
+  stroke-width: 4;
+  stroke-dasharray: 6 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ws-start-dot {
+  fill: #2a7d2a;
+  stroke: white;
+  stroke-width: 1.5;
+}
+.ws-footer {
+  margin-top: 14px;
+  font-size: 10px;
+  color: #999;
+  text-align: right;
+}
+
+/* Print-specific overrides */
+@media print {
+  body { background: white !important; }
+  body .printable-view {
+    display: block !important;
+    position: static;
+    background: white;
+    padding: 8px;
+    z-index: auto;
+  }
+  body #app,
+  body .modal,
+  body .sparkles,
+  body .install-prompt { display: none !important; }
+  .ws-trace-cell { page-break-inside: avoid; }
+  .ws-trace-grid { grid-template-columns: repeat(4, 1fr); }
+  @page { margin: 0.4in; }
+}
+
+/* ============================================================
    v5.5 — Toddler tap mode (cause-effect, no rounds)
    ============================================================ */
 

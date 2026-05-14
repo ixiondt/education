@@ -1070,6 +1070,13 @@
     tapGrid:   $('tap-grid'),
     tapShuffle:$('tap-shuffle'),
 
+    // v5.6 — printable worksheets
+    worksheetsBtn:    $('worksheets-btn'),
+    modalWorksheets:  $('modal-worksheets'),
+    worksheetsClose:  $('worksheets-close'),
+    printableView:    $('printable-view'),
+    printableContent: $('printable-content'),
+
     calmCornerBtn:     $('calm-corner-btn'),
     calmStop:          $('calm-stop'),
     calmText:          $('calm-text'),
@@ -2848,6 +2855,91 @@
     startCalmCorner();
   });
   el.calmStop?.addEventListener('click', stopCalmCorner);
+
+  // ============================================================
+  //  v5.6 — PRINTABLE WORKSHEETS (Rammeplan: real materials matter)
+  //  Renders SVG-based printable views of the alphabet / tracing
+  //  paths / numbers and triggers the browser print dialog.
+  //  Pure off-screen extension — no screen time, no app session.
+  // ============================================================
+
+  function renderAlphabetWorksheet() {
+    const rows = [];
+    rows.push('<h1 class="ws-h1">Alphabet — Letters & Numbers app</h1>');
+    rows.push('<table class="ws-alpha-table"><thead><tr><th>Uppercase</th><th>Lowercase</th><th>Picture word</th></tr></thead><tbody>');
+    LETTERS.forEach((L) => {
+      const word = (typeof LETTER_WORDS !== 'undefined' && LETTER_WORDS[L]) ? LETTER_WORDS[L] : { word: '', emoji: '' };
+      rows.push(`<tr><td class="ws-up">${L}</td><td class="ws-low">${L.toLowerCase()}</td><td class="ws-pic">${word.emoji} <span class="ws-word">${escapeHtml(word.word)}</span></td></tr>`);
+    });
+    rows.push('</tbody></table>');
+    rows.push('<p class="ws-footer">letters.guardcybersolutionsllc.com</p>');
+    return rows.join('');
+  }
+
+  function renderTracingWorksheet(paths, isLowercase = false) {
+    const title = isLowercase ? 'Lowercase letter tracing' : 'Uppercase letter tracing';
+    const items = Object.entries(paths);
+    let html = `<h1 class="ws-h1">${title}</h1>`;
+    html += '<p class="ws-intro">Trace each letter with a finger or pencil. Start at the dot.</p>';
+    html += '<div class="ws-trace-grid">';
+    items.forEach(([letter, strokes]) => {
+      // Build SVG with dashed outline + start dot
+      const strokeSvgs = strokes.map((s) => `<path d="${s.d}" class="ws-trace-path" />`).join('');
+      // First stroke's start point becomes the start dot
+      // We'll inject a script-less version with an explicit circle at the start of stroke 0
+      const firstPath = strokes[0]?.d || '';
+      const startMatch = firstPath.match(/^M\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
+      const sx = startMatch ? startMatch[1] : '100';
+      const sy = startMatch ? startMatch[2] : '120';
+      html += `
+        <div class="ws-trace-cell">
+          <div class="ws-trace-label">${letter}</div>
+          <svg viewBox="0 0 200 240" class="ws-trace-svg" xmlns="http://www.w3.org/2000/svg">
+            ${strokeSvgs}
+            <circle cx="${sx}" cy="${sy}" r="6" class="ws-start-dot" />
+          </svg>
+        </div>
+      `;
+    });
+    html += '</div>';
+    html += '<p class="ws-footer">letters.guardcybersolutionsllc.com</p>';
+    return html;
+  }
+
+  function renderWorksheet(kind) {
+    if (!el.printableContent) return;
+    let html = '';
+    if (kind === 'alphabet') html = renderAlphabetWorksheet();
+    else if (kind === 'trace-upper')   html = renderTracingWorksheet(LETTER_PATHS, false);
+    else if (kind === 'trace-lower' && typeof LOWERCASE_LETTER_PATHS !== 'undefined') {
+      html = renderTracingWorksheet(LOWERCASE_LETTER_PATHS, true);
+    }
+    else if (kind === 'trace-numbers') html = renderTracingWorksheet(NUMBER_PATHS, false);
+    el.printableContent.innerHTML = html;
+    /* Toggle the body class so the print stylesheet shows only the
+       printable view, then call window.print(). The browser dialog
+       handles save-as-PDF on every modern platform. */
+    document.body.classList.add('printing');
+    setTimeout(() => {
+      window.print();
+      // Browser blocks until print dialog closes
+      document.body.classList.remove('printing');
+    }, 100);
+  }
+
+  el.worksheetsBtn?.addEventListener('click', () => {
+    closeSettings();
+    el.modalWorksheets?.classList.add('active');
+  });
+  el.worksheetsClose?.addEventListener('click', () => el.modalWorksheets?.classList.remove('active'));
+  el.modalWorksheets?.addEventListener('click', (e) => {
+    if (e.target === el.modalWorksheets) el.modalWorksheets.classList.remove('active');
+    const btn = e.target.closest('[data-ws]');
+    if (btn) {
+      el.modalWorksheets.classList.remove('active');
+      renderWorksheet(btn.dataset.ws);
+    }
+  });
 
   // ============================================================
   //  PLAY MODE  (v3.2 — non-evaluative free exploration)
