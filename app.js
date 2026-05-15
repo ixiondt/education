@@ -1139,7 +1139,11 @@
       // v5.18 — executive-function trainers (Sequence Star / Stop & Go / Launch Pad)
       sequenceStar:   $('screen-sequence-star'),
       stopGo:         $('screen-stop-go'),
-      launchPad:      $('screen-launch-pad')
+      launchPad:      $('screen-launch-pad'),
+      // v5.20 — round-2 EF (flexibility / sustained attention / metacognition)
+      switchIt:       $('screen-switch-it'),
+      stargazer:      $('screen-stargazer'),
+      reflect:        $('screen-reflect')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1674,6 +1678,42 @@
           });
           break;
         }
+        // v5.20 — round-2 EF
+        case 'switch-it': {
+          showScreen('switchIt');
+          requestAnimationFrame(() => {
+            if (typeof startSwitchIt !== 'function') return;
+            startSwitchIt({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text) => VoiceEngine.speak([text]),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'stargazer': {
+          showScreen('stargazer');
+          requestAnimationFrame(() => {
+            if (typeof startStargazer !== 'function') return;
+            startStargazer({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text) => VoiceEngine.speak([text]),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'reflect': {
+          showScreen('reflect');
+          requestAnimationFrame(() => {
+            if (typeof startReflect !== 'function') return;
+            startReflect({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -1750,6 +1790,10 @@
     if (typeof stopSequenceStar === 'function') stopSequenceStar();
     if (typeof stopStopGo       === 'function') stopStopGo();
     if (typeof stopLaunchPad    === 'function') stopLaunchPad();
+    // v5.20 — tear down round-2 EF trainers
+    if (typeof stopSwitchIt   === 'function') stopSwitchIt();
+    if (typeof stopStargazer  === 'function') stopStargazer();
+    if (typeof stopReflect    === 'function') stopReflect();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;

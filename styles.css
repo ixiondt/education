@@ -681,6 +681,176 @@ body {
 .j-cal-cell.j-cal-blank { background: transparent; border: none; cursor: default; }
 .j-cal-cell.j-cal-blank:hover { transform: none; }
 
+/* ============================================================
+   v5.20 — Round-2 EF games + Reflect form
+   ============================================================ */
+.mode-card.switch-it .icon { color: var(--accent); }
+.mode-card.stargazer .icon { color: var(--secondary); }
+.mode-card.reflect   .icon { color: var(--success); }
+
+/* Switch It — rule banner at the top of the canvas */
+.switch-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: env(safe-area-inset-top, 14px) 0 0;
+  z-index: 3;
+}
+.switch-banner {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  background: oklch(from var(--surface) l c h / 0.94);
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 2px solid var(--accent);
+  box-shadow: 0 4px 14px var(--shadow);
+}
+.switch-banner.rule-flash {
+  animation: rule-flash 700ms ease;
+}
+@keyframes rule-flash {
+  0%   { transform: scale(1);    background: oklch(from var(--accent) l c h / 0.20); }
+  40%  { transform: scale(1.12); background: oklch(from var(--accent) l c h / 0.40); }
+  100% { transform: scale(1);    background: oklch(from var(--surface) l c h / 0.94); }
+}
+
+/* Stargazer — slim progress bar over the night sky */
+.sg-stars-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.sg-stars-hud {
+  padding: env(safe-area-inset-top, 14px) 16px 0;
+}
+.sg-stars-progress {
+  height: 6px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sg-stars-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ffd166, #ef476f);
+  transition: width 500ms linear;
+}
+
+/* Reflect — DOM form screen, calm full-page layout */
+.screen-reflect.active {
+  padding: 32px 20px;
+  gap: 0;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100dvh;
+  width: 100%;
+}
+.reflect-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 8px 22px var(--shadow);
+  border: 1px solid var(--border);
+}
+.reflect-title {
+  font-size: 26px;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+}
+.reflect-sub {
+  color: var(--text-soft);
+  text-align: center;
+  font-size: 14px;
+  margin: -8px 0 0;
+}
+.reflect-section { display: flex; flex-direction: column; gap: 8px; }
+.reflect-q {
+  font-size: 16px;
+  color: var(--text);
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+.reflect-ladder { display: flex; gap: 6px; }
+.reflect-step {
+  flex: 1;
+  font-size: 28px;
+  padding: 10px 0;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.reflect-step:hover { transform: translateY(-1px); }
+.reflect-step.selected {
+  background: oklch(from var(--accent) l c h / 0.10);
+  border-color: var(--accent);
+  transform: scale(1.10);
+}
+.reflect-difficulty {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.reflect-d-btn {
+  padding: 12px 10px;
+  font: inherit;
+  font-size: 15px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+.reflect-d-btn.selected {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.10);
+}
+.reflect-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reflect-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+.reflect-chip-emoji { font-size: 18px; }
+.reflect-chip.selected {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.10);
+}
+.reflect-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.reflect-actions .btn { flex: 1; padding: 12px 18px; }
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

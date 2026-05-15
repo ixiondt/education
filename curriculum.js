@@ -830,7 +830,9 @@ const MODE_AREAS = {
   // v5.18 — Executive function trainers. New first-class area so the
   //         Rammeplan dashboard reports EF coverage separately from
   //         literacy / numeracy / self-world breadth.
-  ef:        ['sequence-star', 'stop-go', 'launch-pad']
+  //  v5.20 — adds cognitive flexibility, sustained attention,
+  //         metacognition (Switch It / Stargazer / Reflect).
+  ef:        ['sequence-star', 'stop-go', 'launch-pad', 'switch-it', 'stargazer', 'reflect']
 };
 
 /* v5.16 — modes that don't have their own skill rows but reuse another

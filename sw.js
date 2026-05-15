@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v5.19';
+const VERSION = 'lnum-v5.20';
 const SHELL = [
   './',
   './index.html',
@@ -21,6 +21,10 @@ const SHELL = [
   './game-launch-pad.js',
   // v5.19 — parent observation journal (Finally Focused)
   './journal.js',
+  // v5.20 — round-2 EF trainers
+  './game-switch-it.js',
+  './game-stargazer.js',
+  './game-reflect.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'

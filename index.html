@@ -158,6 +158,18 @@
           <div class="icon">🚀</div>
           <div class="label">Launch Pad</div>
         </button>
+        <button class="mode-card game switch-it" data-mode="switch-it">
+          <div class="icon">🔀</div>
+          <div class="label">Switch It</div>
+        </button>
+        <button class="mode-card game stargazer" data-mode="stargazer">
+          <div class="icon">🔭</div>
+          <div class="label">Stargazer</div>
+        </button>
+        <button class="mode-card game reflect" data-mode="reflect">
+          <div class="icon">💭</div>
+          <div class="label">Reflect</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">Listening games</h2>
@@ -298,6 +310,21 @@
     <section class="screen screen-game" id="screen-launch-pad">
       <canvas id="launch-pad-canvas" class="ll-canvas"></canvas>
     </section>
+
+    <!-- v5.20 — Switch It (cognitive flexibility) -->
+    <section class="screen screen-game" id="screen-switch-it">
+      <div class="switch-overlay" id="switch-it-overlay"></div>
+      <canvas id="switch-it-canvas" class="ll-canvas"></canvas>
+    </section>
+
+    <!-- v5.20 — Stargazer (sustained attention) -->
+    <section class="screen screen-game" id="screen-stargazer">
+      <div class="sg-stars-overlay" id="stargazer-overlay"></div>
+      <canvas id="stargazer-canvas" class="ll-canvas"></canvas>
+    </section>
+
+    <!-- v5.20 — Reflect (metacognition) — DOM form, not canvas -->
+    <section class="screen screen-reflect" id="screen-reflect"></section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -1118,6 +1145,10 @@
   <script src="game-launch-pad.js"></script>
   <!-- v5.19 — parent observation journal -->
   <script src="journal.js"></script>
+  <!-- v5.20 — round-2 EF trainers (flexibility / sustained attention / metacognition) -->
+  <script src="game-switch-it.js"></script>
+  <script src="game-stargazer.js"></script>
+  <script src="game-reflect.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
