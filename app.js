@@ -1143,7 +1143,11 @@
       // v5.20 — round-2 EF (flexibility / sustained attention / metacognition)
       switchIt:       $('screen-switch-it'),
       stargazer:      $('screen-stargazer'),
-      reflect:        $('screen-reflect')
+      reflect:        $('screen-reflect'),
+      // v5.21 — Calm Corner expansion
+      calmBreath:     $('screen-calm-breath'),
+      bodyScan:       $('screen-body-scan'),
+      thermometer:    $('screen-thermometer')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -3432,55 +3436,294 @@
   //  tracking, no judgement.
   // ============================================================
 
+  /* ──────────────────────────────────────────────────────────────
+     v5.21 — Calm Corner expansion (Session 4 of ADHD-aware plan)
+     ──────────────────────────────────────────────────────────────
+     The original Calm Corner (single 4-4 breath cycle) becomes the
+     'Just breathe' flow inside a new menu that adds:
+       - Pattern selector (Natural 4-4 / Box 4-4-4-4 / Steady 4-7-8)
+       - Body scan — sequential prompts head-to-toes
+       - Feelings thermometer — pre/post mood check that records
+         emotional-regulation events to the parent dashboard
+     All flows are reflective, not measurable — no scoring, no
+     punishment for skipping, no tracking the kid sees.
+     ────────────────────────────────────────────────────────────── */
+
   let calmTimer = null;
   let calmPhaseTimer = null;
+  let calmActivePattern = 'natural';
+  let thermBefore = null;     // mood reading taken before settling
+  let thermAfter  = null;     // post-settling reading
+  let thermPhase  = 'before'; // 'before' | 'after' | 'result'
 
-  function startCalmCorner() {
+  /* Breathing patterns. Each is a sequence of phases with duration
+     in ms and a label. Returning a generator keeps the loop simple
+     and the data structure trivially extensible. */
+  const BREATH_PATTERNS = {
+    natural: [
+      { label: 'Breathe in…',  ms: 4000, cls: 'inhaling' },
+      { label: 'Breathe out…', ms: 4000, cls: 'exhaling' }
+    ],
+    box: [
+      { label: 'Breathe in…',  ms: 4000, cls: 'inhaling' },
+      { label: 'Hold…',        ms: 4000, cls: 'holding'  },
+      { label: 'Breathe out…', ms: 4000, cls: 'exhaling' },
+      { label: 'Hold…',        ms: 4000, cls: 'holding'  }
+    ],
+    steady: [
+      { label: 'Breathe in…',  ms: 4000, cls: 'inhaling' },
+      { label: 'Hold…',        ms: 7000, cls: 'holding'  },
+      { label: 'Breathe out…', ms: 8000, cls: 'exhaling' }
+    ]
+  };
+
+  function openCalmCorner() {
     showScreen('calmCorner');
+  }
+
+  function startBreathing(patternKey = 'natural') {
+    calmActivePattern = patternKey;
+    showScreen('calmBreath');
     if (el.calmCircle) {
-      el.calmCircle.classList.remove('inhaling', 'exhaling');
-      // force reflow so animation restarts cleanly
+      el.calmCircle.classList.remove('inhaling', 'exhaling', 'holding');
       void el.calmCircle.offsetWidth;
     }
-    let phase = 0; // 0 = inhale, 1 = exhale
-    const cycleMs = 4000; // 4 seconds per phase
-    const sessionMs = 60000; // 1 minute total
-
-    const setPhase = (p) => {
+    // Pattern pill state
+    document.querySelectorAll('#calm-pattern-pills .calm-pill').forEach((b) => {
+      b.setAttribute('aria-pressed', b.dataset.pattern === patternKey ? 'true' : 'false');
+    });
+    const seq = BREATH_PATTERNS[patternKey] || BREATH_PATTERNS.natural;
+    const sessionMs = 90 * 1000;
+    let i = 0;
+    const setPhase = (idx) => {
+      const ph = seq[idx];
       if (!el.calmCircle || !el.calmText) return;
-      el.calmCircle.classList.remove('inhaling', 'exhaling');
+      el.calmCircle.classList.remove('inhaling', 'exhaling', 'holding');
       void el.calmCircle.offsetWidth;
-      if (p === 0) {
-        el.calmCircle.classList.add('inhaling');
-        el.calmText.textContent = 'Breathe in…';
-      } else {
-        el.calmCircle.classList.add('exhaling');
-        el.calmText.textContent = 'Breathe out…';
-      }
+      el.calmCircle.classList.add(ph.cls);
+      // CSS animations honor the phase duration via a custom property
+      el.calmCircle.style.setProperty('--calm-phase-ms', ph.ms + 'ms');
+      el.calmText.textContent = ph.label;
     };
-
     setPhase(0);
-    calmPhaseTimer = setInterval(() => {
-      phase = 1 - phase;
-      setPhase(phase);
-    }, cycleMs);
-
-    calmTimer = setTimeout(stopCalmCorner, sessionMs);
+    const tick = () => {
+      i = (i + 1) % seq.length;
+      setPhase(i);
+      calmPhaseTimer = setTimeout(tick, seq[i].ms);
+    };
+    calmPhaseTimer = setTimeout(tick, seq[0].ms);
+    calmTimer = setTimeout(stopBreathing, sessionMs);
   }
 
-  function stopCalmCorner() {
+  function stopBreathing() {
     if (calmTimer) { clearTimeout(calmTimer); calmTimer = null; }
-    if (calmPhaseTimer) { clearInterval(calmPhaseTimer); calmPhaseTimer = null; }
-    if (el.calmCircle) el.calmCircle.classList.remove('inhaling', 'exhaling');
+    if (calmPhaseTimer) { clearTimeout(calmPhaseTimer); calmPhaseTimer = null; }
+    if (el.calmCircle) {
+      el.calmCircle.classList.remove('inhaling', 'exhaling', 'holding');
+      el.calmCircle.style.removeProperty('--calm-phase-ms');
+    }
     if (el.calmText) el.calmText.textContent = '';
-    goHome();
+    // If we're inside a thermometer flow, advance to the After step;
+    // otherwise return to the calm menu.
+    if (thermPhase === 'before' && thermBefore != null) {
+      thermPhase = 'after';
+      openThermometer('after');
+    } else {
+      openCalmCorner();
+    }
   }
+
+  /* ----- Body scan ----- */
+
+  const BODY_SCAN_STEPS = [
+    { emoji: '🦶', text: 'Squeeze your feet… now let them be soft.' },
+    { emoji: '🦵', text: 'Tighten your legs… now let them rest.' },
+    { emoji: '🫁', text: 'Take a slow breath into your belly.' },
+    { emoji: '🤲', text: 'Make tight fists… now let your hands open.' },
+    { emoji: '💪', text: 'Lift your shoulders up… now let them drop.' },
+    { emoji: '😌', text: 'Soften your face. Even your eyes.' },
+    { emoji: '✨', text: 'Notice your whole body, calm and still.' }
+  ];
+  let bsTimer = null;
+  let bsStepIdx = 0;
+  const BS_STEP_MS = 7500;
+
+  function startBodyScan() {
+    bsStepIdx = 0;
+    showScreen('bodyScan');
+    renderBodyScanStep();
+    bsTimer = setInterval(advanceBodyScan, BS_STEP_MS);
+  }
+  function renderBodyScanStep() {
+    const step = BODY_SCAN_STEPS[bsStepIdx];
+    if (!step) return;
+    if (el.bodyScan) {
+      const emoji = el.bodyScan.querySelector('#bs-emoji');
+      const text  = el.bodyScan.querySelector('#bs-prompt');
+      const bar   = el.bodyScan.querySelector('#bs-progress-bar');
+      if (emoji) emoji.textContent = step.emoji;
+      if (text)  text.textContent  = step.text;
+      if (bar)   bar.style.width = `${((bsStepIdx + 1) / BODY_SCAN_STEPS.length) * 100}%`;
+    }
+    // Soft chime per step using the audioPlayer's WebAudio context if available
+    try {
+      if (typeof GameSFX === 'function') {
+        const sfx = new GameSFX();
+        sfx.unlock();
+        sfx.chimeUp();
+      }
+    } catch {}
+  }
+  function advanceBodyScan() {
+    bsStepIdx++;
+    if (bsStepIdx >= BODY_SCAN_STEPS.length) {
+      stopBodyScan();
+      return;
+    }
+    renderBodyScanStep();
+  }
+  function stopBodyScan() {
+    if (bsTimer) { clearInterval(bsTimer); bsTimer = null; }
+    bsStepIdx = 0;
+    // Record an EF emotional-regulation event for the parent dashboard
+    if (typeof recordAttempt === 'function') {
+      try { recordAttempt('ef-emotional-regulation-body-scan', true, 0); } catch {}
+    }
+    openCalmCorner();
+  }
+
+  /* ----- Feelings thermometer ----- */
+
+  function openThermometer(phase = 'before') {
+    thermPhase = phase;
+    showScreen('thermometer');
+    if (!el.thermometer) return;
+    const title  = el.thermometer.querySelector('#therm-title');
+    const sub    = el.thermometer.querySelector('#therm-sub');
+    const ladder = el.thermometer.querySelector('#therm-ladder');
+    const result = el.thermometer.querySelector('#therm-result');
+    const goBtn  = el.thermometer.querySelector('#therm-go');
+    if (phase === 'before') {
+      title.textContent = 'How am I right now?';
+      sub.textContent   = 'Pick the one that\'s closest.';
+      result.hidden = true;
+      goBtn.textContent = 'Breathe →';
+      goBtn.disabled = true;
+      buildThermLadder(ladder, 'before');
+    } else if (phase === 'after') {
+      title.textContent = 'How am I now?';
+      sub.textContent   = 'Check in with yourself again.';
+      result.hidden = true;
+      goBtn.textContent = 'See change →';
+      goBtn.disabled = true;
+      buildThermLadder(ladder, 'after');
+    } else { // result
+      title.textContent = 'Nice noticing.';
+      sub.textContent   = '';
+      result.hidden = false;
+      ladder.innerHTML = '';
+      const before = el.thermometer.querySelector('#therm-before');
+      const after  = el.thermometer.querySelector('#therm-after');
+      const emojis = ['😞','🙁','😐','🙂','😄'];
+      if (before) before.textContent = thermBefore ? emojis[thermBefore - 1] : '—';
+      if (after)  after.textContent  = thermAfter  ? emojis[thermAfter  - 1] : '—';
+      goBtn.textContent = 'Done';
+      goBtn.disabled = false;
+    }
+  }
+  function buildThermLadder(ladder, phase) {
+    if (!ladder) return;
+    ladder.innerHTML = '';
+    ['😞','🙁','😐','🙂','😄'].forEach((emoji, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'therm-step';
+      b.dataset.value = String(i + 1);
+      b.textContent = emoji;
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.addEventListener('click', () => {
+        const v = Number(b.dataset.value);
+        ladder.querySelectorAll('.therm-step').forEach((x) => {
+          const on = x === b;
+          x.setAttribute('aria-checked', on ? 'true' : 'false');
+          x.classList.toggle('selected', on);
+        });
+        if (phase === 'before') thermBefore = v;
+        else                    thermAfter  = v;
+        const goBtn = el.thermometer.querySelector('#therm-go');
+        if (goBtn) goBtn.disabled = false;
+      });
+      ladder.appendChild(b);
+    });
+  }
+  function thermContinue() {
+    if (thermPhase === 'before' && thermBefore != null) {
+      // Record before reading then run a short breathing session
+      if (typeof recordAttempt === 'function') {
+        try { recordAttempt(`ef-emotional-regulation-before-${thermBefore}`, true, 0); } catch {}
+      }
+      startBreathing('natural');
+    } else if (thermPhase === 'after' && thermAfter != null) {
+      if (typeof recordAttempt === 'function') {
+        try { recordAttempt(`ef-emotional-regulation-after-${thermAfter}`, true, 0); } catch {}
+        if (thermBefore != null && thermAfter != null) {
+          const delta = thermAfter - thermBefore;
+          const tag = delta > 0 ? 'better' : delta < 0 ? 'lower' : 'same';
+          try { recordAttempt(`ef-emotional-regulation-delta-${tag}`, true, 0); } catch {}
+        }
+      }
+      openThermometer('result');
+    } else if (thermPhase === 'result') {
+      thermBefore = null;
+      thermAfter = null;
+      thermPhase = 'before';
+      openCalmCorner();
+    }
+  }
+
+  /* ----- Wiring ----- */
 
   el.calmCornerBtn?.addEventListener('click', () => {
     closeSettings();
-    startCalmCorner();
+    thermBefore = null;
+    thermAfter  = null;
+    thermPhase  = 'before';
+    openCalmCorner();
   });
-  el.calmStop?.addEventListener('click', stopCalmCorner);
+
+  // Menu cards
+  document.querySelectorAll('[data-calm-go]').forEach((card) => {
+    card.addEventListener('click', () => {
+      const dest = card.dataset.calmGo;
+      if (dest === 'breath')       startBreathing('natural');
+      if (dest === 'body-scan')    startBodyScan();
+      if (dest === 'thermometer')  openThermometer('before');
+    });
+  });
+  document.getElementById('calm-menu-close')?.addEventListener('click', goHome);
+
+  // Breathing pattern pills
+  document.querySelectorAll('#calm-pattern-pills .calm-pill').forEach((b) => {
+    b.addEventListener('click', () => {
+      const next = b.dataset.pattern;
+      if (next === calmActivePattern) return;
+      // Restart breathing with the new pattern
+      if (calmTimer) { clearTimeout(calmTimer); calmTimer = null; }
+      if (calmPhaseTimer) { clearTimeout(calmPhaseTimer); calmPhaseTimer = null; }
+      startBreathing(next);
+    });
+  });
+
+  el.calmStop?.addEventListener('click', stopBreathing);
+  document.getElementById('bs-stop')?.addEventListener('click', stopBodyScan);
+  document.getElementById('therm-skip')?.addEventListener('click', () => {
+    thermBefore = null;
+    thermAfter  = null;
+    thermPhase  = 'before';
+    openCalmCorner();
+  });
+  document.getElementById('therm-go')?.addEventListener('click', thermContinue);
 
   // ============================================================
   //  v5.6 — PRINTABLE WORKSHEETS (Rammeplan: real materials matter)

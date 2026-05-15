@@ -458,12 +458,75 @@
       <button class="btn btn-secondary btn-replay" id="sub-replay">🔊 Hear it again</button>
     </section>
 
-    <!-- ============ CALM CORNER (v5.2) ============ -->
+    <!-- ============ CALM CORNER (v5.2 → v5.21 expanded) ============ -->
+    <!-- Main menu — three paths -->
     <section class="screen" id="screen-calm-corner">
+      <div class="calm-menu">
+        <h1 class="calm-menu-title">Calm Corner</h1>
+        <p class="calm-menu-sub">Take a minute for yourself. Pick what your body wants right now.</p>
+        <button class="calm-menu-card" data-calm-go="breath">
+          <span class="calm-menu-icon" aria-hidden="true">🌬️</span>
+          <span class="calm-menu-body">
+            <span class="calm-menu-name">Just breathe</span>
+            <span class="calm-menu-desc">Slow breaths with a glowing circle.</span>
+          </span>
+        </button>
+        <button class="calm-menu-card" data-calm-go="body-scan">
+          <span class="calm-menu-icon" aria-hidden="true">🫁</span>
+          <span class="calm-menu-body">
+            <span class="calm-menu-name">Body scan</span>
+            <span class="calm-menu-desc">Notice each part of you, head to toes.</span>
+          </span>
+        </button>
+        <button class="calm-menu-card" data-calm-go="thermometer">
+          <span class="calm-menu-icon" aria-hidden="true">🌡️</span>
+          <span class="calm-menu-body">
+            <span class="calm-menu-name">How am I?</span>
+            <span class="calm-menu-desc">Check in with a feeling, then settle.</span>
+          </span>
+        </button>
+        <button class="btn btn-secondary" id="calm-menu-close">Back</button>
+      </div>
+    </section>
+
+    <!-- Breathing flow (v5.21 expanded — with pattern selector) -->
+    <section class="screen" id="screen-calm-breath">
       <div class="calm-wrap">
+        <div class="calm-pattern-pills" id="calm-pattern-pills" role="group" aria-label="Breathing pattern">
+          <button class="calm-pill" data-pattern="natural" aria-pressed="true">Natural</button>
+          <button class="calm-pill" data-pattern="box"     aria-pressed="false">Box 4-4-4-4</button>
+          <button class="calm-pill" data-pattern="steady"  aria-pressed="false">Steady 4-7-8</button>
+        </div>
         <div class="calm-circle" id="calm-circle"></div>
         <div class="calm-text" id="calm-text">Breathe in…</div>
         <button class="btn btn-secondary" id="calm-stop">All done</button>
+      </div>
+    </section>
+
+    <!-- Body scan -->
+    <section class="screen" id="screen-body-scan">
+      <div class="bs-wrap">
+        <div class="bs-emoji" id="bs-emoji">🦶</div>
+        <div class="bs-prompt" id="bs-prompt">Squeeze your feet… now let them be soft.</div>
+        <div class="bs-progress"><div class="bs-progress-bar" id="bs-progress-bar"></div></div>
+        <button class="btn btn-secondary" id="bs-stop">All done</button>
+      </div>
+    </section>
+
+    <!-- Feelings thermometer -->
+    <section class="screen" id="screen-thermometer">
+      <div class="therm-wrap">
+        <h1 class="therm-title" id="therm-title">How am I right now?</h1>
+        <p class="therm-sub" id="therm-sub">Pick the one that's closest.</p>
+        <div class="therm-ladder" id="therm-ladder" role="radiogroup" aria-label="Feeling now"></div>
+        <div class="therm-result" id="therm-result" hidden>
+          <p class="therm-result-line">Before: <span id="therm-before">—</span></p>
+          <p class="therm-result-line">After:  <span id="therm-after">—</span></p>
+        </div>
+        <div class="therm-actions">
+          <button class="btn btn-secondary" id="therm-skip">Skip</button>
+          <button class="btn btn-primary"   id="therm-go" disabled>Continue</button>
+        </div>
       </div>
     </section>
 
