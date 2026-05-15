@@ -34,9 +34,14 @@ rsync -avz --delete \
   --exclude='*.log' \
   api/ "$HOST:/tmp/lnum-api-staging/"
 
-# ── Create the remote build script (multiline-safe via heredoc to file) ──
-REMOTE_SCRIPT=$(cat <<'REMOTE_EOF'
-#!/usr/bin/env bash
+# ── Run the build script on the droplet ──
+# v6.0 fix: pipe the script over ssh stdin via `bash -s ARG1 ARG2`.
+# The previous `ssh "$HOST" "cat > file << 'EOF' ${SCRIPT} EOF"` pattern
+# collapsed newlines through the local-shell variable interpolation,
+# squashing the multi-line script into one unparseable line on the
+# remote. `bash -s` keeps the heredoc verbatim — no shell interpolation
+# of the script body anywhere.
+ssh "$HOST" "bash -s '$APP_DIR' '$TENANT_USER'" <<'REMOTE_EOF'
 set -euo pipefail
 APP_DIR="$1"
 TENANT_USER="$2"
@@ -47,30 +52,23 @@ sudo chown -R "${TENANT_USER}:${TENANT_USER}" "${APP_DIR}"
 sudo chmod 700 "${APP_DIR}"
 rm -rf /tmp/lnum-api-staging
 
-# Build + run as the tenant user (rootless Podman)
-sudo -u "${TENANT_USER}" -i bash -c "
-  set -e
-  cd '${APP_DIR}'
-  if podman ps -a --format '{{.Names}}' | grep -q '^lnum-api\$'; then
-    podman stop lnum-api 2>/dev/null || true
-    podman rm   lnum-api 2>/dev/null || true
-  fi
-  podman-compose build
-  podman-compose up -d
-  sleep 5
-  echo '--- container status ---'
-  podman ps --filter name=lnum-api --format '{{.Names}} {{.Status}}'
-"
+# Build + run as the tenant user. We use bash -s with an inner heredoc
+# so the inner script's newlines + quotes survive the sudo wrapper.
+sudo -u "${TENANT_USER}" -i bash -s "${APP_DIR}" <<'INNER_EOF'
+set -e
+APP_DIR="$1"
+cd "${APP_DIR}"
+if podman ps -a --format '{{.Names}}' | grep -q '^lnum-api$'; then
+  podman stop lnum-api 2>/dev/null || true
+  podman rm   lnum-api 2>/dev/null || true
+fi
+podman-compose build
+podman-compose up -d
+sleep 5
+echo '--- container status ---'
+podman ps --filter name=lnum-api --format '{{.Names}} {{.Status}}'
+INNER_EOF
 REMOTE_EOF
-)
-
-# Write the script to the droplet, then run it
-ssh "$HOST" "cat > /tmp/lnum-api-build.sh << 'EOF'
-${REMOTE_SCRIPT}
-EOF
-chmod +x /tmp/lnum-api-build.sh
-bash /tmp/lnum-api-build.sh '${APP_DIR}' '${TENANT_USER}'
-rm -f /tmp/lnum-api-build.sh"
 
 # ── Smoke test through Caddy ──
 echo ""
