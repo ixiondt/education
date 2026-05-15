@@ -272,6 +272,9 @@
     onCompleteFn = typeof opts.onComplete === 'function' ? opts.onComplete : null;
 
     engine = new GameEngine(canvas, { background: '#0d1b2c' });
+    // v6.4 — surprise floaters (sparingly — Stargazer already has the
+    // shooting-star target; we don't want false positives)
+    engine.enableSurprises({ minMs: 25000, maxMs: 45000, maxActive: 1 });
     spawnDecorStars();
     const { width, height } = engine.viewport;
     engine.add(new Telescope(60, height - 70));

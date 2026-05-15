@@ -261,6 +261,8 @@
     if (engine) { engine.destroy(); engine = null; }
 
     engine = new GameEngine(canvas, { background: '#fdf8ec' });
+    // v6.4 — surprise floaters between rounds
+    engine.enableSurprises({ minMs: 15000, maxMs: 35000, maxActive: 2 });
     const { width, height } = engine.viewport;
     const charEmoji = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
     character = new Character(width / 2, height - 50, charEmoji);

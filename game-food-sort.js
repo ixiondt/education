@@ -270,6 +270,8 @@
     onCompleteFn = typeof opts.onComplete === 'function' ? opts.onComplete : null;
 
     engine = new GameEngine(canvas, { background: '#fdf8ec' });
+    // v6.4 — sparse surprise floaters during the sort
+    engine.enableSurprises({ minMs: 20000, maxMs: 40000, maxActive: 1 });
     const origResize = engine.resize.bind(engine);
     engine.resize = function () { origResize(); rebuildBins(); };
 

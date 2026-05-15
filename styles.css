@@ -2379,6 +2379,69 @@ body {
   min-width: 200px;
 }
 
+/* ============================================================
+   v6.3 — Living companion at the top of home
+   A small character that bobs, greets, cheers, and goes to sleep
+   at night. Pure UI — no taps, no skill recording.
+   ============================================================ */
+#companion {
+  font-size: 64px;
+  line-height: 1;
+  user-select: none;
+  margin: 12px auto 4px;
+  display: inline-block;
+  animation: companion-idle 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 2px 6px oklch(from var(--accent) l c h / 0.30));
+  transition: filter 400ms ease;
+}
+@keyframes companion-idle {
+  0%, 100% { transform: translateY(0)   rotate(-2deg); }
+  50%      { transform: translateY(-6px) rotate(2deg); }
+}
+#companion.greet {
+  animation: companion-greet 2.2s ease 1;
+}
+@keyframes companion-greet {
+  0%   { transform: translateY(0)    rotate(0deg)   scale(1); }
+  15%  { transform: translateY(-14px) rotate(-12deg) scale(1.12); }
+  30%  { transform: translateY(-14px) rotate(12deg)  scale(1.12); }
+  45%  { transform: translateY(-14px) rotate(-8deg)  scale(1.12); }
+  60%  { transform: translateY(-14px) rotate(8deg)   scale(1.12); }
+  100% { transform: translateY(0)     rotate(0deg)   scale(1); }
+}
+#companion.cheer {
+  animation: companion-cheer 1.4s ease 1;
+}
+@keyframes companion-cheer {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20%      { transform: translateY(-22px) scale(1.18); }
+  40%      { transform: translateY(0)     scale(1.10); }
+  60%      { transform: translateY(-18px) scale(1.15); }
+  80%      { transform: translateY(0)     scale(1.05); }
+}
+#companion.sleep {
+  animation: companion-sleep 5s ease-in-out infinite;
+  opacity: 0.7;
+}
+@keyframes companion-sleep {
+  0%, 100% { transform: translateY(0)   scale(1); }
+  50%      { transform: translateY(-2px) scale(0.98); }
+}
+
+/* ============================================================
+   v6.5 — Daily theme tint
+   A subtle hue shift on the accent + secondary by day-of-week.
+   Stacks on top of calm/bright theme — only nudges the accent
+   so the calm-Montessori palette identity is preserved.
+   ============================================================ */
+html[data-day="mon"] { --accent: oklch(0.62 0.10 145); }  /* forest green */
+html[data-day="tue"] { --accent: oklch(0.62 0.10  60); }  /* honey gold */
+html[data-day="wed"] { --accent: oklch(0.62 0.10 240); }  /* sky blue */
+html[data-day="thu"] { --accent: oklch(0.55 0.13 305); }  /* berry purple */
+html[data-day="fri"] { --accent: oklch(0.62 0.11 355); }  /* rose pink */
+html[data-day="sat"] { --accent: oklch(0.65 0.11  85); }  /* sun yellow */
+html[data-day="sun"] { --accent: oklch(0.62 0.10 175); }  /* mint teal */
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

@@ -1522,6 +1522,19 @@
     document.documentElement.setAttribute('data-theme', profileSettings().theme);
   }
 
+  /* v6.5 — subtle daily-hue shift on top of the active theme.
+     Stacks via CSS — overrides --accent only, so the calm-Montessori
+     identity of the rest of the palette is preserved.
+     Refreshed at midnight if the app is left open. */
+  const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  function applyDailyTheme() {
+    const day = DAY_KEYS[new Date().getDay()];
+    document.documentElement.setAttribute('data-day', day);
+  }
+  /* Tick every 30 min — cheap, no perceptible cost, catches midnight
+     rollovers for users who keep the PWA open across days. */
+  setInterval(applyDailyTheme, 30 * 60 * 1000);
+
   function refreshHeader() {
     const p = activeProfile();
     if (!p) {
@@ -2115,6 +2128,7 @@
     refreshTodaySessionCard();
     refreshVoiceBanner();
     refreshTodaysAdventure();
+    if (typeof Companion !== 'undefined') Companion.refresh();
     showScreen('home');
   }
 
@@ -6029,9 +6043,11 @@
   //  INIT
   // ============================================================
   applyTheme();
+  applyDailyTheme();
   refreshHeader();
   refreshTodaySessionCard();
   if (typeof refreshTodaysAdventure === 'function') refreshTodaysAdventure();
+  if (typeof Companion !== 'undefined') Companion.refresh();
   showScreen(state.profiles.length === 0 ? 'welcome' : 'home');
   refreshRecordedKeys().then(() => refreshVoiceBanner()); // load IDB key index so speech can fast-path
 

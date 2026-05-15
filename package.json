@@ -1,6 +1,6 @@
 {
   "name": "letters-and-numbers",
-  "version": "6.2.0",
+  "version": "6.5.0",
   "description": "Early-childhood educational PWA grounded in the Norwegian Rammeplan. Static, offline-first, zero build step.",
   "private": true,
   "type": "module",

@@ -646,6 +646,102 @@
     }
   }
 
+  /* ============================================================
+     v6.4 — Surprise moments
+
+     A Floater drifts across the canvas on a gentle curve, taps as a
+     tiny delight. Each canvas game gets these for free via the
+     engine's enableSurprises() hook — no per-game wiring required.
+
+     Spawn cadence is randomised (12-30s) so the kid feels surprise,
+     not metronome. Caps at 3 active floaters at once to avoid
+     visual clutter. Taps trigger a sparkle + chime, no scoring.
+     ============================================================ */
+  const SURPRISE_EMOJIS = ['🦋', '🐝', '☁️', '🍃', '🌟', '🐞', '🪶', '🌸', '✨', '🍀'];
+
+  class Floater extends GameEntity {
+    constructor(viewport) {
+      // Random side entry — left edge or right edge — drifting toward the other side
+      const fromLeft = Math.random() < 0.5;
+      const startX = fromLeft ? -40 : viewport.width + 40;
+      const startY = 60 + Math.random() * (viewport.height - 200);
+      super(startX, startY);
+      this.emoji = SURPRISE_EMOJIS[Math.floor(Math.random() * SURPRISE_EMOJIS.length)];
+      this.baseY = startY;
+      this.vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 40);
+      this.tappable = true;
+      this.z = 25;
+      this._t = 0;
+      this._taken = false;
+    }
+    update(dt, engine) {
+      this._t += dt;
+      this.x += this.vx * dt;
+      // Gentle vertical sway — sine wave around the baseline
+      this.y = this.baseY + Math.sin(this._t * 1.6) * 18;
+      // Off-screen — remove
+      if (this.x < -60 || this.x > engine.viewport.width + 60) this.alive = false;
+    }
+    contains(px, py) {
+      const dx = px - this.x, dy = py - this.y;
+      return dx*dx + dy*dy <= 32 * 32;
+    }
+    onTap(engine) {
+      if (this._taken) return;
+      this._taken = true;
+      this.tappable = false;
+      engine.sfx.sparkle();
+      engine.add(new ParticleBurst(this.x, this.y, { count: 14, hue: 50 }));
+      this.alive = false;
+    }
+    draw(ctx) {
+      const bob = Math.sin(this._t * 4) * 2;
+      ctx.save();
+      ctx.translate(this.x, this.y + bob);
+      // Soft halo so it reads against any background
+      const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, 36);
+      grd.addColorStop(0, 'rgba(255,250,200,0.30)');
+      grd.addColorStop(1, 'rgba(255,250,200,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(0, 0, 36, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '40px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.emoji, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  /* Auto-spawner — periodically adds a Floater if the engine has
+     fewer than MAX active. Game modules opt in via
+     engine.enableSurprises(); we don't enable globally because some
+     games (Switch It, Where-Is-It) have meaningful tap zones that
+     would conflict with extra tappables. */
+  GameEngine.prototype.enableSurprises = function (opts = {}) {
+    if (this._surprisesEnabled) return;
+    this._surprisesEnabled = true;
+    const minMs = opts.minMs ?? 12 * 1000;
+    const maxMs = opts.maxMs ?? 30 * 1000;
+    const maxActive = opts.maxActive ?? 3;
+    const entity = new GameEntity(0, 0);
+    entity.draw = () => {};
+    let next = minMs + Math.random() * (maxMs - minMs);
+    let elapsed = 0;
+    entity.update = (dt) => {
+      elapsed += dt * 1000;
+      if (elapsed >= next) {
+        elapsed = 0;
+        next = minMs + Math.random() * (maxMs - minMs);
+        // Count current floaters
+        const active = this.entities.filter((e) => e instanceof Floater && e.alive).length;
+        if (active < maxActive) {
+          this.add(new Floater(this.viewport));
+        }
+      }
+    };
+    this.add(entity);
+  };
+
   // Expose
   global.GameEngine        = GameEngine;
   global.GameEntity        = GameEntity;
@@ -656,5 +752,6 @@
   global.Spaceship         = Spaceship;
   global.IncomingAnswer    = IncomingAnswer;
   global.LaserShot         = LaserShot;
+  global.Floater           = Floater;
   global.fitCanvasToContainer = fitCanvasToContainer;
 })(window);
