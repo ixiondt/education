@@ -2126,6 +2126,128 @@ body {
   box-shadow: 0 2px 6px var(--shadow);
 }
 
+/* ============================================================
+   v6.1 — Parent dashboard (cloud-aggregated read-side)
+   ============================================================ */
+.screen-dashboard.active {
+  padding: 16px;
+  gap: 0;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  max-width: 760px;
+  /* This screen DOES allow scroll — it's a parent-facing report */
+}
+.dash-card {
+  width: 100%;
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 8px 22px var(--shadow);
+  border: 1px solid var(--border);
+}
+.dash-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.dash-title { margin: 0; font-size: 22px; color: var(--text); }
+.dash-sub { margin: 0; font-size: 14px; color: var(--text-soft); }
+.dash-meta { font-size: 13px; color: var(--text-soft); }
+.dash-meta strong { color: var(--text); }
+.dash-h2 {
+  font-size: 14px; font-weight: 700; color: var(--text); margin: 0 0 8px;
+  text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;
+}
+.dash-help { font-size: 12px; color: var(--text-soft); margin: 0 0 8px; }
+.dash-age { font-size: 14px; font-weight: 500; color: var(--text-soft); }
+.dash-section {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.dash-section:first-of-type { border-top: none; padding-top: 0; }
+
+.dash-kid-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.dash-kid-tab {
+  padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600;
+  background: var(--bg); border: 1.5px solid var(--border); color: var(--text-soft);
+  border-radius: 999px; cursor: pointer;
+}
+.dash-kid-tab[aria-pressed="true"] {
+  background: var(--accent); color: white; border-color: var(--accent);
+}
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+}
+.dash-stat {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+  padding: 10px 8px; text-align: center;
+}
+.dash-stat-n { font-size: 22px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.dash-stat-l { font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.dash-chart { width: 100%; }
+.dash-chart svg { color: var(--text-soft); }
+
+.dash-bars { display: flex; flex-direction: column; gap: 4px; }
+.dash-bar-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 30%) 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.dash-bar-label { color: var(--text); font-weight: 500; }
+.dash-bar-wrap {
+  height: 8px;
+  background: oklch(from var(--text-soft) l c h / 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dash-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+.dash-bar-meta { font-size: 12px; color: var(--text-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.dash-events { list-style: none; padding: 0; margin: 0; }
+.dash-event {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-event:last-child { border-bottom: none; }
+.dash-event-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success); flex: 0 0 auto;
+}
+.dash-event.miss .dash-event-dot { background: oklch(0.55 0.18 25); }
+.dash-event-skill { color: var(--text); flex: 1 1 auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.dash-event-mode { color: var(--text-soft); font-size: 11px; }
+.dash-event-time { color: var(--text-soft); font-size: 11px; }
+
+.dash-devices { list-style: none; padding: 0; margin: 0; }
+.dash-devices li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border);
+}
+.dash-devices li:last-child { border-bottom: none; }
+.dash-devices code { color: var(--text-soft); font-size: 12px; }
+
+.dash-empty {
+  padding: 12px;
+  color: var(--text-soft);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.dash-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.dash-actions .btn { padding: 10px 18px; }
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

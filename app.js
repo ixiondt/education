@@ -1256,7 +1256,9 @@
       whereIsIt:      $('screen-where-is-it'),
       // v5.29 — Rammeplan area 7 (Local Environment & Society)
       family:         $('screen-family'),
-      routines:       $('screen-routines')
+      routines:       $('screen-routines'),
+      // v6.1 — Parent dashboard (cloud-aggregated)
+      dashboard:      $('screen-dashboard')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -5523,6 +5525,12 @@
   }
 
   el.journalBtn?.addEventListener('click', openJournal);
+
+  // v6.1 — Parent dashboard button
+  document.getElementById('dashboard-btn')?.addEventListener('click', () => {
+    closeSettings();
+    if (typeof openDashboard === 'function') openDashboard();
+  });
   el.journalClose?.addEventListener('click', closeJournal);
   el.modalJournal?.addEventListener('click', (e) => {
     if (e.target === el.modalJournal) closeJournal();

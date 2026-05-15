@@ -430,6 +430,9 @@
     <!-- v5.29 — Daily routines (Rammeplan area 7) — DOM -->
     <section class="screen screen-routines" id="screen-routines"></section>
 
+    <!-- v6.1 — Parent dashboard (cloud-aggregated, sign-in required) -->
+    <section class="screen screen-dashboard" id="screen-dashboard"></section>
+
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
       <div class="play-prompt"><span id="trace-label">Trace A</span></div>
@@ -870,6 +873,8 @@
       <button class="btn btn-secondary" id="worksheets-btn">🖨️ Printable worksheets</button>
       <!-- v5.19 — Parent observation journal (Finally Focused) -->
       <button class="btn btn-secondary" id="journal-btn">📔 Daily observations</button>
+      <!-- v6.1 — Cloud-aggregated parent dashboard (sign-in required) -->
+      <button class="btn btn-secondary" id="dashboard-btn">📊 Cloud dashboard</button>
       <button class="btn btn-secondary" id="about-btn">📖 About our approach</button>
       <button class="btn btn-primary" id="settingsClose">Done</button>
     </div>
@@ -1415,6 +1420,8 @@
   <script src="i18n.js"></script>
   <!-- v6.0 — opt-in cross-device sync (magic-link parent auth) -->
   <script src="sync.js"></script>
+  <!-- v6.1 — parent dashboard (cloud-aggregated read-side) -->
+  <script src="dashboard.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

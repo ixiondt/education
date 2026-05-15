@@ -1,6 +1,6 @@
 {
   "name": "letters-and-numbers-api",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "description": "Backend API for the Letters & Numbers educational PWA. Sync, parent auth, cross-device progress.",
   "scripts": {
