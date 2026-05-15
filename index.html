@@ -140,6 +140,26 @@
         </button>
       </div>
 
+      <!-- v5.18 — Focus & memory games (executive-function trainers).
+              Inspired by Grisham's "Scattered to Focused" and Dawson & Guare's
+              EF framework. Calm-arcade aesthetic, no scoring shown to the kid. -->
+      <h2 class="mode-section-title">Focus &amp; memory</h2>
+      <p class="mode-section-sub">Mini-games that build attention, memory, and self-control. Short, gentle, no scoring.</p>
+      <div class="mode-grid">
+        <button class="mode-card game sequence-star" data-mode="sequence-star">
+          <div class="icon">🌟</div>
+          <div class="label">Sequence Star</div>
+        </button>
+        <button class="mode-card game stop-go" data-mode="stop-go">
+          <div class="icon">🚦</div>
+          <div class="label">Stop &amp; Go</div>
+        </button>
+        <button class="mode-card game launch-pad" data-mode="launch-pad">
+          <div class="icon">🚀</div>
+          <div class="label">Launch Pad</div>
+        </button>
+      </div>
+
       <h2 class="mode-section-title">Listening games</h2>
       <p class="mode-section-sub">Phonological awareness — the bridge from letters to reading.</p>
       <div class="mode-grid">
@@ -260,6 +280,23 @@
     <section class="screen screen-game screen-game-arcade" id="screen-number-blaster">
       <div class="nb-overlay" id="number-blaster-overlay"></div>
       <canvas id="number-blaster-canvas" class="nb-canvas"></canvas>
+    </section>
+
+    <!-- ============ v5.18 — EXECUTIVE-FUNCTION GAMES ============ -->
+    <!-- Sequence Star — working memory -->
+    <section class="screen screen-game" id="screen-sequence-star">
+      <canvas id="sequence-star-canvas" class="ll-canvas"></canvas>
+    </section>
+
+    <!-- Stop & Go — response inhibition -->
+    <section class="screen screen-game" id="screen-stop-go">
+      <div class="sg-overlay" id="stop-go-overlay"></div>
+      <canvas id="stop-go-canvas" class="ll-canvas"></canvas>
+    </section>
+
+    <!-- Launch Pad — task-initiation ritual -->
+    <section class="screen screen-game" id="screen-launch-pad">
+      <canvas id="launch-pad-canvas" class="ll-canvas"></canvas>
     </section>
 
     <!-- ============ TRACE ============ -->
@@ -970,6 +1007,10 @@
   <script src="game-engine.js"></script>
   <script src="game-letter-lander.js"></script>
   <script src="game-number-blaster.js"></script>
+  <!-- v5.18 — executive-function trainers -->
+  <script src="game-sequence-star.js"></script>
+  <script src="game-stop-go.js"></script>
+  <script src="game-launch-pad.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

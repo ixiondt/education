@@ -1135,7 +1135,11 @@
       // v5.16 — calm-arcade game pilot (Letter / Number Lander)
       letterLander:   $('screen-letter-lander'),
       // v5.17 — full arcade Math Blaster homage
-      numberBlaster:  $('screen-number-blaster')
+      numberBlaster:  $('screen-number-blaster'),
+      // v5.18 — executive-function trainers (Sequence Star / Stop & Go / Launch Pad)
+      sequenceStar:   $('screen-sequence-star'),
+      stopGo:         $('screen-stop-go'),
+      launchPad:      $('screen-launch-pad')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1615,6 +1619,43 @@
         case 'reading':       openReadingLibrary(); break;
         // v5.9 — time of day
         case 'time-of-day':   showScreen('timeOfDay'); startTimeOfDayRound(); break;
+        // v5.18 — Executive-function trainers (Scattered to Focused +
+        //         Dawson & Guare). Records under ef-* skill IDs.
+        case 'sequence-star': {
+          showScreen('sequenceStar');
+          requestAnimationFrame(() => {
+            if (typeof startSequenceStar !== 'function') return;
+            startSequenceStar({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text) => VoiceEngine.speak([text]),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'stop-go': {
+          showScreen('stopGo');
+          requestAnimationFrame(() => {
+            if (typeof startStopGo !== 'function') return;
+            startStopGo({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text) => VoiceEngine.speak([text]),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'launch-pad': {
+          showScreen('launchPad');
+          requestAnimationFrame(() => {
+            if (typeof startLaunchPad !== 'function') return;
+            startLaunchPad({
+              speak: (text) => VoiceEngine.speak([text]),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -1687,6 +1728,10 @@
     if (typeof stopLetterLander === 'function') stopLetterLander();
     // v5.17 — tear down Number Blaster if running
     if (typeof stopNumberBlaster === 'function') stopNumberBlaster();
+    // v5.18 — tear down EF trainers if running
+    if (typeof stopSequenceStar === 'function') stopSequenceStar();
+    if (typeof stopStopGo       === 'function') stopStopGo();
+    if (typeof stopLaunchPad    === 'function') stopLaunchPad();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;

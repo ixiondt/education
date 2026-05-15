@@ -466,6 +466,62 @@ body {
 
 .mode-card.number-blaster .icon { color: var(--warning); }
 
+/* ============================================================
+   v5.18 — Executive-function game variants + Stop & Go HUD
+   ============================================================ */
+.mode-card.sequence-star .icon { color: var(--secondary); }
+.mode-card.stop-go       .icon { color: var(--success); }
+.mode-card.launch-pad    .icon { color: var(--accent); }
+
+/* Stop & Go HUD — minimal progress bar + legend. Score hidden by design. */
+.sg-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.sg-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: env(safe-area-inset-top, 12px) 16px 8px;
+}
+.sg-progress {
+  height: 8px;
+  background: oklch(from var(--text-soft) l c h / 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.sg-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 320ms ease;
+}
+.sg-legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.sg-chip {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 2px solid;
+}
+.sg-chip-go {
+  color: #1a3a1a;
+  background: #dff3df;
+  border-color: #3e8a4a;
+}
+.sg-chip-stop {
+  color: #5a1a1a;
+  background: #ffd6d6;
+  border-color: #b54b4b;
+}
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

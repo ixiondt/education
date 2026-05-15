@@ -826,7 +826,11 @@ function modeMinAge(mode) {
 const MODE_AREAS = {
   language:  ['find-letters', 'letter-lander', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
   math:      ['find-numbers', 'number-lander', 'number-blaster', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
-  selfWorld: ['feelings', 'body', 'animals', 'helpers']
+  selfWorld: ['feelings', 'body', 'animals', 'helpers'],
+  // v5.18 — Executive function trainers. New first-class area so the
+  //         Rammeplan dashboard reports EF coverage separately from
+  //         literacy / numeracy / self-world breadth.
+  ef:        ['sequence-star', 'stop-go', 'launch-pad']
 };
 
 /* v5.16 — modes that don't have their own skill rows but reuse another
@@ -839,6 +843,10 @@ const MODE_ALIASES = {
   //         style IDs created on the fly), but for age-gate and area
   //         lookup we alias to the existing addition mode.
   'number-blaster': 'addition'
+  // v5.18 — EF trainers intentionally have NO alias. They record
+  //         synthetic ef-* skill IDs and live in their own area;
+  //         modeMinAge() returns 0 for them so they show at every
+  //         age band (EF training is universal — Grisham, Dawson).
 };
 
 function areaForMode(mode) {
