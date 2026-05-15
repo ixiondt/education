@@ -829,6 +829,8 @@ const MODE_AREAS = {
   selfWorld: ['feelings', 'body', 'animals', 'helpers', 'move-with-me', 'food-sort'],
   // v5.25 — Rammeplan area 3 (Kunst, kultur og kreativitet)
   arts:      ['draw', 'rhythm'],
+  // v5.26 — Rammeplan area 6 (Etikk, religion og filosofi)
+  ethics:    ['empathy', 'gratitude'],
   // v5.18 — Executive function trainers. New first-class area so the
   //         Rammeplan dashboard reports EF coverage separately from
   //         literacy / numeracy / self-world breadth.

@@ -1241,7 +1241,10 @@
       foodSort:       $('screen-food-sort'),
       // v5.25 — Rammeplan area 3 (Art, Culture & Creativity)
       draw:           $('screen-draw'),
-      rhythm:         $('screen-rhythm')
+      rhythm:         $('screen-rhythm'),
+      // v5.26 — Rammeplan area 6 (Ethics, Religion & Philosophy)
+      empathy:        $('screen-empathy'),
+      gratitude:      $('screen-gratitude')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1875,6 +1878,29 @@
           });
           break;
         }
+        // v5.26 — Rammeplan Session C: Ethics, Religion & Philosophy
+        case 'empathy': {
+          showScreen('empathy');
+          requestAnimationFrame(() => {
+            if (typeof startEmpathy !== 'function') return;
+            startEmpathy({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'gratitude': {
+          showScreen('gratitude');
+          requestAnimationFrame(() => {
+            if (typeof startGratitude !== 'function') return;
+            startGratitude({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -1962,6 +1988,9 @@
     // v5.25 — Rammeplan Session B (Art / Culture / Creativity)
     if (typeof stopDraw       === 'function') stopDraw();
     if (typeof stopRhythm     === 'function') stopRhythm();
+    // v5.26 — Rammeplan Session C (Ethics / Philosophy)
+    if (typeof stopEmpathy    === 'function') stopEmpathy();
+    if (typeof stopGratitude  === 'function') stopGratitude();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;
