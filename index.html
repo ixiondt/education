@@ -237,6 +237,15 @@
           <div class="icon">👃</div>
           <div class="label">My body</div>
         </button>
+        <!-- v5.24 — Rammeplan area 2 (Body, Movement & Health) -->
+        <button class="mode-card whole move-with-me" data-mode="move-with-me">
+          <div class="icon">🤸</div>
+          <div class="label">Move with me</div>
+        </button>
+        <button class="mode-card whole food-sort" data-mode="food-sort">
+          <div class="icon">🍎</div>
+          <div class="label">Food sort</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">World around us</h2>
@@ -325,6 +334,14 @@
 
     <!-- v5.20 — Reflect (metacognition) — DOM form, not canvas -->
     <section class="screen screen-reflect" id="screen-reflect"></section>
+
+    <!-- v5.24 — Move with me (Body & Movement — Rammeplan area 2) — DOM -->
+    <section class="screen screen-mwm" id="screen-move-with-me"></section>
+
+    <!-- v5.24 — Food Sort (Body & Health — Rammeplan area 2) — canvas -->
+    <section class="screen screen-game" id="screen-food-sort">
+      <canvas id="food-sort-canvas" class="ll-canvas"></canvas>
+    </section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -1268,6 +1285,9 @@
   <script src="game-switch-it.js"></script>
   <script src="game-stargazer.js"></script>
   <script src="game-reflect.js"></script>
+  <!-- v5.24 — Rammeplan Session A: Body, Movement & Health -->
+  <script src="game-move-with-me.js"></script>
+  <script src="game-food-sort.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

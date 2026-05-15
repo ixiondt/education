@@ -1235,7 +1235,10 @@
       // v5.21 — Calm Corner expansion
       calmBreath:     $('screen-calm-breath'),
       bodyScan:       $('screen-body-scan'),
-      thermometer:    $('screen-thermometer')
+      thermometer:    $('screen-thermometer'),
+      // v5.24 — Rammeplan area 2 (Body, Movement & Health)
+      moveWithMe:     $('screen-move-with-me'),
+      foodSort:       $('screen-food-sort')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1821,6 +1824,31 @@
           });
           break;
         }
+        // v5.24 — Rammeplan Session A: Body, Movement & Health
+        case 'move-with-me': {
+          showScreen('moveWithMe');
+          requestAnimationFrame(() => {
+            if (typeof startMoveWithMe !== 'function') return;
+            startMoveWithMe({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'food-sort': {
+          showScreen('foodSort');
+          requestAnimationFrame(() => {
+            if (typeof startFoodSort !== 'function') return;
+            startFoodSort({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -1902,6 +1930,9 @@
     if (typeof stopSwitchIt   === 'function') stopSwitchIt();
     if (typeof stopStargazer  === 'function') stopStargazer();
     if (typeof stopReflect    === 'function') stopReflect();
+    // v5.24 — Rammeplan Session A (Body / Movement / Health)
+    if (typeof stopMoveWithMe === 'function') stopMoveWithMe();
+    if (typeof stopFoodSort   === 'function') stopFoodSort();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;

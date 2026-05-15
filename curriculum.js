@@ -826,7 +826,7 @@ function modeMinAge(mode) {
 const MODE_AREAS = {
   language:  ['find-letters', 'letter-lander', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
   math:      ['find-numbers', 'number-lander', 'number-blaster', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
-  selfWorld: ['feelings', 'body', 'animals', 'helpers'],
+  selfWorld: ['feelings', 'body', 'animals', 'helpers', 'move-with-me', 'food-sort'],
   // v5.18 — Executive function trainers. New first-class area so the
   //         Rammeplan dashboard reports EF coverage separately from
   //         literacy / numeracy / self-world breadth.
