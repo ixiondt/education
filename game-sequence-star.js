@@ -141,8 +141,12 @@
 
   /* ----------- State ----------- */
 
-  const MAX_LENGTH = 9;
-  const ROUNDS_PER_SESSION = 5;
+  // v5.23 — eased for younger kids per playtest feedback.
+  // Max length 5 (was 9), shorter sessions (4 rounds), slower playback
+  // (600ms per beat, was 450ms) so a 4-yo can actually track the sequence.
+  const MAX_LENGTH = 5;
+  const ROUNDS_PER_SESSION = 4;
+  const PLAYBACK_BEAT_MS = 600;
 
   let engine = null;
   let stars = [];           // StarButton[]
@@ -187,13 +191,13 @@
     acceptingTaps = false;
     if (!engine) return;
     // Pre-roll beat so the kid knows playback starts
-    await sleep(450);
+    await sleep(PLAYBACK_BEAT_MS);
     for (let i = 0; i < seq.length; i++) {
       const s = stars[seq[i]];
       if (!s) continue;
       s.pulse();
-      playTone(engine.sfx, s.tone, 0.34);
-      await sleep(450);
+      playTone(engine.sfx, s.tone, 0.40);
+      await sleep(PLAYBACK_BEAT_MS);
     }
     playerIndex = 0;
     acceptingTaps = true;

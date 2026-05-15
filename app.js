@@ -1083,6 +1083,80 @@
   }
 
   // ============================================================
+  //  v5.23 — Speech: SINGLE SOURCE OF TRUTH
+  //
+  //  All game modules (and any future content) should speak through
+  //  window.Speech rather than calling VoiceEngine.speak directly.
+  //  Why: VoiceEngine.speak is pure TTS — it bypasses the MP3 pack
+  //  and the parent-recorded IDB chain. The result is the user
+  //  hearing the device's default voice (often Microsoft David /
+  //  Zira on Windows, which sounds robotic) for game prompts even
+  //  though the rest of the app uses neural Aria from the MP3 pack.
+  //
+  //  Speech.phrase(key, fallback) looks for audio/phrases/<key>.mp3
+  //  first, falling back to TTS only if missing. To eliminate ALL
+  //  robotic-TTS leakage we just need MP3 files for every key the
+  //  games use — scripts/generate-voices.py has those phrase keys
+  //  queued in v5.23.
+  // ============================================================
+  /* v5.23 — fallback heuristic for game modules that pass free-text
+     into the `speak` callback without naming a phrase key. We look
+     up known phrases by exact-match first, then by leading-fragment.
+     If nothing matches we return a slugified key derived from the
+     text — generate-voices.py picks those up next regeneration. */
+  const GAME_PHRASE_KEYS = {
+    // Generic game intros
+    'Watch the stars, then tap them in order.': 'watch-the-stars',
+    'Tap the green ones. Don\'t tap the red ones.': 'tap-green-not-red',
+    'Sort by color first.': 'sort-by-color-first',
+    'Now sort by color.': 'now-sort-color',
+    'Now sort by shape.': 'now-sort-shape',
+    'Watch the sky. Tap the shooting stars when they fly.': 'watch-the-sky',
+    'Get ready. Three.': 'ready-three',
+    'Two.': 'count-two',
+    'One.': 'count-one',
+    'Lift off!': 'lift-off',
+    // Praise lines
+    'Nice memory!': 'memory-praise',
+    'Great focus!': 'focus-praise',
+    'Amazing — you stopped every red one!': 'stop-praise',
+    'Great switching!': 'switch-praise',
+    'Nice watching!': 'watch-praise'
+  };
+  function gamePhraseKey(text) {
+    if (text == null) return null;
+    const key = GAME_PHRASE_KEYS[String(text)];
+    if (key) return key;
+    // Slugify as a fallback — generate-voices.py will pick this up next
+    // regeneration if you add the text to its PHRASES dict.
+    return String(text)
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]+/g, '')
+      .replace(/\s+/g, '-')
+      .slice(0, 40);
+  }
+
+  window.Speech = {
+    /* Spoken letter — full priority chain (recording → MP3 → TTS).
+       opts.mode = 'name' | 'sound' | 'both' (defaults to settings). */
+    letter:  (L, opts)             => sayLetter(L, opts),
+    number:  (n)                   => sayNumber(n),
+    word:    (w)                   => sayWord(w),
+    /* Phrase by key. First tries audio/phrases/<key>.mp3, then falls
+       back to TTS with `fallback` text. Use for game prompts:
+         Speech.phrase('watch-the-stars', 'Watch the stars...')   */
+    phrase:  (key, fallback)       => sayPromptKey(key, fallback),
+    /* Generic concept under a category — used for feelings, colors,
+       shapes, helpers, etc. that have their own MP3 folder. */
+    concept: (category, key, txt)  => sayConcept(category, key, txt),
+    /* Free-form text that has no MP3. Pure TTS. Use sparingly — every
+       use of cheer() is a candidate for an MP3 entry later. */
+    cheer:   (text)                => VoiceEngine.speak([text]),
+    /* Hard stop everything. */
+    stop:    ()                    => VoiceEngine.stop()
+  };
+
+  // ============================================================
   //  PHRASE BANKS (variation so it stops sounding repetitive)
   // ============================================================
   const PHRASES = {
@@ -1671,13 +1745,18 @@
         case 'time-of-day':   showScreen('timeOfDay'); startTimeOfDayRound(); break;
         // v5.18 — Executive-function trainers (Scattered to Focused +
         //         Dawson & Guare). Records under ef-* skill IDs.
+        // v5.23 — all `speak` callbacks now route through window.Speech
+        //         single-source-of-truth which tries audio/phrases/<key>.mp3
+        //         FIRST and falls back to TTS only if the MP3 is missing.
+        //         Keys are queued in scripts/generate-voices.py for the
+        //         next MP3 regeneration pass.
         case 'sequence-star': {
           showScreen('sequenceStar');
           requestAnimationFrame(() => {
             if (typeof startSequenceStar !== 'function') return;
             startSequenceStar({
               onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
-              speak: (text) => VoiceEngine.speak([text]),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });
@@ -1689,7 +1768,7 @@
             if (typeof startStopGo !== 'function') return;
             startStopGo({
               onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
-              speak: (text) => VoiceEngine.speak([text]),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });
@@ -1700,7 +1779,7 @@
           requestAnimationFrame(() => {
             if (typeof startLaunchPad !== 'function') return;
             startLaunchPad({
-              speak: (text) => VoiceEngine.speak([text]),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });
@@ -1713,7 +1792,7 @@
             if (typeof startSwitchIt !== 'function') return;
             startSwitchIt({
               onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
-              speak: (text) => VoiceEngine.speak([text]),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });
@@ -1725,7 +1804,7 @@
             if (typeof startStargazer !== 'function') return;
             startStargazer({
               onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
-              speak: (text) => VoiceEngine.speak([text]),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });
@@ -1753,6 +1832,7 @@
               operator: '+',
               calmMode: false,
               onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });
@@ -1783,8 +1863,8 @@
               },
               // Record into the same skill-progress store as find- modes
               onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
-              // Speak through the host voice chain (MP3 → recording → TTS)
-              speak: (text) => VoiceEngine.speak([text]),
+              // v5.23 — speak through the single-source-of-truth chain
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
               onComplete: () => goHome()
             });
           });

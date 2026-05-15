@@ -32,11 +32,13 @@
 (function (global) {
   'use strict';
 
-  const ATTEMPTS_PER_SESSION = 30;     // total Go + Stop targets shown
-  const INITIAL_STOP_RATIO   = 0.20;   // 1 in 5 to start
-  const PEAK_STOP_RATIO      = 0.45;   // gets close to half as skill grows
-  const INITIAL_FALL_SPEED   = 65;     // px/sec
-  const PEAK_FALL_SPEED      = 135;
+  // v5.23 — eased for 4-yo playtest. Shorter session, gentler ratio
+  // climb (peak at 1-in-3 rather than 1-in-2), slower fall throughout.
+  const ATTEMPTS_PER_SESSION = 20;     // was 30
+  const INITIAL_STOP_RATIO   = 0.15;   // was 0.20
+  const PEAK_STOP_RATIO      = 0.35;   // was 0.45
+  const INITIAL_FALL_SPEED   = 45;     // was 65 px/sec
+  const PEAK_FALL_SPEED      = 100;    // was 135
 
   const PALETTE_GO = {
     fill: '#dff3df', stroke: '#3e8a4a', glyph: '#1a3a1a', label: 'GO'

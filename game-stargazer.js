@@ -38,11 +38,15 @@
 (function (global) {
   'use strict';
 
-  const SESSION_DURATION_MS = 90 * 1000;
-  const REENGAGE_AFTER_MS   = 18 * 1000;
-  const SHOOTING_STAR_LIFE  = 1.6;       // seconds visible
-  const MIN_GAP_MS = 2000;
-  const MAX_GAP_MS = 6000;
+  // v5.23 — playtest showed 90s was way too long for a 4-yo and 1.6s
+  // wasn't enough time to find + tap the shooting star. 45s session
+  // with 2.8s shooting-star lifetime + tighter gaps between targets so
+  // the kid sees more action in the shorter window.
+  const SESSION_DURATION_MS = 45 * 1000;   // was 90s
+  const REENGAGE_AFTER_MS   = 12 * 1000;   // was 18s
+  const SHOOTING_STAR_LIFE  = 2.8;         // was 1.6s — much longer to react
+  const MIN_GAP_MS = 1500;                 // was 2000ms
+  const MAX_GAP_MS = 3500;                 // was 6000ms
 
   /* A drifting decorative star — tapping it is logged as a false
      positive but doesn't visually punish. */
@@ -76,7 +80,7 @@
       super(x, y);
       this.vx = vx;
       this.vy = vy;
-      this.r = 14;
+      this.r = 22;                  // v5.23 — bumped from 14 (easier for small fingers)
       this.tappable = true;
       this.z = 20;
       this.age = 0;
@@ -93,7 +97,7 @@
     }
     contains(px, py) {
       const dx = px - this.x, dy = py - this.y;
-      return dx*dx + dy*dy <= (this.r + 12) * (this.r + 12);
+      return dx*dx + dy*dy <= (this.r + 18) * (this.r + 18);  // v5.23 +18 pad (was +12)
     }
     onTap(eng) {
       if (typeof this._onTap === 'function') this._onTap(this, eng);

@@ -193,19 +193,22 @@
     if (speakFn) try { speakFn('Get ready. Three.'); } catch {}
     tickTone(engine.sfx, 440);
 
+    // v5.23 — paced to a calming inhale rhythm. Was 1.1s/beat — felt
+    // rushed for a "settle in" ritual. Now 1.5s/beat. The full ritual
+    // is ~6 seconds total which matches a slow-breath count.
     // 3 → 2 → 1 → liftoff
     setTimeout(() => {
       countValue = 2;
       countText.setValue('2');
       if (speakFn) try { speakFn('Two.'); } catch {}
       tickTone(engine.sfx, 494);
-    }, 1100);
+    }, 1500);
     setTimeout(() => {
       countValue = 1;
       countText.setValue('1');
       if (speakFn) try { speakFn('One.'); } catch {}
       tickTone(engine.sfx, 554);
-    }, 2200);
+    }, 3000);
     setTimeout(() => {
       countText.setValue('GO!');
       if (speakFn) try { speakFn('Lift off!'); } catch {}
@@ -216,13 +219,13 @@
       phase = 'launching';
       const { width, height } = engine.viewport;
       engine.add(new ParticleBurst(width / 2, height - 100, { count: 40, hue: 30 }));
-    }, 3300);
+    }, 4500);
 
     // After the rocket flies off-screen, signal completion
     setTimeout(() => {
       phase = 'done';
       if (onCompleteFn) try { onCompleteFn(); } catch {}
-    }, 5400);
+    }, 6600);
   }
 
   function stopLaunchPad() {

@@ -233,6 +233,9 @@
     // Force reflow then add the class to retrigger the animation
     void banner.offsetWidth;
     banner.classList.add('rule-flash');
+    // v5.23 — also play the levelUp arpeggio so the rule-switch is
+    // audibly distinct, not just a brief scale animation
+    if (engine) engine.sfx.levelUp();
   }
 
   function handleBinTap(bin, eng) {

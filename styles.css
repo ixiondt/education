@@ -711,12 +711,18 @@ body {
   box-shadow: 0 4px 14px var(--shadow);
 }
 .switch-banner.rule-flash {
-  animation: rule-flash 700ms ease;
+  /* v5.23 — flash is much more obvious now: longer (1.4s), bigger
+     scale punch (1.25×), 3 color pulses + a shake. The kid is supposed
+     to NOTICE the rule changed; subtlety here defeats the EF goal. */
+  animation: rule-flash 1400ms ease;
 }
 @keyframes rule-flash {
-  0%   { transform: scale(1);    background: oklch(from var(--accent) l c h / 0.20); }
-  40%  { transform: scale(1.12); background: oklch(from var(--accent) l c h / 0.40); }
-  100% { transform: scale(1);    background: oklch(from var(--surface) l c h / 0.94); }
+  0%   { transform: scale(1)    translateX(0);    background: oklch(from var(--accent) l c h / 0.20); color: var(--text); }
+  15%  { transform: scale(1.25) translateX(-6px); background: var(--accent); color: #fff; }
+  30%  { transform: scale(1.25) translateX(6px);  background: var(--accent); color: #fff; }
+  45%  { transform: scale(1.25) translateX(-4px); background: var(--accent); color: #fff; }
+  60%  { transform: scale(1.25) translateX(0);    background: var(--accent); color: #fff; }
+  100% { transform: scale(1)    translateX(0);    background: oklch(from var(--surface) l c h / 0.94); color: var(--text); }
 }
 
 /* Stargazer — slim progress bar over the night sky */

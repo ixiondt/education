@@ -253,6 +253,24 @@ PHRASES = {
     "time-noon":        "noon",
     "time-evening":     "evening",
     "time-night":       "night",
+    # v5.23 — game-specific phrases. Without these the games fall back
+    # to device TTS (often robotic male voice on Windows). Run with
+    # --only phrases to regenerate just this section after editing.
+    "watch-the-stars":      "Watch the stars, then tap them in order.",
+    "memory-praise":        "Nice memory!",
+    "tap-green-not-red":    "Tap the green ones. Don't tap the red ones.",
+    "focus-praise":         "Great focus!",
+    "stop-praise":          "Amazing! You stopped every red one!",
+    "sort-by-color-first":  "Sort by color first.",
+    "now-sort-color":       "Now sort by color.",
+    "now-sort-shape":       "Now sort by shape.",
+    "switch-praise":        "Great switching!",
+    "watch-the-sky":        "Watch the sky. Tap the shooting stars when they fly.",
+    "watch-praise":         "Nice watching!",
+    "ready-three":          "Get ready. Three.",
+    "count-two":            "Two.",
+    "count-one":            "One.",
+    "lift-off":             "Lift off!",
 }
 
 # v5.9 — time-of-day scenario vocabulary (single-word entries only, so the

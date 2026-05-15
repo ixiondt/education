@@ -118,9 +118,12 @@
     { fill: '#dff3df', stroke: '#549b54', glyph: '#1a3a1a' }
   ];
 
-  /* Fall speed in px/sec. Scales with level, never feels rushed. */
+  /* Fall speed in px/sec. Scales with level, never feels rushed.
+     v5.23 — playtest showed L1 was too quick. Start at 35 px/s (was 50)
+     and ramp gentler so the first 3 levels feel achievable for a kid
+     just learning math facts. */
   function fallSpeedFor(level) {
-    return 50 + (level - 1) * 12;   // L1: 50, L2: 62, L3: 74, ... L10: 158
+    return 35 + (level - 1) * 10;   // L1: 35, L2: 45, L3: 55, ... L10: 125
   }
 
   function spawnRowY(viewport) { return -50; }  // just above viewport
