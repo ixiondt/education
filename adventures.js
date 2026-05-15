@@ -46,198 +46,168 @@
 
   const ADVENTURES = [
     {
-      id: 'bunny-picnic',
-      character: '🐰',
-      title: "Bunny's picnic",
+      id: 'bunny-picnic', character: '🐰', title: "Bunny's picnic",
       hook: "Bunny is going on a picnic. Can you help?",
       bands: ['yngre', 'eldre'],
       chapters: [
-        { narration: "Bunny is packing food. Help sort what to bring!", mode: 'food-sort' },
-        { narration: "Count the carrots in the basket.", mode: 'count', params: { fixedCount: 5 } },
-        { narration: "Now find the letters that spell BUNNY.", mode: 'find-letters', params: { wordSequence: 'BUNNY' } },
-        { narration: "Bunny had a wonderful picnic. Thank you!", celebrate: true }
+        { audioKey: 'adv-bunny-picnic-1', narration: "Bunny is packing food. Help sort what to bring!", mode: 'food-sort' },
+        { audioKey: 'adv-bunny-picnic-2', narration: "Count the carrots in the basket.", mode: 'count', params: { fixedCount: 5 } },
+        { audioKey: 'adv-bunny-picnic-3', narration: "Now find the letters that spell BUNNY.", mode: 'find-letters', params: { wordSequence: 'BUNNY' } },
+        { audioKey: 'adv-bunny-picnic-4', narration: "Bunny had a wonderful picnic. Thank you!", celebrate: true }
       ]
     },
     {
-      id: 'fox-fix-shoes',
-      character: '🦊',
-      title: "Fox's lost shoes",
+      id: 'fox-fix-shoes', character: '🦊', title: "Fox's lost shoes",
       hook: "Fox can't find their shoes. Help search!",
       bands: ['yngre', 'eldre'],
       chapters: [
-        { narration: "Fox is hopping on one foot. Where are the shoes?", mode: 'body' },
-        { narration: "Spell FOX to call them back!", mode: 'find-letters', params: { wordSequence: 'FOX' } },
-        { narration: "Count Fox's two new shoes.", mode: 'count', params: { fixedCount: 2 } },
-        { narration: "Hooray! Fox can run again.", celebrate: true }
+        { audioKey: 'adv-fox-shoes-1', narration: "Fox is hopping on one foot. Where are the shoes?", mode: 'body' },
+        { audioKey: 'adv-fox-shoes-2', narration: "Spell FOX to call them back!", mode: 'find-letters', params: { wordSequence: 'FOX' } },
+        { audioKey: 'adv-fox-shoes-3', narration: "Count Fox's two new shoes.", mode: 'count', params: { fixedCount: 2 } },
+        { audioKey: 'adv-fox-shoes-4', narration: "Hooray! Fox can run again.", celebrate: true }
       ]
     },
     {
-      id: 'rainbow-day',
-      character: '🌈',
-      title: "Rainbow day",
+      id: 'rainbow-day', character: '🌈', title: "Rainbow day",
       hook: "A rainbow appeared! Let's celebrate it.",
       bands: ['smabarn', 'yngre', 'eldre'],
       chapters: [
-        { narration: "Find each color of the rainbow!", mode: 'colors' },
-        { narration: "Draw your favorite rainbow.", mode: 'draw' },
-        { narration: "Play a happy rhythm!", mode: 'rhythm' },
-        { narration: "What a beautiful day.", celebrate: true }
+        { audioKey: 'adv-rainbow-1', narration: "Find each color of the rainbow!", mode: 'colors' },
+        { audioKey: 'adv-rainbow-2', narration: "Draw your favorite rainbow.", mode: 'draw' },
+        { audioKey: 'adv-rainbow-3', narration: "Play a happy rhythm!", mode: 'rhythm' },
+        { audioKey: 'adv-rainbow-4', narration: "What a beautiful day.", celebrate: true }
       ]
     },
     {
-      id: 'snowy-day',
-      character: '❄️',
-      title: "Snowy day",
+      id: 'snowy-day', character: '❄️', title: "Snowy day",
       hook: "Snow is falling! What shall we do?",
       bands: ['yngre', 'eldre', 'skolestart'],
       chapters: [
-        { narration: "How does the cold make you feel?", mode: 'feelings' },
-        { narration: "Take a moment to breathe like snow drifting.", mode: 'calm-corner' },
-        { narration: "What's the weather like today?", mode: 'weather' },
-        { narration: "A peaceful snow day. Well done.", celebrate: true }
+        { audioKey: 'adv-snowy-1', narration: "How does the cold make you feel?", mode: 'feelings' },
+        { audioKey: 'adv-snowy-2', narration: "Take a moment to breathe like snow drifting.", mode: 'calm-corner' },
+        { audioKey: 'adv-snowy-3', narration: "What's the weather like today?", mode: 'weather' },
+        { audioKey: 'adv-snowy-4', narration: "A peaceful snow day. Well done.", celebrate: true }
       ]
     },
     {
-      id: 'pirate-treasure',
-      character: '🏴‍☠️',
-      title: "Pirate treasure",
+      id: 'pirate-treasure', character: '🏴‍☠️', title: "Pirate treasure",
       hook: "X marks the spot! Find the treasure.",
       bands: ['eldre', 'skolestart'],
       chapters: [
-        { narration: "Spell out T-R-E-A-S-U-R-E to unlock the chest.", mode: 'find-letters', params: { wordSequence: 'TREASURE' } },
-        { narration: "Count the gold coins inside!", mode: 'count', params: { fixedCount: 10 } },
-        { narration: "Sort the shiny things from the rocks.", mode: 'shapes' },
-        { narration: "Aaarrr! What a haul, matey.", celebrate: true }
+        { audioKey: 'adv-pirate-1', narration: "Spell out T-R-E-A-S-U-R-E to unlock the chest.", mode: 'find-letters', params: { wordSequence: 'TREASURE' } },
+        { audioKey: 'adv-pirate-2', narration: "Count the gold coins inside!", mode: 'count', params: { fixedCount: 10 } },
+        { audioKey: 'adv-pirate-3', narration: "Sort the shiny things from the rocks.", mode: 'shapes' },
+        { audioKey: 'adv-pirate-4', narration: "Aaarrr! What a haul, matey.", celebrate: true }
       ]
     },
     {
-      id: 'garden-grows',
-      character: '🌱',
-      title: "The garden grows",
+      id: 'garden-grows', character: '🌱', title: "The garden grows",
       hook: "Spring is here — let's plant!",
       bands: ['yngre', 'eldre'],
       chapters: [
-        { narration: "Sort the seeds by shape.", mode: 'shapes' },
-        { narration: "Water the garden — count the buckets.", mode: 'count', params: { fixedCount: 3 } },
-        { narration: "Look at the patterns the leaves make.", mode: 'patterns' },
-        { narration: "Your garden is growing beautifully.", celebrate: true }
+        { audioKey: 'adv-garden-1', narration: "Sort the seeds by shape.", mode: 'shapes' },
+        { audioKey: 'adv-garden-2', narration: "Water the garden — count the buckets.", mode: 'count', params: { fixedCount: 3 } },
+        { audioKey: 'adv-garden-3', narration: "Look at the patterns the leaves make.", mode: 'patterns' },
+        { audioKey: 'adv-garden-4', narration: "Your garden is growing beautifully.", celebrate: true }
       ]
     },
     {
-      id: 'space-mission',
-      character: '🚀',
-      title: "Space mission",
+      id: 'space-mission', character: '🚀', title: "Space mission",
       hook: "Mission Control, ready for takeoff?",
       bands: ['eldre', 'skolestart'],
       chapters: [
-        { narration: "Get ready for liftoff!", mode: 'launch-pad' },
-        { narration: "Solve the asteroid equations to clear the way!", mode: 'number-blaster' },
-        { narration: "Find the planet shapes in the sky.", mode: 'shapes' },
-        { narration: "Welcome back to Earth, astronaut!", celebrate: true }
+        { audioKey: 'adv-space-1', narration: "Get ready for liftoff!", mode: 'launch-pad' },
+        { audioKey: 'adv-space-2', narration: "Solve the asteroid equations to clear the way!", mode: 'number-blaster' },
+        { audioKey: 'adv-space-3', narration: "Find the planet shapes in the sky.", mode: 'shapes' },
+        { audioKey: 'adv-space-4', narration: "Welcome back to Earth, astronaut!", celebrate: true }
       ]
     },
     {
-      id: 'forest-hike',
-      character: '🌲',
-      title: "Forest hike",
+      id: 'forest-hike', character: '🌲', title: "Forest hike",
       hook: "Pack your boots — we're going hiking.",
       bands: ['yngre', 'eldre', 'skolestart'],
       chapters: [
-        { narration: "What's the weather like for our hike?", mode: 'weather' },
-        { narration: "Spot the animals along the trail.", mode: 'animals' },
-        { narration: "Help keep the forest clean — sort the trash.", mode: 'sort-it-out' },
-        { narration: "Nature thanks you.", celebrate: true }
+        { audioKey: 'adv-forest-1', narration: "What's the weather like for our hike?", mode: 'weather' },
+        { audioKey: 'adv-forest-2', narration: "Spot the animals along the trail.", mode: 'animals' },
+        { audioKey: 'adv-forest-3', narration: "Help keep the forest clean — sort the trash.", mode: 'sort-it-out' },
+        { audioKey: 'adv-forest-4', narration: "Nature thanks you.", celebrate: true }
       ]
     },
     {
-      id: 'birthday-party',
-      character: '🎂',
-      title: "Birthday party",
+      id: 'birthday-party', character: '🎂', title: "Birthday party",
       hook: "It's a birthday! Let's get ready.",
       bands: ['yngre', 'eldre'],
       chapters: [
-        { narration: "Count the candles on the cake.", mode: 'count', params: { fixedCount: 4 } },
-        { narration: "Spell P-A-R-T-Y!", mode: 'find-letters', params: { wordSequence: 'PARTY' } },
-        { narration: "How does the birthday feel?", mode: 'feelings' },
-        { narration: "Happy birthday! What a great party.", celebrate: true }
+        { audioKey: 'adv-birthday-1', narration: "Count the candles on the cake.", mode: 'count', params: { fixedCount: 4 } },
+        { audioKey: 'adv-birthday-2', narration: "Spell P-A-R-T-Y!", mode: 'find-letters', params: { wordSequence: 'PARTY' } },
+        { audioKey: 'adv-birthday-3', narration: "How does the birthday feel?", mode: 'feelings' },
+        { audioKey: 'adv-birthday-4', narration: "Happy birthday! What a great party.", celebrate: true }
       ]
     },
     {
-      id: 'kindness-day',
-      character: '❤️',
-      title: "Kindness day",
+      id: 'kindness-day', character: '❤️', title: "Kindness day",
       hook: "Today, let's notice kindness.",
       bands: ['eldre', 'skolestart'],
       chapters: [
-        { narration: "What kind choice would you make?", mode: 'empathy' },
-        { narration: "Who in your family are you grateful for?", mode: 'gratitude' },
-        { narration: "Send a kind feeling to someone you love.", mode: 'feelings' },
-        { narration: "Kindness is its own gift. Thank you for noticing.", celebrate: true }
+        { audioKey: 'adv-kindness-1', narration: "What kind choice would you make?", mode: 'empathy' },
+        { audioKey: 'adv-kindness-2', narration: "Who in your family are you grateful for?", mode: 'gratitude' },
+        { audioKey: 'adv-kindness-3', narration: "Send a kind feeling to someone you love.", mode: 'feelings' },
+        { audioKey: 'adv-kindness-4', narration: "Kindness is its own gift. Thank you for noticing.", celebrate: true }
       ]
     },
     {
-      id: 'music-time',
-      character: '🎵',
-      title: "Music time",
+      id: 'music-time', character: '🎵', title: "Music time",
       hook: "The music is calling — let's play!",
       bands: ['smabarn', 'yngre', 'eldre'],
       chapters: [
-        { narration: "Tap a rhythm with the band.", mode: 'rhythm' },
-        { narration: "Move your body to the beat!", mode: 'move-with-me' },
-        { narration: "Listen to the sound — can you hear the letters?", mode: 'first-sound' },
-        { narration: "What a song!", celebrate: true }
+        { audioKey: 'adv-music-1', narration: "Tap a rhythm with the band.", mode: 'rhythm' },
+        { audioKey: 'adv-music-2', narration: "Move your body to the beat!", mode: 'move-with-me' },
+        { audioKey: 'adv-music-3', narration: "Listen to the sound — can you hear the letters?", mode: 'first-sound' },
+        { audioKey: 'adv-music-4', narration: "What a song!", celebrate: true }
       ]
     },
     {
-      id: 'morning-routine',
-      character: '🌅',
-      title: "Morning routine",
+      id: 'morning-routine', character: '🌅', title: "Morning routine",
       hook: "A new day begins. Walk through your morning.",
       bands: ['yngre', 'eldre', 'skolestart'],
       chapters: [
-        { narration: "Put your morning in order.", mode: 'routines' },
-        { narration: "How are you feeling today?", mode: 'feelings' },
-        { narration: "Take three slow breaths to wake up gently.", mode: 'calm-corner' },
-        { narration: "You're ready for the day. Have a good one!", celebrate: true }
+        { audioKey: 'adv-morning-1', narration: "Put your morning in order.", mode: 'routines' },
+        { audioKey: 'adv-morning-2', narration: "How are you feeling today?", mode: 'feelings' },
+        { audioKey: 'adv-morning-3', narration: "Take three slow breaths to wake up gently.", mode: 'calm-corner' },
+        { audioKey: 'adv-morning-4', narration: "You're ready for the day. Have a good one!", celebrate: true }
       ]
     },
     {
-      id: 'baby-bird',
-      character: '🐣',
-      title: "Baby bird wakes up",
+      id: 'baby-bird', character: '🐣', title: "Baby bird wakes up",
       hook: "A little bird is learning everything new.",
       bands: ['smabarn', 'yngre'],
       chapters: [
-        { narration: "Hear the bird's first chirp — what letter is that?", mode: 'first-sound' },
-        { narration: "Spell B-I-R-D to call them home.", mode: 'find-letters', params: { wordSequence: 'BIRD' } },
-        { narration: "Two little eggs are still in the nest. Count them!", mode: 'count', params: { fixedCount: 2 } },
-        { narration: "The whole family is together now.", celebrate: true }
+        { audioKey: 'adv-baby-bird-1', narration: "Hear the bird's first chirp — what letter is that?", mode: 'first-sound' },
+        { audioKey: 'adv-baby-bird-2', narration: "Spell B-I-R-D to call them home.", mode: 'find-letters', params: { wordSequence: 'BIRD' } },
+        { audioKey: 'adv-baby-bird-3', narration: "Two little eggs are still in the nest. Count them!", mode: 'count', params: { fixedCount: 2 } },
+        { audioKey: 'adv-baby-bird-4', narration: "The whole family is together now.", celebrate: true }
       ]
     },
     {
-      id: 'starry-night',
-      character: '⭐',
-      title: "Starry night",
+      id: 'starry-night', character: '⭐', title: "Starry night",
       hook: "The night sky is full of stars. Look up!",
       bands: ['yngre', 'eldre', 'skolestart'],
       chapters: [
-        { narration: "Watch the night sky carefully.", mode: 'stargazer' },
-        { narration: "Sort the stars by what you see.", mode: 'shapes' },
-        { narration: "Take a deep breath and look at the moon.", mode: 'calm-corner' },
-        { narration: "Goodnight, stars.", celebrate: true }
+        { audioKey: 'adv-starry-1', narration: "Watch the night sky carefully.", mode: 'stargazer' },
+        { audioKey: 'adv-starry-2', narration: "Sort the stars by what you see.", mode: 'shapes' },
+        { audioKey: 'adv-starry-3', narration: "Take a deep breath and look at the moon.", mode: 'calm-corner' },
+        { audioKey: 'adv-starry-4', narration: "Goodnight, stars.", celebrate: true }
       ]
     },
     {
-      id: 'whale-deep-dive',
-      character: '🐳',
-      title: "Whale's deep dive",
+      id: 'whale-deep-dive', character: '🐳', title: "Whale's deep dive",
       hook: "Dive with Whale to the ocean floor.",
       bands: ['yngre', 'eldre'],
       chapters: [
-        { narration: "Whales live in the water — let's match the animals.", mode: 'animals' },
-        { narration: "Hold your breath like Whale. Slow… deep…", mode: 'calm-corner' },
-        { narration: "Count the fish swimming past!", mode: 'count', params: { fixedCount: 7 } },
-        { narration: "Back to the surface — what a deep dive.", celebrate: true }
+        { audioKey: 'adv-whale-1', narration: "Whales live in the water — let's match the animals.", mode: 'animals' },
+        { audioKey: 'adv-whale-2', narration: "Hold your breath like Whale. Slow… deep…", mode: 'calm-corner' },
+        { audioKey: 'adv-whale-3', narration: "Count the fish swimming past!", mode: 'count', params: { fixedCount: 7 } },
+        { audioKey: 'adv-whale-4', narration: "Back to the surface — what a deep dive.", celebrate: true }
       ]
     }
   ];
@@ -333,7 +303,16 @@
       }
     });
     // Speak the narration through the existing voice chain
-    if (typeof Speech !== 'undefined' && Speech.cheer) Speech.cheer(text);
+    /* v6.5.1 — route through Speech.phrase so the MP3 pack catches the
+       narration line. The audio key on each chapter maps to a file in
+       audio/phrases/adv-*.mp3 rendered by scripts/generate-voices.py.
+       Falls back to TTS only when the MP3 is missing (e.g., a future
+       adventure that hasn't been generated yet). */
+    if (typeof Speech !== 'undefined' && Speech.phrase) {
+      const ch = active && active.chapters[chapterIdx];
+      const key = ch?.audioKey || 'adv-narrator-fallback';
+      Speech.phrase(key, text);
+    }
   }
 
   /* ===================  Chapter runner  =================== */
