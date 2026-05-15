@@ -248,6 +248,20 @@
         </button>
       </div>
 
+      <!-- v5.25 — Rammeplan area 3: Kunst, kultur og kreativitet -->
+      <h2 class="mode-section-title">Art &amp; creativity</h2>
+      <p class="mode-section-sub">Open-ended making. No grading, no themes — just expression.</p>
+      <div class="mode-grid">
+        <button class="mode-card whole draw" data-mode="draw">
+          <div class="icon">🎨</div>
+          <div class="label">Draw</div>
+        </button>
+        <button class="mode-card whole rhythm" data-mode="rhythm">
+          <div class="icon">🥁</div>
+          <div class="label">Rhythm</div>
+        </button>
+      </div>
+
       <h2 class="mode-section-title">World around us</h2>
       <p class="mode-section-sub">Nature and community — Rammeplan areas 4 and 7.</p>
       <div class="mode-grid">
@@ -342,6 +356,12 @@
     <section class="screen screen-game" id="screen-food-sort">
       <canvas id="food-sort-canvas" class="ll-canvas"></canvas>
     </section>
+
+    <!-- v5.25 — Draw (Art & Creativity — Rammeplan area 3) — DOM build, own canvas -->
+    <section class="screen screen-draw" id="screen-draw"></section>
+
+    <!-- v5.25 — Rhythm play (Art & Creativity — Rammeplan area 3) — DOM -->
+    <section class="screen screen-rhythm" id="screen-rhythm"></section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -1288,6 +1308,9 @@
   <!-- v5.24 — Rammeplan Session A: Body, Movement & Health -->
   <script src="game-move-with-me.js"></script>
   <script src="game-food-sort.js"></script>
+  <!-- v5.25 — Rammeplan Session B: Art, Culture & Creativity -->
+  <script src="game-draw.js"></script>
+  <script src="game-rhythm.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

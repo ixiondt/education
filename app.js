@@ -1238,7 +1238,10 @@
       thermometer:    $('screen-thermometer'),
       // v5.24 — Rammeplan area 2 (Body, Movement & Health)
       moveWithMe:     $('screen-move-with-me'),
-      foodSort:       $('screen-food-sort')
+      foodSort:       $('screen-food-sort'),
+      // v5.25 — Rammeplan area 3 (Art, Culture & Creativity)
+      draw:           $('screen-draw'),
+      rhythm:         $('screen-rhythm')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1849,6 +1852,29 @@
           });
           break;
         }
+        // v5.25 — Rammeplan Session B: Art, Culture & Creativity
+        case 'draw': {
+          showScreen('draw');
+          requestAnimationFrame(() => {
+            if (typeof startDraw !== 'function') return;
+            startDraw({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'rhythm': {
+          showScreen('rhythm');
+          requestAnimationFrame(() => {
+            if (typeof startRhythm !== 'function') return;
+            startRhythm({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -1933,6 +1959,9 @@
     // v5.24 — Rammeplan Session A (Body / Movement / Health)
     if (typeof stopMoveWithMe === 'function') stopMoveWithMe();
     if (typeof stopFoodSort   === 'function') stopFoodSort();
+    // v5.25 — Rammeplan Session B (Art / Culture / Creativity)
+    if (typeof stopDraw       === 'function') stopDraw();
+    if (typeof stopRhythm     === 'function') stopRhythm();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;

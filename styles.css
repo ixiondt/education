@@ -1212,6 +1212,256 @@ body {
   animation: mwm-clap 700ms ease-in-out infinite;
 }
 
+/* ============================================================
+   v5.25 — Rammeplan Session B: Art, Culture & Creativity
+   ============================================================ */
+.mode-card.draw   .icon { color: var(--accent); }
+.mode-card.rhythm .icon { color: var(--secondary); }
+
+/* Draw — full-screen canvas with toolbar + gallery strip below */
+.screen-draw.active {
+  padding: 8px;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: stretch;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 1100px;
+}
+.draw-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.draw-palette,
+.draw-brushes,
+.draw-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.draw-color {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 200ms ease;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.draw-color:hover   { transform: scale(1.08); }
+.draw-color.selected { border-color: var(--text); transform: scale(1.14); }
+.draw-eraser {
+  background: var(--bg);
+  border: 2px solid var(--border);
+}
+
+.draw-brush {
+  width: 40px;
+  height: 34px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+}
+.draw-brush.selected {
+  background: oklch(from var(--accent) l c h / 0.12);
+  border-color: var(--accent);
+}
+
+.draw-actions { margin-left: auto; gap: 8px; }
+.draw-actions .btn { padding: 8px 14px; font-size: 14px; }
+
+.draw-canvas-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 50vh;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: #fffaf0;
+  overflow: hidden;
+}
+.draw-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;     /* let JS handle pointer events without scroll */
+  cursor: crosshair;
+}
+.draw-saved-note {
+  position: absolute;
+  top: 14px; right: 14px;
+  padding: 8px 14px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: none;
+}
+.draw-saved-note.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.draw-gallery {
+  display: flex;
+  gap: 8px;
+  padding: 8px 4px 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 80px;
+}
+.draw-gallery-empty {
+  color: var(--text-soft);
+  font-size: 13px;
+  padding: 18px 8px;
+  font-style: italic;
+}
+.draw-thumb {
+  position: relative;
+  flex: 0 0 80px;
+  width: 80px;
+  height: 60px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 200ms ease;
+}
+.draw-thumb:hover { transform: scale(1.04); border-color: var(--accent); }
+.draw-thumb img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.draw-thumb-del {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+
+/* Rhythm — 4-pad instrument layout */
+.screen-rhythm.active {
+  padding: 16px;
+  gap: 16px;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 640px;
+}
+.rhythm-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: oklch(from var(--text-soft) l c h / 0.10);
+  border-radius: 999px;
+}
+.rhythm-tab {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+}
+.rhythm-tab[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.rhythm-banner {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  padding: 12px 18px;
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  min-height: 28px;
+  width: 100%;
+  transition: background 200ms ease, color 200ms ease;
+}
+.rhythm-banner.rhythm-banner-active {
+  background: oklch(from var(--accent) l c h / 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.rhythm-pads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+  max-width: 520px;
+  margin-top: 6px;
+}
+.rhythm-pad {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--accent);
+  border: 3px solid rgba(0,0,0,0.10);
+  border-radius: 22px;
+  cursor: pointer;
+  font: inherit;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  transition: transform 80ms ease, box-shadow 200ms ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+.rhythm-pad:active { transform: scale(0.95); }
+.rhythm-pad-pulse {
+  animation: rhythm-pulse 320ms ease;
+}
+@keyframes rhythm-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+  50%      { transform: scale(1.08); box-shadow: 0 10px 24px rgba(0,0,0,0.30); }
+}
+.rhythm-pad-emoji {
+  font-size: 58px;
+  line-height: 1;
+}
+.rhythm-pad-label {
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.30);
+}
+.rhythm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.rhythm-actions .btn { padding: 10px 18px; }
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;
