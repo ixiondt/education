@@ -836,6 +836,10 @@ const MODE_AREAS = {
   //        keep them there as their primary area, this area adds
   //        the new nature-observation + recycling modes.
   nature:    ['weather', 'sort-it-out'],
+  // v5.29 — Rammeplan area 7 (Nærmiljø og samfunn).
+  // 'helpers' is listed elsewhere too; this area adds family +
+  // daily routines as core society-belonging content.
+  society:   ['family', 'routines'],
   // v5.18 — Executive function trainers. New first-class area so the
   //         Rammeplan dashboard reports EF coverage separately from
   //         literacy / numeracy / self-world breadth.

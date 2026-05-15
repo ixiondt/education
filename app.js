@@ -1247,7 +1247,13 @@
       gratitude:      $('screen-gratitude'),
       // v5.27 — Rammeplan area 4 (Nature, Environment & Technology)
       weather:        $('screen-weather'),
-      sortItOut:      $('screen-sort-it-out')
+      sortItOut:      $('screen-sort-it-out'),
+      // v5.28 — Rammeplan area 5 depth (measurement + spatial)
+      measure:        $('screen-measure'),
+      whereIsIt:      $('screen-where-is-it'),
+      // v5.29 — Rammeplan area 7 (Local Environment & Society)
+      family:         $('screen-family'),
+      routines:       $('screen-routines')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1928,6 +1934,56 @@
           });
           break;
         }
+        // v5.28 — Rammeplan Session E: measurement + spatial reasoning
+        case 'measure': {
+          showScreen('measure');
+          requestAnimationFrame(() => {
+            if (typeof startMeasure !== 'function') return;
+            startMeasure({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'where-is-it': {
+          showScreen('whereIsIt');
+          requestAnimationFrame(() => {
+            if (typeof startWhereIsIt !== 'function') return;
+            startWhereIsIt({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        // v5.29 — Rammeplan Session F: family + daily routines
+        case 'family': {
+          showScreen('family');
+          requestAnimationFrame(() => {
+            if (typeof startFamily !== 'function') return;
+            startFamily({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'routines': {
+          showScreen('routines');
+          requestAnimationFrame(() => {
+            if (typeof startRoutines !== 'function') return;
+            startRoutines({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -2021,6 +2077,12 @@
     // v5.27 — Rammeplan Session D (Nature / Environment / Technology)
     if (typeof stopWeather    === 'function') stopWeather();
     if (typeof stopSortItOut  === 'function') stopSortItOut();
+    // v5.28 — Rammeplan Session E (Measurement / Spatial)
+    if (typeof stopMeasure    === 'function') stopMeasure();
+    if (typeof stopWhereIsIt  === 'function') stopWhereIsIt();
+    // v5.29 — Rammeplan Session F (Society / Family / Routines)
+    if (typeof stopFamily     === 'function') stopFamily();
+    if (typeof stopRoutines   === 'function') stopRoutines();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;
@@ -4578,6 +4640,11 @@
       seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
       if (key === 'theme')        applyTheme();
       if (key === 'showAllModes') { refreshModeLocks(); }
+      // v5.30 — locale change: re-pick voice + notify i18n subscribers
+      if (key === 'locale' && typeof I18n !== 'undefined') {
+        I18n.setLocale(b.dataset.value);
+        if (typeof VoiceEngine !== 'undefined') VoiceEngine.refresh();
+      }
       // v5.15 — audible preview of speech speed so the parent hears
       // the difference immediately (otherwise they'd have to leave
       // Settings and tap into a mode to test).

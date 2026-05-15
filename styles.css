@@ -1731,6 +1731,292 @@ body {
   .weather-grid, .weather-chips { grid-template-columns: repeat(3, 1fr); }
 }
 
+/* ============================================================
+   v5.28 — Rammeplan Session E: Measurement + Spatial
+   ============================================================ */
+.mode-card.measure     .icon { color: var(--accent); }
+.mode-card.where-is-it .icon { color: var(--secondary); }
+
+.screen-measure.active,
+.screen-where-is-it.active {
+  padding: 24px 16px;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100dvh;
+  width: 100%;
+  gap: 0;
+}
+.measure-card,
+.where-card {
+  width: 100%;
+  max-width: 600px;
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  box-shadow: 0 8px 22px var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.measure-progress, .where-progress {
+  width: 100%; height: 6px;
+  background: oklch(from var(--text-soft) l c h / 0.18);
+  border-radius: 999px; overflow: hidden;
+}
+.measure-progress-bar, .where-progress-bar {
+  height: 100%; background: var(--accent); transition: width 400ms ease;
+}
+.measure-title, .where-title {
+  font-size: 22px; font-weight: 700; color: var(--text); margin: 0;
+}
+.measure-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+}
+.measure-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 12px;
+  background: var(--bg);
+  border: 2.5px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+  min-height: 160px;
+  justify-content: center;
+}
+.measure-pick:hover { transform: translateY(-1px); border-color: var(--accent); }
+.measure-emoji { font-size: 56px; line-height: 1; transition: transform 200ms ease; }
+.measure-label { font-size: 13px; font-weight: 600; color: var(--text-soft); }
+.measure-correct {
+  border-color: var(--success);
+  background: oklch(from var(--success) l c h / 0.12);
+}
+.measure-wrong {
+  border-color: oklch(0.55 0.18 25);
+  background: oklch(0.55 0.18 25 / 0.10);
+}
+.measure-hint {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.14);
+  animation: pulse-once 600ms ease;
+}
+@keyframes pulse-once {
+  0%,100% { transform: scale(1); } 50% { transform: scale(1.05); }
+}
+.measure-done { padding: 40px 22px; }
+.measure-done-emoji { font-size: 80px; }
+
+/* Where is it? — scene shows obj + subj in a 240×180 box, subject
+   positioned by a class for the active relation. */
+.where-scene {
+  position: relative;
+  width: 240px;
+  height: 180px;
+  background: oklch(from var(--bg) l c h);
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  overflow: visible;
+}
+.where-obj, .where-subj {
+  position: absolute;
+  font-size: 70px;
+  line-height: 1;
+}
+.where-obj  { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.where-subj { font-size: 50px; transition: top 200ms ease, left 200ms ease; }
+.where-rel-above   .where-subj { left: 50%; top: 10%;  transform: translate(-50%, 0); }
+.where-rel-under   .where-subj { left: 50%; top: 100%; transform: translate(-50%, -50%); }
+.where-rel-on      .where-subj { left: 50%; top: 32%;  transform: translate(-50%, -100%); }
+.where-rel-inside  .where-subj { left: 50%; top: 60%;  transform: translate(-50%, -50%); font-size: 30px; }
+.where-rel-beside  .where-subj { left: 92%; top: 50%;  transform: translate(-50%, -50%); }
+.where-rel-in      .where-subj { left: 50%; top: 35%;  transform: translate(-50%, -50%); font-size: 30px; }
+.where-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+.where-choice {
+  padding: 14px 12px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.where-choice:hover { transform: translateY(-1px); border-color: var(--accent); }
+.where-correct {
+  border-color: var(--success);
+  background: oklch(from var(--success) l c h / 0.14);
+}
+.where-wrong {
+  border-color: oklch(0.55 0.18 25);
+  background: oklch(0.55 0.18 25 / 0.10);
+}
+.where-hint {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.14);
+  animation: pulse-once 600ms ease;
+}
+.where-done { padding: 40px 22px; }
+.where-done-emoji { font-size: 80px; }
+
+/* ============================================================
+   v5.29 — Rammeplan Session F: Family + Routines
+   ============================================================ */
+.mode-card.family   .icon { color: var(--accent); }
+.mode-card.routines .icon { color: var(--success); }
+
+.screen-family.active,
+.screen-routines.active {
+  padding: 24px 16px;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100dvh;
+  width: 100%;
+  gap: 0;
+}
+.family-card, .rout-card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 8px 22px var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.family-title, .rout-title {
+  font-size: 22px; font-weight: 700; color: var(--text); margin: 0;
+}
+.family-sub {
+  font-size: 14px; color: var(--text-soft); margin: 0;
+}
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.family-grid-setup { grid-template-columns: repeat(3, 1fr); }
+.family-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.family-cell:hover { transform: translateY(-1px); border-color: var(--accent); }
+.family-cell.selected {
+  background: oklch(from var(--accent) l c h / 0.12);
+  border-color: var(--accent);
+}
+.family-emoji { font-size: 44px; line-height: 1; }
+.family-label { font-size: 13px; font-weight: 600; }
+.family-pulse { animation: pulse-once 600ms ease; }
+.family-actions {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+}
+.family-actions .btn { padding: 12px 18px; }
+
+/* Routines — timeline + pool */
+.rout-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 8px;
+  background: var(--bg);
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  min-height: 80px;
+}
+.rout-timeline-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 64px;
+}
+.rout-arrow { color: var(--text-soft); font-size: 18px; }
+.rout-next {
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 700;
+  min-width: 64px;
+  min-height: 56px;
+  display: flex; align-items: center; justify-content: center;
+}
+.rout-pool {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+.rout-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.rout-pick:hover { transform: translateY(-1px); border-color: var(--accent); }
+.rout-emoji { font-size: 36px; line-height: 1; }
+.rout-label { font-size: 12px; font-weight: 600; }
+.rout-correct {
+  border-color: var(--success);
+  background: oklch(from var(--success) l c h / 0.14);
+}
+.rout-wrong {
+  border-color: oklch(0.55 0.18 25);
+  background: oklch(0.55 0.18 25 / 0.10);
+}
+.rout-hint {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.14);
+  animation: pulse-once 600ms ease;
+}
+.rout-done { padding: 32px 22px; }
+.rout-done-emoji { font-size: 70px; }
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

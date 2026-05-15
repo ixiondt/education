@@ -224,6 +224,15 @@
           <div class="icon">🕐</div>
           <div class="label">Time of day</div>
         </button>
+        <!-- v5.28 — Rammeplan area 5: spatial reasoning + measurement -->
+        <button class="mode-card whole measure" data-mode="measure">
+          <div class="icon">📏</div>
+          <div class="label">Measure</div>
+        </button>
+        <button class="mode-card whole where-is-it" data-mode="where-is-it">
+          <div class="icon">🧭</div>
+          <div class="label">Where is it?</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">Self &amp; feelings</h2>
@@ -299,6 +308,15 @@
         <button class="mode-card whole sort-it-out" data-mode="sort-it-out">
           <div class="icon">♻️</div>
           <div class="label">Sort it out</div>
+        </button>
+        <!-- v5.29 — Rammeplan area 7: family + daily routines -->
+        <button class="mode-card whole family" data-mode="family">
+          <div class="icon">🏠</div>
+          <div class="label">My family</div>
+        </button>
+        <button class="mode-card whole routines" data-mode="routines">
+          <div class="icon">🗓</div>
+          <div class="label">Daily routines</div>
         </button>
       </div>
 
@@ -399,6 +417,18 @@
     <section class="screen screen-game" id="screen-sort-it-out">
       <canvas id="sort-it-out-canvas" class="ll-canvas"></canvas>
     </section>
+
+    <!-- v5.28 — Measure Me (Rammeplan area 5) — DOM -->
+    <section class="screen screen-measure" id="screen-measure"></section>
+
+    <!-- v5.28 — Where Is It? (Rammeplan area 5) — DOM -->
+    <section class="screen screen-where-is-it" id="screen-where-is-it"></section>
+
+    <!-- v5.29 — Who lives with you? (Rammeplan area 7) — DOM -->
+    <section class="screen screen-family" id="screen-family"></section>
+
+    <!-- v5.29 — Daily routines (Rammeplan area 7) — DOM -->
+    <section class="screen screen-routines" id="screen-routines"></section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -756,6 +786,20 @@
         <div class="segmented" data-setting="bodyBreaks">
           <button data-value="on">On</button>
           <button data-value="off">Off</button>
+        </div>
+      </div>
+
+      <!-- v5.30 — Norwegian language toggle (Rammeplan Session G).
+              Audio resolver already tries audio/<locale>/... first; the
+              new i18n.js layer translates UI strings. Render the
+              Norsk MP3 pack with:
+                python scripts/generate-voices.py --locale nb-NO
+              then bash scripts/deploy-audio.sh -->
+      <div class="setting-row">
+        <label>Language</label>
+        <div class="segmented" data-setting="locale">
+          <button data-value="en-US">English</button>
+          <button data-value="nb-NO">Norsk</button>
         </div>
       </div>
 
@@ -1354,6 +1398,14 @@
   <!-- v5.27 — Rammeplan Session D: Nature, Environment & Technology -->
   <script src="game-weather.js"></script>
   <script src="game-sort-it-out.js"></script>
+  <!-- v5.28 — Rammeplan Session E: Quantities, Spaces & Shapes (depth) -->
+  <script src="game-measure.js"></script>
+  <script src="game-where-is-it.js"></script>
+  <!-- v5.29 — Rammeplan Session F: Local Environment & Society -->
+  <script src="game-family.js"></script>
+  <script src="game-routines.js"></script>
+  <!-- v5.30 — Rammeplan Session G: Norwegian language module -->
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
