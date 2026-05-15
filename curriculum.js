@@ -552,7 +552,10 @@ const SKILLS_BY_MODE = SKILLS.reduce((acc, s) => {
 }, {});
 
 function skillsForMode(mode) {
-  return SKILLS_BY_MODE[mode] || [];
+  // v5.16 — resolve mode aliases (e.g. letter-lander → find-letters)
+  // so game modes draw from the same skill pool as their source mode.
+  const resolved = (typeof MODE_ALIASES === 'object' && MODE_ALIASES[mode]) || mode;
+  return SKILLS_BY_MODE[resolved] || [];
 }
 
 /* Map a standard code to its framework family name (for dashboard grouping). */
@@ -806,10 +809,13 @@ function bandForMonths(months) {
 
 /* Lowest minAgeMonths among all skills registered for a mode.
    Used to decide whether a mode card should appear / be locked
-   on the home screen for the current profile. */
+   on the home screen for the current profile.
+   v5.16 — resolves mode aliases (letter-lander → find-letters) so
+   game modes share the age gate of their source skill domain. */
 function modeMinAge(mode) {
   if (mode === 'play') return 0; // free play is always available
-  const skills = SKILLS_BY_MODE[mode] || [];
+  const resolved = (typeof MODE_ALIASES === 'object' && MODE_ALIASES[mode]) || mode;
+  const skills = SKILLS_BY_MODE[resolved] || [];
   if (!skills.length) return 0;
   return Math.min(...skills.map((s) => s.minAgeMonths));
 }
@@ -818,9 +824,17 @@ function modeMinAge(mode) {
    so a "Today's session" includes one activity per area instead
    of three letter-recognition rounds in a row. */
 const MODE_AREAS = {
-  language:  ['find-letters', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
-  math:      ['find-numbers', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
+  language:  ['find-letters', 'letter-lander', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
+  math:      ['find-numbers', 'number-lander', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
   selfWorld: ['feelings', 'body', 'animals', 'helpers']
+};
+
+/* v5.16 — modes that don't have their own skill rows but reuse another
+   mode's. modeMinAge / picker / dashboard treats letter-lander as if it
+   were find-letters (same letter-recognize-* skills). Map mode → source. */
+const MODE_ALIASES = {
+  'letter-lander': 'find-letters',
+  'number-lander': 'find-numbers'
 };
 
 function areaForMode(mode) {

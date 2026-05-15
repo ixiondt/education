@@ -122,6 +122,20 @@
         </button>
       </div>
 
+      <!-- v5.16 — Games. Calm-arcade pilot; Number Blaster + others slot in here. -->
+      <h2 class="mode-section-title">Games</h2>
+      <p class="mode-section-sub">Letters and numbers as gentle floating-tap mini-games. Same skills, more play.</p>
+      <div class="mode-grid">
+        <button class="mode-card game letter-lander" data-mode="letter-lander">
+          <div class="icon">🐰</div>
+          <div class="label">Letter Lander</div>
+        </button>
+        <button class="mode-card game number-lander" data-mode="number-lander">
+          <div class="icon">🦊</div>
+          <div class="label">Number Lander</div>
+        </button>
+      </div>
+
       <h2 class="mode-section-title">Listening games</h2>
       <p class="mode-section-sub">Phonological awareness — the bridge from letters to reading.</p>
       <div class="mode-grid">
@@ -230,6 +244,12 @@
         <span class="target" id="find-target">A</span>
       </div>
       <div class="choices" id="find-choices"></div>
+    </section>
+
+    <!-- ============ LETTER LANDER (v5.16 — calm-arcade game) ============ -->
+    <section class="screen screen-game" id="screen-letter-lander">
+      <div class="ll-overlay" id="letter-lander-overlay"></div>
+      <canvas id="letter-lander-canvas" class="ll-canvas"></canvas>
     </section>
 
     <!-- ============ TRACE ============ -->
@@ -935,6 +955,10 @@
   <script src="letters.js"></script>
   <script src="world.js"></script>
   <script src="curriculum.js"></script>
+  <!-- v5.16 — game engine + first game (Letter Lander). Loaded before app.js
+       so app.js can wire startLetterLander into the mode switch. -->
+  <script src="game-engine.js"></script>
+  <script src="game-letter-lander.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

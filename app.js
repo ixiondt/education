@@ -1131,7 +1131,9 @@
       readingLibrary: $('screen-reading-library'),
       readingBook:    $('screen-reading-book'),
       // v5.9
-      timeOfDay:      $('screen-time-of-day')
+      timeOfDay:      $('screen-time-of-day'),
+      // v5.16 — calm-arcade game pilot (Letter / Number Lander)
+      letterLander:   $('screen-letter-lander')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1611,6 +1613,38 @@
         case 'reading':       openReadingLibrary(); break;
         // v5.9 — time of day
         case 'time-of-day':   showScreen('timeOfDay'); startTimeOfDayRound(); break;
+        // v5.16 — calm-arcade game (Letter / Number Lander). Same skills
+        //         as find-letters / find-numbers, different delivery.
+        case 'letter-lander':
+        case 'number-lander': {
+          showScreen('letterLander');
+          const isNumber = mode === 'number-lander';
+          const sourceMode = isNumber ? 'find-numbers' : 'find-letters';
+          // Canvas needs the screen visible before fit; one frame is enough
+          requestAnimationFrame(() => {
+            if (typeof startLetterLander !== 'function') return;
+            startLetterLander({
+              target: isNumber ? 'number' : 'letter',
+              // Use the same curriculum-aware picker the find- modes use
+              pickTarget: () => {
+                const profile = activeProfile();
+                if (!profile) return isNumber ? '1' : 'A';
+                try {
+                  const skill = pickNextSkill(profile, sourceMode);
+                  if (skill && skill.target) return skill.target;
+                } catch {}
+                const pool = isNumber ? NUMBERS : LETTERS;
+                return pool[Math.floor(Math.random() * pool.length)];
+              },
+              // Record into the same skill-progress store as find- modes
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              // Speak through the host voice chain (MP3 → recording → TTS)
+              speak: (text) => VoiceEngine.speak([text]),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
       }
     };
 
@@ -1631,6 +1665,8 @@
   function goHome() {
     VoiceEngine.stop();
     if (state.tracer) { state.tracer.destroy(); state.tracer = null; }
+    // v5.16 — tear down the game engine if Letter / Number Lander is running
+    if (typeof stopLetterLander === 'function') stopLetterLander();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;
