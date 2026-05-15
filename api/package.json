@@ -1,6 +1,6 @@
 {
   "name": "letters-and-numbers-api",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Backend API for the Letters & Numbers educational PWA. Sync, parent auth, cross-device progress.",
   "scripts": {
@@ -17,7 +17,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "next": "16.0.0",
+    "next": "^16.2.3",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "drizzle-orm": "0.30.10",
