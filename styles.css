@@ -1039,6 +1039,78 @@ body {
 }
 .therm-actions .btn { flex: 1; max-width: 200px; padding: 12px 18px; }
 
+/* ============================================================
+   v5.22 — Pre-session check-in + body-break modals
+   ============================================================ */
+.checkin-sub {
+  font-size: 14px;
+  color: var(--text-soft);
+  text-align: center;
+  margin: 0 0 8px;
+}
+.checkin-ladder {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0 16px;
+}
+.checkin-step {
+  flex: 1;
+  font-size: 36px;
+  padding: 14px 0;
+  max-width: 80px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.checkin-step:hover { transform: translateY(-1px); }
+.checkin-step.selected {
+  border-color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.12);
+  transform: scale(1.10);
+}
+
+.body-break-sub {
+  font-size: 13px;
+  color: var(--text-soft);
+  text-align: center;
+  margin: 0 0 12px;
+}
+.body-break-emoji {
+  font-size: 90px;
+  text-align: center;
+  margin: 8px 0;
+  transition: transform 300ms ease;
+  animation: body-break-pulse 1.4s ease-in-out infinite;
+}
+@keyframes body-break-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+.body-break-prompt {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin: 0 0 14px;
+  min-height: 32px;
+}
+.body-break-progress {
+  height: 8px;
+  background: oklch(from var(--text-soft) l c h / 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 8px 0 16px;
+}
+.body-break-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

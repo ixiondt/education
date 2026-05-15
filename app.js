@@ -27,7 +27,15 @@
     showAllModes:  'off',     // v5.1 — 'on' = ignore age band, show every mode card regardless
     /* v5.13 — One-time banner that nudges the parent to record their own voice
        when the device only has robotic TTS available. Dismissed: never re-shown. */
-    roboticVoiceBannerDismissed: false
+    roboticVoiceBannerDismissed: false,
+    /* v5.22 — pre-session check-in (Scattered to Focused). When 'on', the
+       app shows a quick 3-emoji "how are you feeling?" before launching any
+       mode (at most once per day per profile). Records to the journal. */
+    sessionCheckIn: 'on',
+    /* v5.22 — body-break suggestions. When 'on', a 30-second guided micro-
+       break modal pops every ~8 min of continuous play. Off-switch is
+       available because some kids find break interruptions disruptive. */
+    bodyBreaks:    'on'
   };
 
   function newProfileObject(name, ageMonths) {
@@ -318,6 +326,12 @@
   }
 
   function maybeSuggestBreak() {
+    // v5.22 — body-break check piggybacks on the same per-correct-answer
+    // pipeline. It uses its own threshold (8 min) and tracking, so it can
+    // fire multiple times per session without conflicting with the session
+    // cap break (which fires once at sensoryMode-dependent thresholds).
+    if (typeof maybeSuggestBodyBreak === 'function') maybeSuggestBodyBreak();
+
     if (state.breakSuggested) return;
     if (!state.sessionStartedAt) return;
     if (Date.now() - state.sessionStartedAt < sessionCapMs()) return;
@@ -1615,6 +1629,16 @@
     if (mode !== 'play') startNewSession();
 
     const launchActivity = () => {
+      // v5.22 — Optional pre-session check-in. Runs at most once per
+      // day per profile when sessionCheckIn === 'on'. The kid picks a
+      // mood, we save it to today's journal entry, then continue.
+      if (shouldRunCheckIn()) {
+        runCheckIn().then(() => actuallyLaunchActivity(mode));
+        return;
+      }
+      actuallyLaunchActivity(mode);
+    };
+    const actuallyLaunchActivity = (mode) => {
       switch (mode) {
         case 'find-letters':
         case 'find-numbers':  showScreen('find');  startFindRound();   break;
@@ -3724,6 +3748,149 @@
     openCalmCorner();
   });
   document.getElementById('therm-go')?.addEventListener('click', thermContinue);
+
+  /* ──────────────────────────────────────────────────────────────
+     v5.22 — Pre-session check-in + body breaks
+     (Session 5 of ADHD-aware expansion plan — Scattered to Focused)
+     ────────────────────────────────────────────────────────────── */
+
+  // ---- Check-in ----
+  let checkinResolver = null;
+  let checkinPick = null;
+
+  function shouldRunCheckIn() {
+    const p = activeProfile();
+    if (!p) return false;
+    if (p.settings.sessionCheckIn !== 'on') return false;
+    // Only once per day — if today's journal already has a mood, skip
+    if (!window.JournalAPI) return false;
+    const e = JournalAPI.getEntry(p, JournalAPI.todayKey());
+    return e.mood == null;
+  }
+
+  function runCheckIn() {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('modal-checkin');
+      if (!modal) { resolve(); return; }
+      checkinResolver = resolve;
+      checkinPick = null;
+      modal.querySelectorAll('.checkin-step').forEach((b) => {
+        b.classList.remove('selected');
+        b.setAttribute('aria-checked', 'false');
+      });
+      const goBtn = document.getElementById('checkin-go');
+      if (goBtn) goBtn.disabled = true;
+      modal.classList.add('active');
+    });
+  }
+
+  function finishCheckIn(save) {
+    const modal = document.getElementById('modal-checkin');
+    if (modal) modal.classList.remove('active');
+    if (save && checkinPick != null) {
+      const p = activeProfile();
+      if (p && window.JournalAPI) {
+        JournalAPI.setEntry(p, JournalAPI.todayKey(), { mood: checkinPick });
+        saveStorage();
+      }
+      if (typeof recordAttempt === 'function') {
+        try { recordAttempt(`ef-self-awareness-checkin-${checkinPick}`, true, 0); } catch {}
+      }
+    }
+    const r = checkinResolver;
+    checkinResolver = null;
+    checkinPick = null;
+    if (r) r();
+  }
+
+  document.querySelectorAll('#checkin-ladder .checkin-step').forEach((b) => {
+    b.addEventListener('click', () => {
+      checkinPick = Number(b.dataset.value);
+      document.querySelectorAll('#checkin-ladder .checkin-step').forEach((x) => {
+        const on = x === b;
+        x.setAttribute('aria-checked', on ? 'true' : 'false');
+        x.classList.toggle('selected', on);
+      });
+      const goBtn = document.getElementById('checkin-go');
+      if (goBtn) goBtn.disabled = false;
+    });
+  });
+  document.getElementById('checkin-go')?.addEventListener('click', () => finishCheckIn(true));
+  document.getElementById('checkin-skip')?.addEventListener('click', () => finishCheckIn(false));
+
+  // ---- Body break ----
+  const BODY_BREAK_INTERVAL_MS = 8 * 60 * 1000;   // every 8 min of session time
+  const BODY_BREAK_STEPS = [
+    { emoji: '🧍', text: 'Stand up tall!' },
+    { emoji: '🙆', text: 'Reach for the sky…' },
+    { emoji: '🤸', text: 'Touch your toes…' },
+    { emoji: '👏', text: 'Shake your hands!' },
+    { emoji: '🌀', text: 'Roll your shoulders…' },
+    { emoji: '😌', text: 'Big breath… and back to play!' }
+  ];
+  const BODY_BREAK_STEP_MS = 5000;
+  let lastBodyBreakAt = 0;
+  let bodyBreakStepIdx = 0;
+  let bodyBreakTimer = null;
+
+  function maybeSuggestBodyBreak() {
+    const p = activeProfile();
+    if (!p || p.settings.bodyBreaks !== 'on') return;
+    if (!state.sessionStartedAt) return;
+    const elapsed = Date.now() - state.sessionStartedAt;
+    // Fire at every BODY_BREAK_INTERVAL_MS boundary, but never more than
+    // once per real-time interval
+    const boundary = Math.floor(elapsed / BODY_BREAK_INTERVAL_MS);
+    if (boundary === 0) return;
+    if (lastBodyBreakAt === boundary) return;
+    lastBodyBreakAt = boundary;
+    setTimeout(showBodyBreak, 1200);
+  }
+
+  function showBodyBreak() {
+    const modal = document.getElementById('modal-body-break');
+    if (!modal) return;
+    bodyBreakStepIdx = 0;
+    renderBodyBreakStep();
+    modal.classList.add('active');
+    const doneBtn = document.getElementById('body-break-done');
+    if (doneBtn) doneBtn.hidden = true;
+    bodyBreakTimer = setInterval(advanceBodyBreak, BODY_BREAK_STEP_MS);
+  }
+  function renderBodyBreakStep() {
+    const step = BODY_BREAK_STEPS[bodyBreakStepIdx];
+    if (!step) return;
+    const e = document.getElementById('body-break-emoji');
+    const t = document.getElementById('body-break-prompt');
+    const b = document.getElementById('body-break-bar');
+    if (e) e.textContent = step.emoji;
+    if (t) t.textContent = step.text;
+    if (b) b.style.width = `${((bodyBreakStepIdx + 1) / BODY_BREAK_STEPS.length) * 100}%`;
+  }
+  function advanceBodyBreak() {
+    bodyBreakStepIdx++;
+    if (bodyBreakStepIdx >= BODY_BREAK_STEPS.length) {
+      if (bodyBreakTimer) { clearInterval(bodyBreakTimer); bodyBreakTimer = null; }
+      const doneBtn = document.getElementById('body-break-done');
+      if (doneBtn) doneBtn.hidden = false;
+      if (typeof recordAttempt === 'function') {
+        try { recordAttempt('ef-body-break-complete', true, 0); } catch {}
+      }
+      return;
+    }
+    renderBodyBreakStep();
+  }
+  function closeBodyBreak() {
+    if (bodyBreakTimer) { clearInterval(bodyBreakTimer); bodyBreakTimer = null; }
+    document.getElementById('modal-body-break')?.classList.remove('active');
+    bodyBreakStepIdx = 0;
+  }
+  document.getElementById('body-break-skip')?.addEventListener('click', closeBodyBreak);
+  document.getElementById('body-break-done')?.addEventListener('click', closeBodyBreak);
+
+  // Expose body-break check globally inside the IIFE so the existing
+  // maybeSuggestBreak() implementation can call it (patched below).
+  // (Direct edit is in the original definition; this comment marks intent.)
 
   // ============================================================
   //  v5.6 — PRINTABLE WORKSHEETS (Rammeplan: real materials matter)

@@ -669,6 +669,22 @@
         </div>
       </div>
 
+      <!-- v5.22 — pre-session check-in + body breaks (Scattered to Focused) -->
+      <div class="setting-row">
+        <label>Check-in before play</label>
+        <div class="segmented" data-setting="sessionCheckIn">
+          <button data-value="on">On</button>
+          <button data-value="off">Off</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <label>Suggest body breaks</label>
+        <div class="segmented" data-setting="bodyBreaks">
+          <button data-value="on">On</button>
+          <button data-value="off">Off</button>
+        </div>
+      </div>
+
       <div class="setting-row">
         <label>Skill order</label>
         <div class="segmented" data-setting="prereqsMode">
@@ -933,6 +949,46 @@
       </section>
 
       <button class="btn btn-primary" id="about-close">Close</button>
+    </div>
+  </div>
+
+  <!-- ============ v5.22 — PRE-SESSION CHECK-IN ============
+        A 3-emoji "how are you feeling?" prompt that fires at most once
+        per day before launching any mode. Records to today's journal
+        entry so it counts toward the parent dashboard. Skippable. -->
+  <div class="modal" id="modal-checkin" role="dialog" aria-modal="true" aria-labelledby="checkin-title">
+    <div class="modal-card">
+      <h2 id="checkin-title">How are you feeling?</h2>
+      <p class="checkin-sub">Pick one. There's no wrong answer.</p>
+      <div class="checkin-ladder" id="checkin-ladder" role="radiogroup" aria-label="Feeling now">
+        <button type="button" class="checkin-step" data-value="1" aria-label="Low">😞</button>
+        <button type="button" class="checkin-step" data-value="2" aria-label="Not great">🙁</button>
+        <button type="button" class="checkin-step" data-value="3" aria-label="Okay">😐</button>
+        <button type="button" class="checkin-step" data-value="4" aria-label="Good">🙂</button>
+        <button type="button" class="checkin-step" data-value="5" aria-label="Great">😄</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="checkin-skip">Skip</button>
+        <button class="btn btn-primary"   id="checkin-go" disabled>Let's play</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ v5.22 — BODY-BREAK ============
+        30-second guided micro-break, runs after ~8 min of continuous
+        play. 6 sequential prompts ("Stand up tall", "Reach for the
+        sky", etc.) with soft chimes on advance. Closable any time. -->
+  <div class="modal" id="modal-body-break" role="dialog" aria-modal="true" aria-labelledby="body-break-title">
+    <div class="modal-card">
+      <h2 id="body-break-title">Body break!</h2>
+      <p class="body-break-sub">Your brain works best with a stretch every few minutes.</p>
+      <div class="body-break-emoji" id="body-break-emoji">🧍</div>
+      <div class="body-break-prompt" id="body-break-prompt">Stand up tall!</div>
+      <div class="body-break-progress"><div class="body-break-bar" id="body-break-bar"></div></div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="body-break-skip">Skip</button>
+        <button class="btn btn-primary"   id="body-break-done"  hidden>Back to play</button>
+      </div>
     </div>
   </div>
 
