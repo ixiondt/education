@@ -1370,6 +1370,24 @@
     recordClose:      $('record-close'),
     recordSummary:    $('record-summary'),
     recordTabs:       document.querySelectorAll('[data-record-tab]'),
+    // v5.19 — Parent observation journal (Finally Focused)
+    journalBtn:       $('journal-btn'),
+    modalJournal:     $('modal-journal'),
+    journalClose:     $('journal-close'),
+    journalTabs:      document.querySelectorAll('[data-journal-tab]'),
+    jSleep:           $('j-sleep'),
+    jSleepReadout:    $('j-sleep-readout'),
+    jScreen:          $('j-screen'),
+    jScreenReadout:   $('j-screen-readout'),
+    jOutdoor:         $('j-outdoor'),
+    jOutdoorReadout:  $('j-outdoor-readout'),
+    jSupplements:     $('j-supplements'),
+    jNotes:           $('j-notes'),
+    jTrend:           $('j-trend'),
+    jCalendar:        $('j-calendar'),
+    jExportJson:      $('j-export-json'),
+    jExportCsv:       $('j-export-csv'),
+    jExportPdf:       $('j-export-pdf'),
     // v5.13 — bulk recorder
     recordBulkStart:  $('record-bulk-start'),
     recordBulkStop:   $('record-bulk-stop'),
@@ -4616,6 +4634,231 @@
   el.aboutClose?.addEventListener('click', () => el.modalAbout?.classList.remove('active'));
   el.modalAbout?.addEventListener('click', (e) => {
     if (e.target === el.modalAbout) el.modalAbout.classList.remove('active');
+  });
+
+  // ============================================================
+  //  v5.19 — PARENT OBSERVATION JOURNAL (Finally Focused)
+  //  Parent-only tool — Settings gates entry. The JournalAPI module
+  //  owns storage / aggregates / export; this section is pure UI.
+  // ============================================================
+  let activeJournalTab = 'today';
+  let activeJournalKey = null;   // YYYY-MM-DD the form is currently editing
+
+  function buildLadders() {
+    // 1-5 emoji ladder, one per dimension (mood, focus, energy)
+    document.querySelectorAll('.j-ladder').forEach((ladder) => {
+      if (ladder.childElementCount > 0) return;  // built once
+      const labels = ['😞','🙁','😐','🙂','😄'];
+      labels.forEach((emoji, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'j-ladder-step';
+        btn.dataset.value = String(i + 1);
+        btn.textContent = emoji;
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', 'false');
+        btn.setAttribute('aria-label', `Level ${i + 1} of 5`);
+        ladder.appendChild(btn);
+      });
+    });
+  }
+
+  function loadEntryIntoForm() {
+    const profile = activeProfile();
+    if (!profile || !window.JournalAPI) return;
+    activeJournalKey = JournalAPI.todayKey();
+    const entry = JournalAPI.getEntry(profile, activeJournalKey);
+    // Sliders + readouts
+    el.jSleep.value = entry.sleep ?? 0;
+    el.jSleepReadout.textContent = entry.sleep != null ? entry.sleep.toFixed(1) : '—';
+    el.jScreen.value = entry.screen ?? 0;
+    el.jScreenReadout.textContent = entry.screen != null ? `${entry.screen} min` : '—';
+    el.jOutdoor.value = entry.outdoor ?? 0;
+    el.jOutdoorReadout.textContent = entry.outdoor != null ? `${entry.outdoor} min` : '—';
+    // Ladders
+    ['mood', 'focus', 'energy'].forEach((field) => {
+      const v = entry[field];
+      document.querySelectorAll(`.j-ladder[data-field="${field}"] .j-ladder-step`).forEach((b) => {
+        const on = (v != null && Number(b.dataset.value) === v);
+        b.setAttribute('aria-checked', on ? 'true' : 'false');
+        b.classList.toggle('selected', on);
+      });
+    });
+    el.jSupplements.value = entry.supplements || '';
+    el.jNotes.value = entry.notes || '';
+  }
+
+  function patchEntry(patch) {
+    const profile = activeProfile();
+    if (!profile || !window.JournalAPI || !activeJournalKey) return;
+    JournalAPI.setEntry(profile, activeJournalKey, patch);
+    saveStorage();
+  }
+
+  function renderWeekTrend() {
+    if (!el.jTrend || !window.JournalAPI) return;
+    const profile = activeProfile();
+    if (!profile) return;
+    el.jTrend.innerHTML = '';
+    const range = JournalAPI.entriesForRange(profile, 7);
+    const moodVals   = range.map((e) => e.mood);
+    const focusVals  = range.map((e) => e.focus);
+    const energyVals = range.map((e) => e.energy);
+    const sleepVals  = range.map((e) => e.sleep);
+
+    const mkRow = (label, values, opts) => {
+      const row = document.createElement('div');
+      row.className = 'j-trend-row';
+      const lbl = document.createElement('div');
+      lbl.className = 'j-trend-label';
+      const avg = JournalAPI.average(range, opts.field);
+      lbl.innerHTML = `<span>${label}</span><span class="j-trend-avg">${avg != null ? avg.toFixed(1) : '—'}</span>`;
+      row.appendChild(lbl);
+      const chartWrap = document.createElement('div');
+      chartWrap.className = 'j-trend-chart';
+      const chart = JournalAPI.sparkline(values, {
+        min: opts.min, max: opts.max,
+        stroke: opts.stroke, width: 280, height: 36
+      });
+      chartWrap.appendChild(chart);
+      row.appendChild(chartWrap);
+      el.jTrend.appendChild(row);
+    };
+    mkRow('Mood',    moodVals,   { field: 'mood',    min: 1, max: 5,  stroke: 'var(--accent)' });
+    mkRow('Focus',   focusVals,  { field: 'focus',   min: 1, max: 5,  stroke: 'var(--secondary)' });
+    mkRow('Energy',  energyVals, { field: 'energy',  min: 1, max: 5,  stroke: 'var(--success)' });
+    mkRow('Sleep',   sleepVals,  { field: 'sleep',   min: 0, max: 12, stroke: 'var(--warning)' });
+  }
+
+  function renderMonthCalendar() {
+    if (!el.jCalendar || !window.JournalAPI) return;
+    const profile = activeProfile();
+    if (!profile) return;
+    el.jCalendar.innerHTML = '';
+    const range = JournalAPI.entriesForRange(profile, 30);
+    // Day-of-week header
+    const dayLabels = ['S','M','T','W','T','F','S'];
+    dayLabels.forEach((d) => {
+      const h = document.createElement('div');
+      h.className = 'j-cal-dayhead';
+      h.textContent = d;
+      el.jCalendar.appendChild(h);
+    });
+    // Pad the start so the first cell aligns to the correct day-of-week
+    const first = new Date(range[0].date);
+    const pad = first.getDay();
+    for (let i = 0; i < pad; i++) {
+      const blank = document.createElement('div');
+      blank.className = 'j-cal-cell j-cal-blank';
+      el.jCalendar.appendChild(blank);
+    }
+    // Cells
+    range.forEach((entry) => {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'j-cal-cell';
+      const score = JournalAPI.dayScore(entry);
+      if (score != null) {
+        cell.classList.add('j-cal-filled');
+        // Composite score → alpha. 0 → 0.18, 1 → 1.0
+        const a = 0.18 + score * 0.82;
+        cell.style.background = `oklch(from var(--accent) l c h / ${a.toFixed(2)})`;
+      }
+      const d = new Date(entry.date);
+      cell.textContent = String(d.getDate());
+      cell.title = entry.date + (score != null ? ` — mood/focus/energy ${(score * 4 + 1).toFixed(1)} / 5` : ' — no entry');
+      cell.addEventListener('click', () => {
+        // Jump back to Today tab and (for future) edit historical
+        switchJournalTab('today');
+      });
+      el.jCalendar.appendChild(cell);
+    });
+  }
+
+  function switchJournalTab(name) {
+    activeJournalTab = name;
+    el.journalTabs?.forEach((b) =>
+      b.setAttribute('aria-pressed', b.dataset.journalTab === name ? 'true' : 'false'));
+    ['today', 'week', 'month', 'export'].forEach((t) => {
+      const pane = document.getElementById('journal-pane-' + t);
+      if (pane) pane.hidden = (t !== name);
+    });
+    if (name === 'today')  loadEntryIntoForm();
+    if (name === 'week')   renderWeekTrend();
+    if (name === 'month')  renderMonthCalendar();
+  }
+
+  function openJournal() {
+    if (!el.modalJournal) return;
+    buildLadders();
+    closeSettings();
+    el.modalJournal.classList.add('active');
+    switchJournalTab('today');
+  }
+  function closeJournal() {
+    el.modalJournal?.classList.remove('active');
+  }
+
+  el.journalBtn?.addEventListener('click', openJournal);
+  el.journalClose?.addEventListener('click', closeJournal);
+  el.modalJournal?.addEventListener('click', (e) => {
+    if (e.target === el.modalJournal) closeJournal();
+  });
+
+  el.journalTabs?.forEach((b) =>
+    b.addEventListener('click', () => switchJournalTab(b.dataset.journalTab)));
+
+  // Today-form change handlers — save on every change so nothing is lost
+  el.jSleep?.addEventListener('input', () => {
+    const v = parseFloat(el.jSleep.value);
+    el.jSleepReadout.textContent = v.toFixed(1);
+    patchEntry({ sleep: v });
+  });
+  el.jScreen?.addEventListener('input', () => {
+    const v = parseInt(el.jScreen.value, 10);
+    el.jScreenReadout.textContent = `${v} min`;
+    patchEntry({ screen: v });
+  });
+  el.jOutdoor?.addEventListener('input', () => {
+    const v = parseInt(el.jOutdoor.value, 10);
+    el.jOutdoorReadout.textContent = `${v} min`;
+    patchEntry({ outdoor: v });
+  });
+  el.jSupplements?.addEventListener('input', () => patchEntry({ supplements: el.jSupplements.value }));
+  el.jNotes?.addEventListener('input',       () => patchEntry({ notes: el.jNotes.value }));
+
+  // Ladder clicks
+  document.querySelectorAll('.j-ladder').forEach((ladder) => {
+    ladder.addEventListener('click', (e) => {
+      const btn = e.target.closest('.j-ladder-step');
+      if (!btn) return;
+      const field = ladder.dataset.field;
+      const v = Number(btn.dataset.value);
+      ladder.querySelectorAll('.j-ladder-step').forEach((b) => {
+        const on = b === btn;
+        b.setAttribute('aria-checked', on ? 'true' : 'false');
+        b.classList.toggle('selected', on);
+      });
+      patchEntry({ [field]: v });
+    });
+  });
+
+  // Export buttons
+  el.jExportJson?.addEventListener('click', () => {
+    const p = activeProfile(); if (!p || !window.JournalAPI) return;
+    const json = JournalAPI.exportJSON(p);
+    JournalAPI.downloadBlob(json, `journal-${p.name}-${JournalAPI.todayKey()}.json`, 'application/json');
+  });
+  el.jExportCsv?.addEventListener('click', () => {
+    const p = activeProfile(); if (!p || !window.JournalAPI) return;
+    const csv = JournalAPI.exportCSV(p);
+    JournalAPI.downloadBlob(csv, `journal-${p.name}-${JournalAPI.todayKey()}.csv`, 'text/csv');
+  });
+  el.jExportPdf?.addEventListener('click', () => {
+    // Reuses the existing print pipeline — a styled snapshot of the
+    // calendar + week trend would be cleaner; for now print the whole
+    // modal which is already a clean one-pager.
+    window.print();
   });
 
   // Agency picker backdrop close

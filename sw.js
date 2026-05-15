@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v5.18';
+const VERSION = 'lnum-v5.19';
 const SHELL = [
   './',
   './index.html',
@@ -19,6 +19,8 @@ const SHELL = [
   './game-sequence-star.js',
   './game-stop-go.js',
   './game-launch-pad.js',
+  // v5.19 — parent observation journal (Finally Focused)
+  './journal.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'

@@ -637,6 +637,8 @@
       <button class="btn btn-secondary" id="activities-btn">🌳 Off-screen activities</button>
       <button class="btn btn-secondary" id="reading-btn">📚 Reading log</button>
       <button class="btn btn-secondary" id="worksheets-btn">🖨️ Printable worksheets</button>
+      <!-- v5.19 — Parent observation journal (Finally Focused) -->
+      <button class="btn btn-secondary" id="journal-btn">📔 Daily observations</button>
       <button class="btn btn-secondary" id="about-btn">📖 About our approach</button>
       <button class="btn btn-primary" id="settingsClose">Done</button>
     </div>
@@ -844,6 +846,109 @@
     </div>
   </div>
 
+  <!-- ============ v5.19 — PARENT OBSERVATION JOURNAL ============
+        Daily snapshot of sleep / mood / focus / energy / screen / outdoor,
+        plus free-text supplements + triggers / notes. 7-day strip,
+        30-day calendar heatmap, JSON / CSV / printable PDF export.
+        Parent-facing tool — not a diagnostic. Bring exports to your
+        clinician for interpretation. -->
+  <div class="modal" id="modal-journal" role="dialog" aria-modal="true" aria-labelledby="journal-title">
+    <div class="modal-card modal-card-wide">
+      <h2 id="journal-title">📔 Daily observations</h2>
+      <p style="color: var(--text-soft); font-size: 13px; line-height: 1.5;">
+        A neutral place to note what you see day to day. We don't interpret
+        these — we just store them so you can spot patterns and share them
+        with your pediatrician.
+      </p>
+
+      <div class="segmented journal-tabs">
+        <button data-journal-tab="today" aria-pressed="true">Today</button>
+        <button data-journal-tab="week"  aria-pressed="false">7 days</button>
+        <button data-journal-tab="month" aria-pressed="false">30 days</button>
+        <button data-journal-tab="export" aria-pressed="false">Export</button>
+      </div>
+
+      <!-- TODAY TAB -->
+      <div class="journal-pane" id="journal-pane-today">
+        <div class="j-row j-row-slider">
+          <label for="j-sleep">Sleep (hours) <span class="j-readout" id="j-sleep-readout">—</span></label>
+          <input type="range" id="j-sleep" min="0" max="14" step="0.5" value="0" aria-describedby="j-sleep-readout">
+        </div>
+        <div class="j-row j-row-ladder">
+          <label>Mood</label>
+          <div class="j-ladder" data-field="mood" role="radiogroup" aria-label="Mood today"></div>
+        </div>
+        <div class="j-row j-row-ladder">
+          <label>Focus</label>
+          <div class="j-ladder" data-field="focus" role="radiogroup" aria-label="Focus today"></div>
+        </div>
+        <div class="j-row j-row-ladder">
+          <label>Energy</label>
+          <div class="j-ladder" data-field="energy" role="radiogroup" aria-label="Energy today"></div>
+        </div>
+        <div class="j-row j-row-slider">
+          <label for="j-screen">Screen time (minutes) <span class="j-readout" id="j-screen-readout">—</span></label>
+          <input type="range" id="j-screen" min="0" max="480" step="15" value="0">
+        </div>
+        <div class="j-row j-row-slider">
+          <label for="j-outdoor">Outdoor / movement (minutes) <span class="j-readout" id="j-outdoor-readout">—</span></label>
+          <input type="range" id="j-outdoor" min="0" max="180" step="5" value="0">
+        </div>
+        <div class="j-row">
+          <label for="j-supplements">Supplements / medications (free text)</label>
+          <input type="text" id="j-supplements" placeholder="e.g. magnesium 100mg, omega-3 500mg" autocomplete="off">
+        </div>
+        <div class="j-row">
+          <label for="j-notes">Notes / triggers</label>
+          <textarea id="j-notes" rows="3" placeholder="e.g. started new sport; ate sugary cereal at breakfast; great morning"></textarea>
+        </div>
+        <p class="j-disclaimer">
+          Not medical advice. If something feels off, talk to your pediatrician.
+        </p>
+      </div>
+
+      <!-- 7-DAY TAB -->
+      <div class="journal-pane" id="journal-pane-week" hidden>
+        <div class="j-trend" id="j-trend"></div>
+        <p class="j-trend-help" style="color: var(--text-soft); font-size: 12px; margin-top: 8px;">
+          Mood / focus / energy trends over the last 7 days. Gaps = days you didn't log.
+        </p>
+      </div>
+
+      <!-- 30-DAY TAB -->
+      <div class="journal-pane" id="journal-pane-month" hidden>
+        <div class="j-calendar" id="j-calendar"></div>
+        <p class="j-trend-help" style="color: var(--text-soft); font-size: 12px; margin-top: 8px;">
+          Each cell is a day. Darker = better composite mood / focus / energy.
+          Empty cells = days without an entry. Tap any cell to jump to it.
+        </p>
+      </div>
+
+      <!-- EXPORT TAB -->
+      <div class="journal-pane" id="journal-pane-export" hidden>
+        <p style="font-size: 14px; line-height: 1.5;">
+          Export your observations to share with your pediatrician or save for
+          your own records. Everything stays on this device unless you choose
+          to share it.
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="j-export-json">Download JSON</button>
+          <button class="btn btn-secondary" id="j-export-csv">Download CSV</button>
+          <button class="btn btn-secondary" id="j-export-pdf">Print / Save PDF</button>
+        </div>
+        <p class="j-disclaimer">
+          The PDF is formatted for a clinician — a clean one-pager with the
+          last 30 days of observations. Open the print dialog and choose
+          "Save as PDF" if you don't have a printer.
+        </p>
+      </div>
+
+      <div class="btn-row" style="margin-top: 8px;">
+        <button class="btn btn-primary" id="journal-close">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ RECORD VOICE ============ -->
   <div class="modal" id="modal-record" role="dialog" aria-modal="true" aria-labelledby="record-title">
     <div class="modal-card modal-card-wide">
@@ -1011,6 +1116,8 @@
   <script src="game-sequence-star.js"></script>
   <script src="game-stop-go.js"></script>
   <script src="game-launch-pad.js"></script>
+  <!-- v5.19 — parent observation journal -->
+  <script src="journal.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
