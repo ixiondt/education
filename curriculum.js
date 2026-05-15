@@ -825,7 +825,7 @@ function modeMinAge(mode) {
    of three letter-recognition rounds in a row. */
 const MODE_AREAS = {
   language:  ['find-letters', 'letter-lander', 'sounds', 'first-sound', 'rhyme', 'blend', 'trace-letters', 'sight-words', 'reading'],
-  math:      ['find-numbers', 'number-lander', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
+  math:      ['find-numbers', 'number-lander', 'number-blaster', 'count', 'trace-numbers', 'shapes', 'patterns', 'colors', 'addition', 'subtraction', 'time-of-day'],
   selfWorld: ['feelings', 'body', 'animals', 'helpers']
 };
 
@@ -833,8 +833,12 @@ const MODE_AREAS = {
    mode's. modeMinAge / picker / dashboard treats letter-lander as if it
    were find-letters (same letter-recognize-* skills). Map mode → source. */
 const MODE_ALIASES = {
-  'letter-lander': 'find-letters',
-  'number-lander': 'find-numbers'
+  'letter-lander':  'find-letters',
+  'number-lander':  'find-numbers',
+  // v5.17 — Number Blaster's skill events are synthetic (math-+-7-6
+  //         style IDs created on the fly), but for age-gate and area
+  //         lookup we alias to the existing addition mode.
+  'number-blaster': 'addition'
 };
 
 function areaForMode(mode) {

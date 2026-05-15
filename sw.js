@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v5.16';
+const VERSION = 'lnum-v5.17';
 const SHELL = [
   './',
   './index.html',
@@ -13,6 +13,8 @@ const SHELL = [
   // v5.16 — game engine + first game (Letter Lander)
   './game-engine.js',
   './game-letter-lander.js',
+  // v5.17 — full arcade Math Blaster homage
+  './game-number-blaster.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'

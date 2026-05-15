@@ -128,6 +128,67 @@
         this._envelope(o, g, t + off, d, 0.14);
       });
     }
+    /* v5.17 — arcade-tier cues for Number Blaster.
+       Tone palette stays musical (no harsh sawtooth) but with
+       sharper attack + a pitch-sweep on the laser so it reads as
+       "arcade" without being grating. */
+    laser() {
+      const c = this.ctx(); if (!c) return;
+      const t = c.currentTime;
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'square';        // brighter than sine — feels like a zap
+      o.frequency.setValueAtTime(1200, t);
+      o.frequency.exponentialRampToValueAtTime(220, t + 0.18);
+      o.connect(g); g.connect(c.destination);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.07, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
+      o.start(t);
+      o.stop(t + 0.22);
+    }
+    /* Soft thump for a wrong answer or losing a life. */
+    explosion() {
+      const c = this.ctx(); if (!c) return;
+      const t = c.currentTime;
+      // Mix: low triangle sweep + brief noise burst (via random oscillator FM)
+      const o1 = c.createOscillator();
+      const g1 = c.createGain();
+      o1.type = 'triangle';
+      o1.frequency.setValueAtTime(180, t);
+      o1.frequency.exponentialRampToValueAtTime(60, t + 0.35);
+      o1.connect(g1); g1.connect(c.destination);
+      g1.gain.setValueAtTime(0, t);
+      g1.gain.linearRampToValueAtTime(0.20, t + 0.01);
+      g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+      o1.start(t); o1.stop(t + 0.42);
+    }
+    /* Four ascending notes — level up. */
+    levelUp() {
+      const c = this.ctx(); if (!c) return;
+      const t = c.currentTime;
+      [523, 659, 784, 1047].forEach((f, i) => {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'triangle';
+        o.frequency.value = f;
+        o.connect(g); g.connect(c.destination);
+        this._envelope(o, g, t + i * 0.08, 0.18, 0.14);
+      });
+    }
+    /* Slow descending three-note "game over" tone. Encouraging, not punishing. */
+    gameOver() {
+      const c = this.ctx(); if (!c) return;
+      const t = c.currentTime;
+      [659, 523, 392].forEach((f, i) => {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        o.connect(g); g.connect(c.destination);
+        this._envelope(o, g, t + i * 0.18, 0.45, 0.15);
+      });
+    }
   }
 
   /* ============================================================
@@ -409,6 +470,182 @@
     hop() { this._hopT = 0.6; }
   }
 
+  /* ============================================================
+     v5.17 — Number Blaster entities
+     ============================================================ */
+
+  /* Spaceship — the player avatar at the bottom of Number Blaster.
+     Glides horizontally to align with the most-recently-tapped answer
+     before firing a laser at it (visual flair; the tap is what scores).
+     The ship doesn't actually need user steering — tap-anywhere is the
+     primary interaction. */
+  class Spaceship extends GameEntity {
+    constructor(x, y) {
+      super(x, y);
+      this.targetX = x;
+      this.z = 8;
+      this._t = 0;
+      this._fireFlash = 0;
+    }
+    update(dt) {
+      this._t += dt;
+      // Glide toward targetX
+      const dx = this.targetX - this.x;
+      this.x += dx * Math.min(1, dt * 6);
+      if (this._fireFlash > 0) this._fireFlash = Math.max(0, this._fireFlash - dt);
+    }
+    aimAt(x) { this.targetX = x; }
+    flash()  { this._fireFlash = 0.15; }
+    draw(ctx) {
+      const idleY = Math.sin(this._t * 3) * 2;
+      ctx.save();
+      ctx.translate(this.x, this.y + idleY);
+      // Body — soft triangle/diamond, calm-arcade palette
+      ctx.fillStyle = this._fireFlash > 0 ? '#ffeaa3' : '#fff5d6';
+      ctx.strokeStyle = '#7a5212';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -22);
+      ctx.lineTo(20, 14);
+      ctx.lineTo(10, 18);
+      ctx.lineTo(-10, 18);
+      ctx.lineTo(-20, 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Cockpit
+      ctx.fillStyle = '#3a78c2';
+      ctx.beginPath();
+      ctx.arc(0, -4, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // Exhaust flame (animated)
+      const flameH = 12 + Math.sin(this._t * 18) * 4;
+      ctx.fillStyle = 'rgba(255,160,80,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(-6, 18);
+      ctx.lineTo(0, 18 + flameH);
+      ctx.lineTo(6, 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /* IncomingAnswer — a number/text disc that falls from the top with
+     gravity-feeling acceleration. Subclass of FloatingLetter for the
+     visual treatment; physics differ. Owns its `value` for scoring. */
+  class IncomingAnswer extends GameEntity {
+    constructor(value, x, y, vy, palette = {}) {
+      super(x, y);
+      this.value = String(value);
+      this.vx = 0;
+      this.vy = vy;
+      this.r = palette.r || 40;
+      this.fill   = palette.fill   || '#fff5d6';
+      this.stroke = palette.stroke || '#c69a3f';
+      this.glyph  = palette.glyph  || '#3a2e1a';
+      this.tappable = true;
+      this.z = 10;
+      this._burstT = 0;
+      this._scale = 1;
+      this._wobbleT = 0;
+      this._wobble = 0;
+    }
+    update(dt, engine) {
+      // Constant downward drift (no gravity acceleration — predictable for kids)
+      this.y += this.vy * dt;
+      // Wobble decay
+      if (this._wobbleT > 0) {
+        this._wobbleT -= dt;
+        this._wobble = Math.sin(this._wobbleT * 32) * 5 * Math.max(0, this._wobbleT / 0.3);
+      } else this._wobble = 0;
+      // Burst animation
+      if (this._burstT > 0) {
+        this._burstT -= dt;
+        this._scale = 1 + (0.45 - this._burstT) * 1.3;
+        if (this._burstT <= 0) this.alive = false;
+      }
+      // Off-screen — let the game logic decide (death-by-miss vs. just removed)
+      if (this.y - this.r > engine.viewport.height + 10 && this._burstT <= 0) {
+        if (typeof this.onMiss === 'function') this.onMiss(this, engine);
+        this.alive = false;
+      }
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x + this._wobble, this.y);
+      ctx.scale(this._scale, this._scale);
+      // Drop shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.10)';
+      ctx.beginPath();
+      ctx.ellipse(0, this.r * 0.85, this.r * 0.95, this.r * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Disc
+      ctx.fillStyle   = this.fill;
+      ctx.strokeStyle = this.stroke;
+      ctx.lineWidth   = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // Number — auto-fit if 2-3 digits
+      const len = this.value.length;
+      const fontPx = len > 2 ? this.r * 0.78 : this.r * 1.05;
+      ctx.fillStyle = this.glyph;
+      ctx.globalAlpha = this._burstT > 0 ? Math.max(0, this._burstT * 2.2) : 1;
+      ctx.font = `bold ${fontPx}px system-ui, "Segoe UI", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.value, 0, 2);
+      ctx.restore();
+    }
+    contains(px, py) {
+      const dx = px - this.x, dy = py - this.y;
+      return dx*dx + dy*dy <= (this.r + 6) * (this.r + 6);
+    }
+    burst() { this.tappable = false; this._burstT = 0.45; }
+    wobble() { this._wobbleT = 0.3; }
+  }
+
+  /* LaserShot — visual-only projectile from spaceship to target.
+     Auto-removes when it reaches the target Y. Doesn't affect scoring;
+     scoring already happened on the tap. */
+  class LaserShot extends GameEntity {
+    constructor(x, y, targetX, targetY) {
+      super(x, y);
+      this.targetX = targetX;
+      this.targetY = targetY;
+      const dx = targetX - x, dy = targetY - y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const speed = 1400;       // px/sec — fast, feels like a zap
+      this.vx = (dx / dist) * speed;
+      this.vy = (dy / dist) * speed;
+      this.life = dist / speed + 0.02;
+      this.age = 0;
+      this.z = 15;
+    }
+    update(dt) {
+      this.age += dt;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      if (this.age >= this.life) this.alive = false;
+    }
+    draw(ctx) {
+      const trailLen = 40;
+      const angle = Math.atan2(this.vy, this.vx);
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(angle);
+      const grad = ctx.createLinearGradient(-trailLen, 0, 0, 0);
+      grad.addColorStop(0, 'rgba(255,200,90,0)');
+      grad.addColorStop(1, 'rgba(255,230,120,0.95)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(-trailLen, -3, trailLen, 6);
+      ctx.fillStyle = '#fffac8';
+      ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // Expose
   global.GameEngine        = GameEngine;
   global.GameEntity        = GameEntity;
@@ -416,5 +653,8 @@
   global.ParticleBurst     = ParticleBurst;
   global.Character         = Character;
   global.GameSFX           = GameSFX;
+  global.Spaceship         = Spaceship;
+  global.IncomingAnswer    = IncomingAnswer;
+  global.LaserShot         = LaserShot;
   global.fitCanvasToContainer = fitCanvasToContainer;
 })(window);

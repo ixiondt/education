@@ -134,6 +134,10 @@
           <div class="icon">🦊</div>
           <div class="label">Number Lander</div>
         </button>
+        <button class="mode-card game number-blaster" data-mode="number-blaster">
+          <div class="icon">🚀</div>
+          <div class="label">Number Blaster</div>
+        </button>
       </div>
 
       <h2 class="mode-section-title">Listening games</h2>
@@ -250,6 +254,12 @@
     <section class="screen screen-game" id="screen-letter-lander">
       <div class="ll-overlay" id="letter-lander-overlay"></div>
       <canvas id="letter-lander-canvas" class="ll-canvas"></canvas>
+    </section>
+
+    <!-- ============ NUMBER BLASTER (v5.17 — full arcade Math Blaster homage) ============ -->
+    <section class="screen screen-game screen-game-arcade" id="screen-number-blaster">
+      <div class="nb-overlay" id="number-blaster-overlay"></div>
+      <canvas id="number-blaster-canvas" class="nb-canvas"></canvas>
     </section>
 
     <!-- ============ TRACE ============ -->
@@ -955,10 +965,11 @@
   <script src="letters.js"></script>
   <script src="world.js"></script>
   <script src="curriculum.js"></script>
-  <!-- v5.16 — game engine + first game (Letter Lander). Loaded before app.js
-       so app.js can wire startLetterLander into the mode switch. -->
+  <!-- v5.16+ — game engine + games. Loaded before app.js so app.js can wire
+       each start*() into the mode switch. -->
   <script src="game-engine.js"></script>
   <script src="game-letter-lander.js"></script>
+  <script src="game-number-blaster.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

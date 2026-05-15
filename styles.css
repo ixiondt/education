@@ -286,6 +286,186 @@ body {
   transform: scale(1.1);
 }
 
+/* ============================================================
+   v5.17 — Number Blaster arcade UI
+   ============================================================ */
+.screen-game-arcade.active {
+  /* Inherit the full-bleed game layout */
+  background: #0d1b2c;
+  color: #f7f1df;
+}
+.nb-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  touch-action: manipulation;
+}
+.nb-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;          /* children re-enable as needed */
+  display: flex;
+  flex-direction: column;
+  z-index: 3;
+}
+/* Top HUD: lives left, problem center, score+level right */
+.nb-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: env(safe-area-inset-top, 12px) 16px 8px;
+  gap: 12px;
+  pointer-events: none;
+}
+.nb-lives {
+  display: flex;
+  gap: 4px;
+  min-width: 72px;
+}
+.nb-heart {
+  font-size: 22px;
+  color: #ff6b8b;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.nb-heart.lost {
+  opacity: 0.20;
+  filter: grayscale(1);
+  transform: scale(0.85);
+}
+.nb-problem {
+  font-size: clamp(26px, 5vw, 38px);
+  font-weight: 800;
+  color: #fffac8;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  padding: 6px 18px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  min-width: 0;
+  text-align: center;
+}
+.nb-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 72px;
+}
+.nb-score {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fffac8;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.nb-level {
+  font-size: 14px;
+  color: #c8d6ee;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* Bottom toolbar: operator switcher + calm-mode toggle */
+.nb-toolbar {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px env(safe-area-inset-bottom, 14px);
+  pointer-events: none;
+}
+.nb-op-group {
+  display: flex;
+  gap: 6px;
+  background: rgba(0,0,0,0.30);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  pointer-events: auto;
+}
+.nb-op {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: transparent;
+  color: #f7f1df;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background 200ms ease, transform 120ms ease;
+}
+.nb-op:hover  { background: rgba(255,255,255,0.10); }
+.nb-op:active { transform: scale(0.92); }
+.nb-op[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+.nb-calm {
+  pointer-events: auto;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c8d6ee;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+}
+.nb-calm[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Game-over modal (lives → 0). Floats inside the overlay. */
+.nb-gameover {
+  position: absolute;
+  inset: 50% 50% auto auto;
+  transform: translate(50%, -50%);
+  top: 50%;
+  right: 50%;
+  background: var(--surface);
+  color: var(--text);
+  padding: 24px 28px;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.40);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+  min-width: 280px;
+  max-width: 92vw;
+  text-align: center;
+}
+.nb-gameover h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  color: var(--text);
+}
+.nb-go-score, .nb-go-level {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 15px;
+}
+.nb-go-score strong { color: var(--accent); font-size: 20px; }
+.nb-go-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+}
+.nb-go-actions .btn { padding: 10px 18px; }
+
+.mode-card.number-blaster .icon { color: var(--warning); }
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

@@ -1133,7 +1133,9 @@
       // v5.9
       timeOfDay:      $('screen-time-of-day'),
       // v5.16 — calm-arcade game pilot (Letter / Number Lander)
-      letterLander:   $('screen-letter-lander')
+      letterLander:   $('screen-letter-lander'),
+      // v5.17 — full arcade Math Blaster homage
+      numberBlaster:  $('screen-number-blaster')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1613,6 +1615,22 @@
         case 'reading':       openReadingLibrary(); break;
         // v5.9 — time of day
         case 'time-of-day':   showScreen('timeOfDay'); startTimeOfDayRound(); break;
+        // v5.17 — full arcade math game (Math Blaster homage). Targets
+        //         ages 7-10. Records skill events under math-{op}-{a}-{b}
+        //         so the parent dashboard can see arithmetic engagement.
+        case 'number-blaster': {
+          showScreen('numberBlaster');
+          requestAnimationFrame(() => {
+            if (typeof startNumberBlaster !== 'function') return;
+            startNumberBlaster({
+              operator: '+',
+              calmMode: false,
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.16 — calm-arcade game (Letter / Number Lander). Same skills
         //         as find-letters / find-numbers, different delivery.
         case 'letter-lander':
@@ -1667,6 +1685,8 @@
     if (state.tracer) { state.tracer.destroy(); state.tracer = null; }
     // v5.16 — tear down the game engine if Letter / Number Lander is running
     if (typeof stopLetterLander === 'function') stopLetterLander();
+    // v5.17 — tear down Number Blaster if running
+    if (typeof stopNumberBlaster === 'function') stopNumberBlaster();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;
