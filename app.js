@@ -1258,7 +1258,9 @@
       family:         $('screen-family'),
       routines:       $('screen-routines'),
       // v6.1 — Parent dashboard (cloud-aggregated)
-      dashboard:      $('screen-dashboard')
+      dashboard:      $('screen-dashboard'),
+      // v6.2 — Adventure narrator (between-chapter framing screen)
+      adventureNarrator: $('screen-adventure-narrator')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -2056,6 +2058,8 @@
   }
 
   function goHome() {
+    /* Common teardown — runs in both real-home AND chapter-advance
+       paths so the previous mode's rAF loops + DOM are cleaned up. */
     VoiceEngine.stop();
     if (state.tracer) { state.tracer.destroy(); state.tracer = null; }
     // v5.16 — tear down the game engine if Letter / Number Lander is running
@@ -2096,8 +2100,21 @@
     setPulse(el.soundsPic, false);
     endSessionEarly();  // v5.1 — exits the daily-session flow if active
     refreshHeader();
+
+    // v6.2 — if we're mid-adventure, hand control back to the
+    // adventure runner instead of going home. Common teardown above
+    // already ran; runner takes care of the next narrator screen.
+    if (typeof isInAdventure === 'function' && isInAdventure()
+        && typeof window.__adventureNextChapter === 'function') {
+      const advance = window.__adventureNextChapter;
+      window.__adventureNextChapter = null;
+      advance();
+      return;
+    }
+
     refreshTodaySessionCard();
     refreshVoiceBanner();
+    refreshTodaysAdventure();
     showScreen('home');
   }
 
@@ -5531,6 +5548,26 @@
     closeSettings();
     if (typeof openDashboard === 'function') openDashboard();
   });
+
+  // v6.2 — Today's adventure card (above the mode grid on home).
+  function refreshTodaysAdventure() {
+    const card  = document.getElementById('today-adventure-card');
+    const char  = document.getElementById('today-adventure-char');
+    const title = document.getElementById('today-adventure-title');
+    const hook  = document.getElementById('today-adventure-hook');
+    if (!card || typeof todaysAdventure !== 'function') return;
+    const adv = todaysAdventure();
+    if (!adv) { card.hidden = true; return; }
+    char.textContent  = adv.character;
+    title.textContent = adv.title;
+    hook.textContent  = adv.hook;
+    card.hidden = false;
+  }
+  document.getElementById('today-adventure-card')?.addEventListener('click', () => {
+    if (typeof startTodaysAdventure === 'function') startTodaysAdventure();
+  });
+  // Expose startMode to the adventure runner
+  window.startMode = startMode;
   el.journalClose?.addEventListener('click', closeJournal);
   el.modalJournal?.addEventListener('click', (e) => {
     if (e.target === el.modalJournal) closeJournal();
@@ -5994,6 +6031,7 @@
   applyTheme();
   refreshHeader();
   refreshTodaySessionCard();
+  if (typeof refreshTodaysAdventure === 'function') refreshTodaysAdventure();
   showScreen(state.profiles.length === 0 ? 'welcome' : 'home');
   refreshRecordedKeys().then(() => refreshVoiceBanner()); // load IDB key index so speech can fast-path
 

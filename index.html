@@ -81,6 +81,19 @@
         </div>
       </div>
 
+      <!-- ▼ v6.2 — Today's adventure. Narrative wrapper around 3-4
+              existing modes; same mechanics, story context. Sits ABOVE
+              the daily session so it gets the first-glance position. -->
+      <button class="today-adventure-card" id="today-adventure-card" type="button" hidden>
+        <span class="today-adventure-char" id="today-adventure-char">🐰</span>
+        <span class="today-adventure-text">
+          <span class="today-adventure-label">Today's Adventure</span>
+          <span class="today-adventure-title" id="today-adventure-title"></span>
+          <span class="today-adventure-hook"  id="today-adventure-hook"></span>
+        </span>
+        <span class="today-adventure-arrow" aria-hidden="true">▶</span>
+      </button>
+
       <!-- ▼ v5.1 daily session — Norwegian-style 10-min mini-session of
               mixed activities. Click to start a guided sequence. -->
       <div class="today-session-card" id="today-session-card">
@@ -432,6 +445,9 @@
 
     <!-- v6.1 — Parent dashboard (cloud-aggregated, sign-in required) -->
     <section class="screen screen-dashboard" id="screen-dashboard"></section>
+
+    <!-- v6.2 — Adventure narrator screen (between-chapter framing) -->
+    <section class="screen screen-adv-narrator" id="screen-adventure-narrator"></section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -1422,6 +1438,8 @@
   <script src="sync.js"></script>
   <!-- v6.1 — parent dashboard (cloud-aggregated read-side) -->
   <script src="dashboard.js"></script>
+  <!-- v6.2 — Adventures: narrative glue layer over existing modes -->
+  <script src="adventures.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v6.1';
+const VERSION = 'lnum-v6.2';
 const SHELL = [
   './',
   './index.html',
@@ -49,6 +49,8 @@ const SHELL = [
   './sync.js',
   // v6.1 — parent dashboard (cloud-aggregated)
   './dashboard.js',
+  // v6.2 — Adventures: narrative wrapper over existing modes
+  './adventures.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'

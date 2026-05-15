@@ -2248,6 +2248,137 @@ body {
 .dash-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .dash-actions .btn { padding: 10px 18px; }
 
+/* ============================================================
+   v6.2 — Today's Adventure card + narrator screen
+   ============================================================ */
+.today-adventure-card {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg,
+              oklch(from var(--accent) l c h / 0.12),
+              oklch(from var(--secondary) l c h / 0.10));
+  border: 2px solid var(--accent);
+  border-radius: 20px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 6px 18px var(--shadow);
+  transition: transform 150ms ease, box-shadow 200ms ease;
+}
+.today-adventure-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--shadow); }
+.today-adventure-card[hidden] { display: none; }
+.today-adventure-char {
+  font-size: 56px;
+  line-height: 1;
+  flex: 0 0 auto;
+  animation: adv-char-idle 3.2s ease-in-out infinite;
+}
+@keyframes adv-char-idle {
+  0%, 100% { transform: translateY(0)   rotate(-2deg); }
+  50%      { transform: translateY(-4px) rotate(2deg); }
+}
+.today-adventure-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.today-adventure-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.today-adventure-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.today-adventure-hook {
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.35;
+}
+.today-adventure-arrow {
+  font-size: 22px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+/* Narrator screen — between-chapter framing */
+.screen-adv-narrator.active {
+  min-height: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding: 24px 16px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  gap: 0;
+}
+.adv-narrator {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  box-shadow: 0 12px 30px var(--shadow);
+  border: 2px solid var(--accent);
+  text-align: center;
+  animation: adv-narrator-in 350ms ease;
+}
+@keyframes adv-narrator-in {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.adv-character {
+  font-size: 110px;
+  line-height: 1;
+  animation: adv-char-idle 2.4s ease-in-out infinite;
+}
+.adv-character.adv-celebrate {
+  animation: adv-celebrate 700ms ease infinite;
+}
+@keyframes adv-celebrate {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-12px) scale(1.08); }
+}
+.adv-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.adv-text {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+  margin: 0;
+}
+.adv-next {
+  margin-top: 8px;
+  padding: 14px 32px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 200px;
+}
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;
