@@ -18,8 +18,17 @@ A phased plan from current v2 → v5+, written to slot into the existing GuardCy
 | **Live in production at `letters.guardcybersolutionsllc.com`** | ✅ Deployed | 2026-05-14 |
 | v5.0 — Whole-child platform: 7 new modes covering Rammeplan areas 2–7; parent activity cards; reading log; free Edge-TTS voice-pack script | ✅ Shipped | 2026-05-14 |
 | v5.0-be — Backend tenant: Next.js 16 + Drizzle + Postgres 16, idempotent schema (7 tables), `/api/health` + `/api/sync/probe` live through Caddy → rootless Podman | ✅ Shipped | 2026-05-14 |
-| v5.1 — Magic-link auth + opt-in profile sync, parent web dashboard | Planned | — |
-| v5.2+ — Conflict-free event ingest (`/api/sync/push` + `/api/sync/pull`), aggregate dashboards | Planned | — |
+| v5.11–v5.12 — CI auto-deploy: GHA → typecheck/build/Trivy → ghcr.io → droplet pull. Static + API workflows, both blocking-gated. | ✅ Shipped | 2026-05-14 |
+| v5.13–v5.15 — Voice overhaul: customAudio 'auto' default, S/Z phoneme fix, Speech.speakSequence, robotic-voice banner, voiceFingerprint, locale field, scripts/generate-voices.py multi-locale. Bulk-record UX. Snappier transitions. Speech speed slider. | ✅ Shipped | 2026-05-14 |
+| v5.16–v5.17 — **Educational video games**: shared canvas/rAF engine + Letter Lander (calm-arcade) + Number Lander + Number Blaster (full arcade Math Blaster homage, score/lives/levels/DDA) | ✅ Shipped | 2026-05-15 |
+| v5.18–v5.22 — **ADHD-aware expansion** (Scattered to Focused + Finally Focused): 6 EF skill trainers + Parent Observation Journal + Calm Corner expansion + pre-session check-in + body-break prompts | ✅ Shipped | 2026-05-15 |
+| v5.23 — Game tuning + `Speech` single-source-of-truth + game phrase MP3s | ✅ Shipped | 2026-05-15 |
+| v5.24–v5.30 — **Rammeplan depth pass** (one session per area): Body/Movement (🤸🍎), Art/Creativity (🎨🥁), Ethics/Philosophy (❤️🙏), Nature/Environment (🌦️♻️), Spatial/Measurement (📏🧭), Society (🏠🗓), Norwegian language toggle + Norsk pack scaffolding | ✅ Shipped | 2026-05-15 |
+| v5.31 — Codebase audit (docs/AUDIT-v5.31.md): 44 modes, ~19,600 LOC, all static checks green | ✅ Shipped | 2026-05-15 |
+| v5.32 — Documentation refresh | ✅ Shipped | 2026-05-15 |
+| v6.0 — Magic-link parent auth + opt-in profile sync (uses existing backend schema) | Planned | — |
+| v6.1+ — Conflict-free event ingest (`/api/sync/push` + `/api/sync/pull`), aggregate parent web dashboard | Planned | — |
+| v7+ — K-12 architecture refactor (subject/grade/band schema), upper-elementary content (CCSS Grades 1-5), additional arcade games (Word Munchers, Fraction Frenzy, Capital Quest, Sentence Builder) | Planned | — |
 
 ---
 

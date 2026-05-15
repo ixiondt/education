@@ -143,6 +143,16 @@ Every skill the child practices satisfies codes across **all four** frameworks s
 - **NAEYC.** *Early Learning Outcomes Framework.* National Association for the Education of Young Children.
 - **NGA Center & CCSSO.** *Common Core State Standards for English Language Arts and Mathematics.* 2010.
 
+### Executive function + ADHD-aware design (v5.18–v5.22)
+
+The six EF skill trainers (Sequence Star, Stop & Go, Launch Pad, Switch It, Stargazer, Reflect) and the parent observation journal are inspired by:
+
+- **Grisham, Z.** *Scattered to Focused: Smart Strategies to Improve Your Child's Executive Functioning Skills.* The EF framework's 11 skills (response inhibition, working memory, emotional control, sustained attention, task initiation, planning, organization, time management, goal-directed persistence, flexibility, metacognition) — six of which we adapted as the kid-facing mini-games.
+- **Dawson, P. & Guare, R.** *Smart but Scattered.* The original framework Grisham draws on; canonical reference for EF in education.
+- **Greenblatt, J. & Gottlieb, B.** *Finally Focused: The Breakthrough Natural Treatment Plan for ADHD.* The Plus-Minus observation framework — daily noticing of sleep, mood, focus, energy, screen time, supplements, triggers — informs the Parent Observation Journal (v5.19). The app provides structure; the parent provides interpretation, ideally with their pediatrician.
+
+**Important clinical boundary**: the app does not interpret these observations, does not recommend supplements or medications, does not diagnose. Exports (JSON / CSV / printable PDF) are intended as the structured artifact a parent brings to their clinician — not a substitute for clinical care.
+
 ---
 
 *If you're a teacher, caregiver, or parent who would like to see additional alignment with a specific framework — Reggio Emilia, Te Whāriki (New Zealand), Curiosity Approach, or your local national framework — open an issue or send a note. The data model supports adding more standard codes without changing the gameplay.*

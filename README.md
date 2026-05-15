@@ -104,10 +104,15 @@ Marginal monthly cost: ~$0 (reuse of existing GuardCyber droplet) plus optionall
 ├── curriculum.js               # skill graph: ~290 skills across 4 international frameworks
 ├── letters.js                  # static data: stroke paths, phonics, picture-words, books
 ├── world.js                    # broader content: feelings, shapes, habitats, helpers, time
+├── journal.js                  # v5.19 — parent observation journal (Finally Focused)
+├── i18n.js                     # v5.30 — string layer for en-US / nb-NO
+├── game-engine.js              # v5.16 — shared canvas + rAF + entity loop + SFX
+├── game-*.js                   # v5.16-v5.30 — 17 game/EF/Rammeplan modes
 ├── manifest.webmanifest        # PWA install metadata
 ├── sw.js                       # service worker (offline cache, versioned)
 ├── icons/                      # PWA icons (SVG primary, PNG via tools/make-icons.html)
 ├── tools/make-icons.html       # one-shot tool to render PNGs from SVG for iOS
+├── docs/                       # CI-SETUP.md, AUDIT-v5.31.md
 ├── caddy-letters.conf          # Caddy block for the live tenant (static + /api/* proxy)
 ├── api/                        # v5 backend — Next.js 16 + Drizzle + Postgres 16
 │   ├── src/app/api/            # route handlers (health, sync/probe)
@@ -115,9 +120,10 @@ Marginal monthly cost: ~$0 (reuse of existing GuardCyber droplet) plus optionall
 │   ├── drizzle/0000_initial.sql  # idempotent initial migration (7 tables)
 │   ├── Dockerfile              # multi-stage Node 20 alpine standalone build
 │   └── podman-compose.yml      # rootless service binding 127.0.0.1:3013
+├── .github/workflows/          # deploy-static.yml + deploy-api.yml (CI auto-deploy)
 └── scripts/                    # deploy.sh (static), deploy-api.sh (backend),
-                                # setup-droplet.sh, setup-droplet-api.sh (one-shot
-                                # tenant + DB + pg_hba bootstrap)
+                                # deploy-audio.sh, generate-voices.py,
+                                # setup-droplet.sh, setup-droplet-api.sh
 ```
 
 ---
@@ -258,9 +264,19 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 **v4** ✅ shipped: lowercase tracing (52 path definitions, 52 skills), phonemic awareness (rhyming, first-sound isolation, blending), Dolch sight words, decodable reading books, arithmetic, calm corner, Rammeplan dashboard, age bands 1–6.
 
-**v5.0** ✅ shipped: backend tenant provisioned. Next.js 16 + Drizzle on Postgres 16, idempotent schema (7 tables), `/api/health` and `/api/sync/probe` live behind Cloudflare → Caddy → rootless Podman.
+**v5.0–v5.15** ✅ shipped: backend tenant provisioned (Next.js 16 + Drizzle + Postgres 16), CI auto-deploy (GHA → ghcr.io → droplet pull), full voice overhaul (305-file neural Aria MP3 pack on by default, single-source-of-truth `window.Speech` API, speech-speed slider), snappier transitions.
 
-**v5.1** next: opt-in profile sync (magic-link auth, no passwords), parent web dashboard accessible separately from the kid's device. The schema (`parents`, `children`, `devices`, `skill_progress`, `play_events`, `session_summaries`, `magic_links`) is already in place; client and route handlers are the remaining work.
+**v5.16–v5.17** ✅ shipped: **Educational video-game modes**. Shared canvas/rAF game engine, three games — 🐰 Letter Lander (calm-arcade, ages 4-6), 🦊 Number Lander, 🚀 Number Blaster (full arcade Math Blaster homage with score/lives/levels/DDA, ages 7-10).
+
+**v5.18–v5.22** ✅ shipped: **ADHD-aware expansion**, drawing on *Scattered to Focused* (Grisham / Dawson & Guare EF framework) and *Finally Focused* (Greenblatt). Six EF skill trainers (Working Memory / Response Inhibition / Task Initiation / Cognitive Flexibility / Sustained Attention / Metacognition), parent observation journal with 7-day + 30-day views + CSV/PDF export, expanded Calm Corner (breathing patterns + body scan + feelings thermometer), pre-session check-in + body-break prompts.
+
+**v5.23–v5.30** ✅ shipped: **Rammeplan depth pass**, one session per area. Body & Health (🤸 Move with me + 🍎 Food sort), Art & Creativity (🎨 Draw + 🥁 Rhythm), Ethics & Philosophy (❤️ Kind choices + 🙏 Thankful), Nature & Environment (🌦️ Weather + ♻️ Sort it out), Quantities & Spaces depth (📏 Measure + 🧭 Where is it?), Local Society (🏠 Family + 🗓 Daily routines), Norwegian language module (locale toggle + Norsk picture-word infrastructure ready for MP3 generation via `--locale nb-NO`).
+
+**v5.31** ✅ shipped: structured codebase audit ([docs/AUDIT-v5.31.md](docs/AUDIT-v5.31.md)). 44 modes, ~19,600 LOC, all static checks green.
+
+**v5.32** ✅ shipped: documentation refresh (this commit).
+
+**v6 (next)** — Magic-link parent auth + opt-in profile sync. The backend schema (`parents`, `children`, `devices`, `skill_progress`, `play_events`, `session_summaries`, `magic_links`) is already in place; client and route handlers are the remaining work. After that: K-12 architecture refactor (subject/grade/band schema), upper-elementary content (CCSS Grades 1-5), additional arcade games.
 
 ---
 
