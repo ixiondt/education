@@ -831,6 +831,11 @@ const MODE_AREAS = {
   arts:      ['draw', 'rhythm'],
   // v5.26 — Rammeplan area 6 (Etikk, religion og filosofi)
   ethics:    ['empathy', 'gratitude'],
+  // v5.27 — Rammeplan area 4 (Natur, miljø og teknologi).
+  // Note: 'animals' + 'helpers' are listed under selfWorld too —
+  //        keep them there as their primary area, this area adds
+  //        the new nature-observation + recycling modes.
+  nature:    ['weather', 'sort-it-out'],
   // v5.18 — Executive function trainers. New first-class area so the
   //         Rammeplan dashboard reports EF coverage separately from
   //         literacy / numeracy / self-world breadth.

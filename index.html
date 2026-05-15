@@ -291,6 +291,15 @@
           <div class="icon">👩‍⚕️</div>
           <div class="label">Helpers</div>
         </button>
+        <!-- v5.27 — Rammeplan area 4 (Natur, miljø og teknologi) -->
+        <button class="mode-card whole weather" data-mode="weather">
+          <div class="icon">🌦️</div>
+          <div class="label">Today's weather</div>
+        </button>
+        <button class="mode-card whole sort-it-out" data-mode="sort-it-out">
+          <div class="icon">♻️</div>
+          <div class="label">Sort it out</div>
+        </button>
       </div>
 
       <button class="freeplay-cta" data-mode="play">
@@ -382,6 +391,14 @@
 
     <!-- v5.26 — Gratitude (Ethics & Philosophy — Rammeplan area 6) — DOM -->
     <section class="screen screen-gratitude" id="screen-gratitude"></section>
+
+    <!-- v5.27 — Today's Weather (Nature — Rammeplan area 4) — DOM -->
+    <section class="screen screen-weather" id="screen-weather"></section>
+
+    <!-- v5.27 — Sort It Out / Kildesortering (Rammeplan area 4) — canvas -->
+    <section class="screen screen-game" id="screen-sort-it-out">
+      <canvas id="sort-it-out-canvas" class="ll-canvas"></canvas>
+    </section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -1334,6 +1351,9 @@
   <!-- v5.26 — Rammeplan Session C: Ethics, Religion & Philosophy -->
   <script src="game-empathy.js"></script>
   <script src="game-gratitude.js"></script>
+  <!-- v5.27 — Rammeplan Session D: Nature, Environment & Technology -->
+  <script src="game-weather.js"></script>
+  <script src="game-sort-it-out.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

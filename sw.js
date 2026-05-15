@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v5.26';
+const VERSION = 'lnum-v5.27';
 const SHELL = [
   './',
   './index.html',
@@ -34,6 +34,9 @@ const SHELL = [
   // v5.26 — Rammeplan Session C (Ethics, Religion & Philosophy)
   './game-empathy.js',
   './game-gratitude.js',
+  // v5.27 — Rammeplan Session D (Nature, Environment & Technology)
+  './game-weather.js',
+  './game-sort-it-out.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'

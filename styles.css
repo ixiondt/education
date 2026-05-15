@@ -1615,6 +1615,122 @@ body {
   .gratitude-chips { grid-template-columns: 1fr; }
 }
 
+/* ============================================================
+   v5.27 — Rammeplan Session D: Nature, Environment & Technology
+   ============================================================ */
+.mode-card.weather     .icon { color: var(--secondary); }
+.mode-card.sort-it-out .icon { color: var(--success); }
+
+.screen-weather.active {
+  padding: 24px 16px;
+  gap: 0;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100dvh;
+  width: 100%;
+}
+.weather-card {
+  width: 100%;
+  max-width: 540px;
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 8px 22px var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.weather-emoji {
+  font-size: 96px;
+  line-height: 1;
+}
+.weather-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.weather-h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 12px 0 0;
+}
+.weather-sub {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin: 0;
+}
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.weather-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: transform 120ms ease, border-color 200ms ease, background 200ms ease;
+}
+.weather-btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+.weather-btn.selected {
+  background: oklch(from var(--accent) l c h / 0.14);
+  border-color: var(--accent);
+}
+.weather-btn-emoji { font-size: 28px; line-height: 1; }
+.weather-btn-label { font-size: 12px; font-weight: 600; }
+.weather-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.weather-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  font-size: 12px;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+.weather-chip > :first-child { font-size: 22px; line-height: 1; }
+.weather-chip.selected {
+  background: oklch(from var(--success) l c h / 0.14);
+  border-color: var(--success);
+  font-weight: 700;
+}
+.weather-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+.weather-actions .btn { flex: 1; max-width: 180px; padding: 12px 16px; }
+.weather-done { padding: 40px 22px; }
+@media (max-width: 420px) {
+  .weather-grid, .weather-chips { grid-template-columns: repeat(3, 1fr); }
+}
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

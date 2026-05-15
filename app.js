@@ -1244,7 +1244,10 @@
       rhythm:         $('screen-rhythm'),
       // v5.26 — Rammeplan area 6 (Ethics, Religion & Philosophy)
       empathy:        $('screen-empathy'),
-      gratitude:      $('screen-gratitude')
+      gratitude:      $('screen-gratitude'),
+      // v5.27 — Rammeplan area 4 (Nature, Environment & Technology)
+      weather:        $('screen-weather'),
+      sortItOut:      $('screen-sort-it-out')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -1901,6 +1904,30 @@
           });
           break;
         }
+        // v5.27 — Rammeplan Session D: Nature, Environment & Technology
+        case 'weather': {
+          showScreen('weather');
+          requestAnimationFrame(() => {
+            if (typeof startWeather !== 'function') return;
+            startWeather({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
+        case 'sort-it-out': {
+          showScreen('sortItOut');
+          requestAnimationFrame(() => {
+            if (typeof startSortItOut !== 'function') return;
+            startSortItOut({
+              onAttempt: (skillId, ok) => recordAttempt(skillId, ok, 0),
+              speak: (text, key) => Speech.phrase(key || gamePhraseKey(text), text),
+              onComplete: () => goHome()
+            });
+          });
+          break;
+        }
         // v5.17 — full arcade math game (Math Blaster homage). Targets
         //         ages 7-10. Records skill events under math-{op}-{a}-{b}
         //         so the parent dashboard can see arithmetic engagement.
@@ -1991,6 +2018,9 @@
     // v5.26 — Rammeplan Session C (Ethics / Philosophy)
     if (typeof stopEmpathy    === 'function') stopEmpathy();
     if (typeof stopGratitude  === 'function') stopGratitude();
+    // v5.27 — Rammeplan Session D (Nature / Environment / Technology)
+    if (typeof stopWeather    === 'function') stopWeather();
+    if (typeof stopSortItOut  === 'function') stopSortItOut();
     state.sessionStartedAt = 0;
     state.breakSuggested = false;
     state.wrongInRound = 0;
