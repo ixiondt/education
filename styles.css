@@ -2017,6 +2017,115 @@ body {
 .rout-done { padding: 32px 22px; }
 .rout-done-emoji { font-size: 70px; }
 
+/* ============================================================
+   v5.33 — Game / mode screens fixed to viewport (no scroll)
+
+   Every game / EF / Rammeplan-content screen should fit inside
+   the viewport — scroll on a game screen disorients kids and
+   breaks the immersion of canvas-based games. We override the
+   default .screen.active min-height with a hard height + hide
+   overflow. Internal cards become flex children that shrink to
+   fit; aspect-ratio elements (rhythm pads, where-is-it scene)
+   gracefully scale down on shorter viewports.
+   ============================================================ */
+.screen-mwm.active,
+.screen-reflect.active,
+.screen-empathy.active,
+.screen-gratitude.active,
+.screen-weather.active,
+.screen-family.active,
+.screen-routines.active,
+.screen-rhythm.active,
+.screen-measure.active,
+.screen-where-is-it.active,
+.screen-game.active,
+.screen-game-arcade.active,
+.screen-draw.active {
+  /* Override default .screen.active min-height: 100dvh */
+  min-height: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+/* The Rhythm pad grid was sized assuming scroll-room. Cap the
+   max width tighter on short viewports so the 2×2 grid never
+   overflows. The aspect-ratio: 1 on pads handles the rest. */
+@media (max-height: 720px) {
+  .rhythm-pads { max-width: 420px; }
+  .rhythm-pad-emoji { font-size: 46px; }
+  .rhythm-banner { font-size: 16px; padding: 8px 14px; }
+  .mwm-emoji { font-size: 100px; }
+  .empathy-emoji, .gratitude-emoji, .weather-emoji { font-size: 64px; }
+}
+@media (max-height: 560px) {
+  .rhythm-pads { max-width: 340px; }
+  .rhythm-pad-emoji { font-size: 38px; }
+  .mwm-emoji { font-size: 80px; }
+  .empathy-emoji, .gratitude-emoji, .weather-emoji { font-size: 52px; }
+  .measure-emoji { font-size: 44px; }
+}
+
+/* ============================================================
+   v6.0 — Cross-device sync row in Settings
+   ============================================================ */
+.setting-row.sync-row {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+.sync-state {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.sync-status-off { color: var(--text-soft); }
+.sync-status-ok  { color: var(--success); font-weight: 600; }
+.sync-status-err { color: oklch(0.55 0.18 25); font-weight: 600; }
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+.sync-actions input[type="email"] {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 8px 12px;
+  font: inherit;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+}
+.sync-actions input[type="email"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.sync-actions .btn { padding: 8px 14px; font-size: 14px; }
+.sync-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: oklch(from var(--text-soft) l c h / 0.10);
+  border-radius: 999px;
+}
+.sync-toggle button {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.sync-toggle button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
 .mode-section-title {
   font-size: 14px;
   font-weight: 700;

@@ -856,6 +856,13 @@
         <button class="btn btn-secondary" id="profile-switch-btn">Switch child</button>
         <button class="btn btn-secondary" id="progress-btn">View progress</button>
       </div>
+      <!-- v6.0 — Cross-device sync (opt-in, parent magic-link auth) -->
+      <div class="setting-row sync-row" id="sync-row">
+        <label>Cross-device sync</label>
+        <div class="sync-state" id="sync-state">Loading…</div>
+        <div class="sync-actions" id="sync-actions"></div>
+      </div>
+
       <button class="btn btn-secondary" id="record-btn">🎙 Record your voice</button>
       <button class="btn btn-secondary" id="calm-corner-btn">🌬️ Calm corner</button>
       <button class="btn btn-secondary" id="activities-btn">🌳 Off-screen activities</button>
@@ -1406,6 +1413,8 @@
   <script src="game-routines.js"></script>
   <!-- v5.30 — Rammeplan Session G: Norwegian language module -->
   <script src="i18n.js"></script>
+  <!-- v6.0 — opt-in cross-device sync (magic-link parent auth) -->
+  <script src="sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

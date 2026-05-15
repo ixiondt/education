@@ -237,14 +237,17 @@
     }
 
     profile.progress.events ||= [];
-    profile.progress.events.push({
+    const event = {
       skillId,
       success,
       ts: Date.now(),
       durationMs: Math.max(0, Math.min(durationMs, 60000)),
       mode: state.mode
-    });
+    };
+    profile.progress.events.push(event);
     trimEvents(profile);
+    // v6.0 — mirror to the sync outbox (no-op when sync disabled or not signed in)
+    if (typeof Sync !== 'undefined' && Sync.enqueue) Sync.enqueue(event);
 
     rollupSession(profile, success, durationMs, state.mode);
     bumpStreaks(profile);
@@ -6000,5 +6003,107 @@
   } else {
     // No speechSynthesis at all — surface the banner immediately
     refreshVoiceBanner();
+  }
+
+  // ============================================================
+  //  v6.0 — Sync UI wiring
+  //  Renders the Settings → Cross-device sync row reactively
+  //  against Sync.status(). The actual flush loop + session check
+  //  runs in sync.js; we only paint state here.
+  // ============================================================
+  function renderSyncUI(st) {
+    const stateEl   = document.getElementById('sync-state');
+    const actionsEl = document.getElementById('sync-actions');
+    if (!stateEl || !actionsEl) return;
+
+    if (!st.signedIn) {
+      stateEl.innerHTML = '<span class="sync-status-off">Not signed in</span> — sync is off';
+      actionsEl.innerHTML = `
+        <input type="email" id="sync-email" placeholder="Your email" autocomplete="email" />
+        <button class="btn btn-primary" id="sync-request">Send sign-in link</button>
+      `;
+      const email = document.getElementById('sync-email');
+      const btn   = document.getElementById('sync-request');
+      btn?.addEventListener('click', async () => {
+        const addr = (email?.value || '').trim();
+        if (!addr) return;
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        const result = await Sync.requestLink(addr);
+        if (!result.ok) {
+          stateEl.innerHTML = `<span class="sync-status-err">${escapeHtml(result.error)}</span>`;
+          btn.disabled = false;
+          btn.textContent = 'Send sign-in link';
+          return;
+        }
+        if (result.sent === 'stubbed' && result.link) {
+          // Self-hosted single-family — show the link inline
+          actionsEl.innerHTML = `
+            <p style="font-size:13px; color:var(--text-soft); line-height:1.45;">
+              Sign-in link below. Tap it to complete sign-in:
+            </p>
+            <a class="btn btn-primary" id="sync-link" href="${escapeAttr(result.link)}">Open sign-in link</a>
+            <button class="btn btn-secondary" id="sync-cancel">Cancel</button>
+          `;
+          document.getElementById('sync-cancel')?.addEventListener('click', () => renderSyncUI(Sync.status()));
+        } else {
+          stateEl.innerHTML = `<span class="sync-status-ok">Check your email for the sign-in link.</span>`;
+          actionsEl.innerHTML = `<button class="btn btn-secondary" id="sync-cancel">Back</button>`;
+          document.getElementById('sync-cancel')?.addEventListener('click', () => renderSyncUI(Sync.status()));
+        }
+      });
+      return;
+    }
+    // Signed in — show toggle + status + sign out
+    const lastPush = st.lastPush
+      ? `Last sync ${Math.max(1, Math.round((Date.now() - st.lastPush) / 1000))}s ago`
+      : (st.syncEnabled ? 'Waiting to sync…' : 'Sync is paused');
+    stateEl.innerHTML = `
+      <div><span class="sync-status-ok">Signed in</span> as ${escapeHtml(st.email)}</div>
+      <div style="font-size:12px; color:var(--text-soft);">${lastPush}${st.outbox ? ` · ${st.outbox} pending` : ''}</div>
+    `;
+    actionsEl.innerHTML = `
+      <div class="segmented sync-toggle">
+        <button data-sync="on"  aria-pressed="${st.syncEnabled ? 'true' : 'false'}">Sync on</button>
+        <button data-sync="off" aria-pressed="${st.syncEnabled ? 'false' : 'true'}">Off</button>
+      </div>
+      <button class="btn btn-secondary" id="sync-signout">Sign out</button>
+    `;
+    actionsEl.querySelectorAll('[data-sync]').forEach((b) => {
+      b.addEventListener('click', () => Sync.setEnabled(b.dataset.sync === 'on'));
+    });
+    document.getElementById('sync-signout')?.addEventListener('click', () => Sync.signOut());
+  }
+  function escapeAttr(s) { return String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+  if (typeof Sync !== 'undefined') {
+    Sync.onChange(renderSyncUI);
+    Sync.init();
+    // Paint initial loading state quickly
+    renderSyncUI(Sync.status());
+
+    // v6.0 — Handle the magic-link landing.
+    // The link in the parent's email lands at /auth/verify?token=X;
+    // Caddy try_files serves index.html for that path, so we detect
+    // it here and complete the sign-in via fetch (the API endpoint
+    // sets the session cookie + we then clean the URL).
+    (async function handleMagicLinkLanding() {
+      if (window.location.pathname === '/auth/verify') {
+        const token = new URLSearchParams(window.location.search).get('token');
+        if (!token) return;
+        try {
+          const r = await fetch(`/api/auth/verify?token=${encodeURIComponent(token)}`, {
+            credentials: 'same-origin',
+          });
+          if (r.ok) {
+            await Sync.refreshSession();
+            // Auto-enable sync on first successful sign-in
+            if (!Sync.status().syncEnabled) Sync.setEnabled(true);
+          }
+        } catch {}
+        // Clean the URL regardless so the token doesn't sit in history
+        if (history.replaceState) history.replaceState(null, '', '/');
+      }
+    })();
   }
 })();

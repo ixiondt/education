@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v5.32';
+const VERSION = 'lnum-v6.0';
 const SHELL = [
   './',
   './index.html',
@@ -45,6 +45,8 @@ const SHELL = [
   './game-routines.js',
   // v5.30 — Rammeplan Session G (Norwegian language module)
   './i18n.js',
+  // v6.0 — opt-in cross-device sync (parent auth + outbox)
+  './sync.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'
