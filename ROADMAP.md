@@ -26,8 +26,11 @@ A phased plan from current v2 → v5+, written to slot into the existing GuardCy
 | v5.24–v5.30 — **Rammeplan depth pass** (one session per area): Body/Movement (🤸🍎), Art/Creativity (🎨🥁), Ethics/Philosophy (❤️🙏), Nature/Environment (🌦️♻️), Spatial/Measurement (📏🧭), Society (🏠🗓), Norwegian language toggle + Norsk pack scaffolding | ✅ Shipped | 2026-05-15 |
 | v5.31 — Codebase audit (docs/AUDIT-v5.31.md): 44 modes, ~19,600 LOC, all static checks green | ✅ Shipped | 2026-05-15 |
 | v5.32 — Documentation refresh | ✅ Shipped | 2026-05-15 |
-| v6.0 — Magic-link parent auth + opt-in profile sync (uses existing backend schema) | Planned | — |
-| v6.1+ — Conflict-free event ingest (`/api/sync/push` + `/api/sync/pull`), aggregate parent web dashboard | Planned | — |
+| v5.33 — Game screens fixed to viewport (no more page scroll inside games) | ✅ Shipped | 2026-05-15 |
+| v6.0 — Magic-link parent auth + opt-in cross-device sync. 6 new routes (request-link / verify / me / logout / sync push / sync pull), HMAC session cookies, IP rate limiting, idempotent event ingest. Client `window.Sync` API + Settings row + magic-link landing handler. ~1,200 LOC. | ✅ Shipped | 2026-05-15 |
+| v6.0.1 — Stripped npm + node-tar from runtime image (3 HIGH CVEs cleared, image −40 MB) | ✅ Shipped | 2026-05-15 |
+| v6.0.2 — Next.js 16.0.0 → 16.2.6 (3 advisories: GHSA-h25m, GHSA-mwv6, GHSA-q4gf) | ✅ Shipped | 2026-05-15 |
+| v6.1 — Parent web dashboard route at `/dashboard` showing aggregate progress across devices (read-side of sync data) | Planned | — |
 | v7+ — K-12 architecture refactor (subject/grade/band schema), upper-elementary content (CCSS Grades 1-5), additional arcade games (Word Munchers, Fraction Frenzy, Capital Quest, Sentence Builder) | Planned | — |
 
 ---

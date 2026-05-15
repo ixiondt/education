@@ -124,6 +124,16 @@ Every skill the child practices satisfies codes across **all four** frameworks s
 
 ---
 
+## Privacy and the opt-in sync (v6.0+)
+
+The Rammeplan explicitly names child privacy as a non-negotiable. We honor that with a strong default and an honest opt-in:
+
+- **Default**: all data lives on the device. The PWA works fully offline. Nothing leaves the device — not the kid's name, not their progress, not their drawings, not their voice recordings, not their journal entries.
+- **Opt-in**: a parent who wants progress to follow the kid between devices (their phone + the family iPad, say) can sign in by email — passwordless, just click a link. Once signed in and sync is toggled on, **only structured skill events** sync to the server (skill ID, success/fail, timestamp). Voice recordings, drawings, journal entries, and the kid's name and age stay local unless the parent later configures otherwise.
+- **No background tracking**: nothing syncs while sync is off. No analytics. No telemetry. Sessions are an HMAC-signed cookie, server is single-tenant on infrastructure the parent (or a self-hoster) controls.
+
+The right framing: the platform doesn't *require* an account, it *allows* one when the use-case justifies it. This is the inverse of how most kid apps work, and it's deliberate.
+
 ## What this app is not
 
 - Not a replacement for kindergarten.

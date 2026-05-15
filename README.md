@@ -70,24 +70,41 @@ Recording 89 clips (26 letter names + 26 sounds + 26 picture-words + 11 numbers)
 
 ---
 
-## Privacy, hosting, and the v5 backend
+## Privacy, hosting, and the backend
 
-- **No accounts. No servers. No analytics. No telemetry. No ads.**
-- All data — profile, progress, voice recordings — stays in `localStorage` and `IndexedDB` on the device.
-- The app remains **fully usable with the network off**. The service worker caches the app shell for full offline operation. Sync is strictly opt-in (off by default).
+- **No accounts required. No analytics. No telemetry. No ads.**
+- By default, all data — profile, progress, voice recordings, drawings, journal entries — stays in `localStorage` and `IndexedDB` on the device.
+- The app remains **fully usable with the network off**. The service worker caches the app shell for full offline operation. **Sync is strictly opt-in — off by default.**
 
-The v5 backend is **provisioned and reachable** as of 2026-05-14, but it is **dormant from the client's perspective**: no profile is auto-synced, no telemetry is captured, no PII leaves the device unless a parent explicitly opts in (planned for v5.2+ — magic-link based, no passwords).
+**Opt-in cross-device sync (v6.0+)**: A parent who wants progress to follow the kid between devices can sign in via a magic link (passwordless — link arrives by email, link click sets a session cookie, no password ever stored). When sync is on, skill events (taps, attempts, success/miss) replicate to the server via the append-only `/api/sync/push` endpoint. Events are idempotent on a client-generated UUID so retries never double-count. Other devices pull via `/api/sync/pull`. Voice recordings + drawings + journal entries stay local — only the structured skill events sync.
+
+For self-hosted single-family setups without an email provider (`EMAIL_STUB=1` or no `RESEND_API_KEY`), the magic link is returned directly in the request response so the parent can tap it inline — no email round-trip required.
 
 Tenant allocation (live):
 
 | Layer | Endpoint | Behavior |
 |---|---|---|
 | Static PWA | `https://letters.guardcybersolutionsllc.com/` | Caddy file-server (no upstream) |
-| Backend API | `https://letters.guardcybersolutionsllc.com/api/*` | Next.js standalone, rootless Podman on 127.0.0.1:3013 |
+| Backend API | `https://letters.guardcybersolutionsllc.com/api/*` | Next.js 16.2 standalone, rootless Podman on 127.0.0.1:3013 |
 | Health | `/api/health` | DB ping, returns `{status,db,dbLatencyMs}` |
 | Probe | `/api/sync/probe` | Schema readiness check (lists table row counts) |
+| Auth | `POST /api/auth/request-link`, `GET /api/auth/verify`, `GET /api/auth/me`, `POST /api/auth/logout` | Magic-link passwordless flow with HMAC-signed session cookies (HttpOnly + Secure + SameSite=Lax, 30d) |
+| Sync | `POST /api/sync/push`, `GET /api/sync/pull` | Append-only skill events, idempotent on `client_event_id`, parent-scoped via session cookie |
 
 Marginal monthly cost: ~$0 (reuse of existing GuardCyber droplet) plus optionally $10/yr for a dedicated domain later.
+
+**One-time droplet env step before auth works** in production:
+
+```bash
+ssh deploy@<droplet>
+sudo -u lnum-deploy -i bash -c "
+  echo \"LNUM_SESSION_SECRET=\$(openssl rand -hex 48)\" >> /opt/apps/letters-and-numbers-api/.env
+  chmod 600 /opt/apps/letters-and-numbers-api/.env
+  podman restart lnum-api
+"
+```
+
+(Optional, for real email instead of the inline-stub flow: also set `RESEND_API_KEY=...` and `LNUM_EMAIL_FROM='Letters & Numbers <letters@your-domain>'` in the same `.env`.)
 
 ---
 
@@ -106,6 +123,7 @@ Marginal monthly cost: ~$0 (reuse of existing GuardCyber droplet) plus optionall
 ├── world.js                    # broader content: feelings, shapes, habitats, helpers, time
 ├── journal.js                  # v5.19 — parent observation journal (Finally Focused)
 ├── i18n.js                     # v5.30 — string layer for en-US / nb-NO
+├── sync.js                     # v6.0 — client-side opt-in sync (outbox + auth UI)
 ├── game-engine.js              # v5.16 — shared canvas + rAF + entity loop + SFX
 ├── game-*.js                   # v5.16-v5.30 — 17 game/EF/Rammeplan modes
 ├── manifest.webmanifest        # PWA install metadata
@@ -114,11 +132,15 @@ Marginal monthly cost: ~$0 (reuse of existing GuardCyber droplet) plus optionall
 ├── tools/make-icons.html       # one-shot tool to render PNGs from SVG for iOS
 ├── docs/                       # CI-SETUP.md, AUDIT-v5.31.md
 ├── caddy-letters.conf          # Caddy block for the live tenant (static + /api/* proxy)
-├── api/                        # v5 backend — Next.js 16 + Drizzle + Postgres 16
-│   ├── src/app/api/            # route handlers (health, sync/probe)
-│   ├── src/lib/                # schema, db, logger, api-error envelope
+├── api/                        # backend — Next.js 16.2 + Drizzle + Postgres 16
+│   ├── src/app/api/
+│   │   ├── health/             # DB ping
+│   │   ├── auth/{request-link,verify,me,logout}/   # v6.0 magic-link
+│   │   └── sync/{probe,push,pull}/                  # v6.0 event sync
+│   ├── src/lib/                # schema, db, logger, api-error, auth, email
 │   ├── drizzle/0000_initial.sql  # idempotent initial migration (7 tables)
 │   ├── Dockerfile              # multi-stage Node 20 alpine standalone build
+│   │                           # (v6.0.1: npm stripped from runtime image)
 │   └── podman-compose.yml      # rootless service binding 127.0.0.1:3013
 ├── .github/workflows/          # deploy-static.yml + deploy-api.yml (CI auto-deploy)
 └── scripts/                    # deploy.sh (static), deploy-api.sh (backend),
@@ -274,9 +296,17 @@ See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 **v5.31** ✅ shipped: structured codebase audit ([docs/AUDIT-v5.31.md](docs/AUDIT-v5.31.md)). 44 modes, ~19,600 LOC, all static checks green.
 
-**v5.32** ✅ shipped: documentation refresh (this commit).
+**v5.32** ✅ shipped: documentation refresh.
 
-**v6 (next)** — Magic-link parent auth + opt-in profile sync. The backend schema (`parents`, `children`, `devices`, `skill_progress`, `play_events`, `session_summaries`, `magic_links`) is already in place; client and route handlers are the remaining work. After that: K-12 architecture refactor (subject/grade/band schema), upper-elementary content (CCSS Grades 1-5), additional arcade games.
+**v5.33** ✅ shipped: game screens fixed to viewport (no more page scroll inside a game).
+
+**v6.0** ✅ shipped: **Magic-link parent auth + opt-in cross-device sync**. Six new backend routes (`request-link`, `verify`, `me`, `logout`, `sync/push`, `sync/pull`), HMAC-signed session cookies, IP rate limiting, Zod-validated bodies, idempotent event ingest. Client-side `window.Sync` API + Settings → "Cross-device sync" row + magic-link landing handler. Stub email mode for self-hosted; Resend-ready when an API key is set. ~1,200 LOC.
+
+**v6.0.1** ✅ shipped: stripped npm + node-tar from the runtime image (3 HIGH `node-tar` CVEs gone). Image ~40 MB smaller.
+
+**v6.0.2** ✅ shipped: Next.js bumped 16.0.0 → 16.2.6 (3 advisories cleared: GHSA-h25m, GHSA-mwv6, GHSA-q4gf).
+
+**v6.1 (next)** — Parent web dashboard route at `/dashboard` showing across-device aggregate progress (read-side of the sync data we now collect). After that: K-12 architecture refactor (subject/grade/band schema), upper-elementary content (CCSS Grades 1-5), additional arcade games (Word Munchers, Fraction Frenzy, Capital Quest, Sentence Builder).
 
 ---
 

@@ -2,6 +2,31 @@
 
 A condensed timeline of what landed when. For the deeper "why," see [PEDAGOGY.md](PEDAGOGY.md) and [ROADMAP.md](ROADMAP.md).
 
+## v6.0.2 — Next.js CVE bump · 2026-05-15
+- `next` 16.0.0 → 16.2.6 (resolves three GHSA advisories: insecure React, two DoS via Server Components)
+- Lockfile regenerated; build + typecheck clean against all 9 routes
+
+## v6.0.1 — Runtime image hardening · 2026-05-15
+- Stripped npm + bundled `node-tar` from the Dockerfile runner stage
+- Three HIGH `node-tar` CVEs (CVE-2026-26960 / -29786 / -31802) eliminated by removal — npm isn't on any runtime code path since the Next.js standalone bundle just needs `node server.js`
+- Removed the OCI-ignored HEALTHCHECK directive (Caddy `reverse_proxy` checks `/api/health` directly)
+- Final image ~40 MB smaller
+
+## v6.0 — Magic-link parent auth + opt-in sync · 2026-05-15
+- **Backend**: 6 new routes — `POST /api/auth/request-link`, `GET /api/auth/verify`, `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/sync/push`, `GET /api/sync/pull`
+- HMAC-signed session cookies (HttpOnly + Secure + SameSite=Lax, 30-day)
+- In-memory IP rate limiter on `/api/auth/*` (3 req / 10s)
+- Email send via Resend; falls back to stub mode (link returned in JSON) when no API key set
+- Idempotent event ingest on `client_event_id`; bumps `skill_progress` aggregates per skill in same transaction
+- **Client**: new `sync.js` (`window.Sync` API) — device ID, localStorage outbox capped at 2000, 30s flush loop, visibility-aware
+- New Settings → "Cross-device sync" row: sign-in flow, sync on/off toggle, sign-out, status
+- `/auth/verify?token=...` landing handler completes sign-in from the magic-link email
+- ~1,200 LOC across 9 files
+
+## v5.33 — Game screens stop scrolling · 2026-05-15
+- All game / EF / Rammeplan-content screens override default `.screen.active` min-height; use `height: 100dvh` + `overflow: hidden`
+- Two new max-height media queries (720/560) shrink emojis + pad sizes on shorter viewports
+
 ## v5.32 — Documentation refresh · 2026-05-15
 - README structure tree + "What's next" updated to reflect v5.16→v5.31
 - ROADMAP status table extended with every shipped version
