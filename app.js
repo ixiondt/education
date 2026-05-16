@@ -248,6 +248,12 @@
     trimEvents(profile);
     // v6.0 — mirror to the sync outbox (no-op when sync disabled or not signed in)
     if (typeof Sync !== 'undefined' && Sync.enqueue) Sync.enqueue(event);
+    // v7.1 — reflective response (cooldown-gated, character-aware).
+    // Inserts a curiosity-opening line every ~8s of play. Replaces
+    // the generic 'Yes!' pattern with conversation-style lines.
+    if (typeof Reflective !== 'undefined' && Reflective.maybeSay) {
+      Reflective.maybeSay(skillId, success);
+    }
 
     rollupSession(profile, success, durationMs, state.mode);
     bumpStreaks(profile);
@@ -353,7 +359,37 @@
     if (el.breakStats && stats) {
       el.breakStats.textContent = `${stats.masteredSkills} of ${stats.availableSkills} mastered`;
     }
+    // v7.1 — surface an away-from-screen extension based on what
+    // the kid played today. Inserts into the break modal between
+    // the stats line and the action buttons.
+    injectBreakOfflineExtension(profile);
     el.modalBreak.classList.add('active');
+  }
+
+  function injectBreakOfflineExtension(profile) {
+    const host = el.modalBreak;
+    if (!host || !profile || typeof OfflineExtensions === 'undefined') return;
+    // Drop any prior insertion so we don't accumulate banners
+    host.querySelector('.break-offline-ext')?.remove();
+    // Categories the kid touched in the last 24h
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const events = (profile.progress?.events || []).filter((e) => e.ts >= since);
+    const cats = Array.from(new Set(
+      events.map((e) => (typeof Reflective !== 'undefined' ? Reflective.categoryOf(e.skillId) : null))
+            .filter(Boolean)
+    ));
+    const text = OfflineExtensions.pickForToday(cats);
+    if (!text) return;
+    const card = document.createElement('div');
+    card.className = 'break-offline-ext';
+    card.innerHTML = `
+      <div class="break-offline-ext-label">Try this with your kid:</div>
+      <div class="break-offline-ext-text">${text.replace(/</g, '&lt;')}</div>
+    `;
+    // Insert before any existing button row inside the modal-card
+    const actions = host.querySelector('.btn-row');
+    if (actions && actions.parentNode) actions.parentNode.insertBefore(card, actions);
+    else host.querySelector('.modal-card')?.appendChild(card);
   }
 
   function activeProfile() {

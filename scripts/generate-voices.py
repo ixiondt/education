@@ -335,6 +335,13 @@ PHRASES = {
     "adv-whale-2":          "Hold your breath like Whale. Slow. Deep.",
     "adv-whale-3":          "Count the fish swimming past!",
     "adv-whale-4":          "Back to the surface. What a deep dive.",
+    # v7.0 — World greetings spoken when the kid enters a world.
+    "world-forest-greet":   "Welcome to the Forest! I'm Bram the Bear. Tall trees, soft moss, sunlight through the leaves.",
+    "world-farm-greet":     "Welcome to the Farm! I'm Daisy the Cow. There's so much to count and care for here.",
+    "world-home-greet":     "Welcome home! I'm Coco the Cat. Let's explore the cozy spots together.",
+    "world-story-greet":    "Welcome to the Story Corner. I'm Luna the Owl. Pull up a pillow and let's read.",
+    "world-shapes-greet":   "Welcome to Shapes and Building! I'm Pip the Fox. Let's sort, count, and build.",
+    "world-feelings-greet": "Welcome to Feelings and Friends. I'm Sunny. Let's notice how you feel today.",
 }
 
 # v5.9 — time-of-day scenario vocabulary (single-word entries only, so the

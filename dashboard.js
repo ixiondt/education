@@ -187,6 +187,40 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /* v7.1 — Build a 'Observe today' section from observations.js +
+     offline-extensions.js. Categories come from the child's
+     bySkillCategory map. Surfaces 3-5 questions + one offline
+     extension. Noticing language only. */
+  function renderObservations(child) {
+    if (typeof Observations === 'undefined') return '';
+    const cats = Object.keys(child.bySkillCategory || {});
+    if (!cats.length) return '';
+    const prompts = Observations.forCategories(cats).slice(0, 5);
+    const extension = (typeof OfflineExtensions !== 'undefined')
+      ? OfflineExtensions.pickForToday(cats)
+      : null;
+    return `
+      <section class="dash-section">
+        <h2 class="dash-h2">Observe today</h2>
+        <p class="dash-help">Things to notice in your kid based on what they played. No right answers — these are conversation starters with yourself or with your child.</p>
+        <ul class="dash-observations">
+          ${prompts.map((p) => `
+            <li>
+              <span class="dash-observation-cat">${escapeHtml(p.category.replace(/-/g, ' '))}</span>
+              <span class="dash-observation-text">${escapeHtml(p.prompt)}</span>
+            </li>
+          `).join('')}
+        </ul>
+        ${extension ? `
+          <div class="dash-offline-extension">
+            <span class="dash-offline-label">Away-from-screen try-this:</span>
+            <span class="dash-offline-text">${escapeHtml(extension)}</span>
+          </div>
+        ` : ''}
+      </section>
+    `;
+  }
+
   function render() {
     if (!host) return;
     if (loading) {
@@ -286,6 +320,10 @@
               `).join('')}
           </ul>
         </section>
+
+        <!-- v7.1 — Observation prompts + offline extensions for the
+                 parent. Noticing language, never ranking. -->
+        ${renderObservations(c)}
 
         <section class="dash-section">
           <h2 class="dash-h2">Devices</h2>

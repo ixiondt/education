@@ -1,7 +1,7 @@
 // Letters & Numbers — Service Worker
 // Cache-first for app shell, stale-while-revalidate for fonts/audio.
 
-const VERSION = 'lnum-v7.0';
+const VERSION = 'lnum-v7.1';
 const SHELL = [
   './',
   './index.html',
@@ -56,6 +56,10 @@ const SHELL = [
   // v7.0 — Worlds + characters (Lingokids-style reframe)
   './worlds.js',
   './world-view.js',
+  // v7.1 — Reflective responses + observation prompts + offline extensions
+  './reflective.js',
+  './observations.js',
+  './offline-extensions.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-maskable.svg'

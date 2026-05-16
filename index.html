@@ -1470,6 +1470,11 @@
   <!-- v7.0 — Worlds + characters (Lingokids-style navigation reframe) -->
   <script src="worlds.js"></script>
   <script src="world-view.js"></script>
+  <!-- v7.1 — Reflective responses + observations + offline extensions
+       (must load before app.js so recordAttempt can call Reflective.maybeSay) -->
+  <script src="reflective.js"></script>
+  <script src="observations.js"></script>
+  <script src="offline-extensions.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
