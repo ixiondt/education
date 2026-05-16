@@ -4149,22 +4149,42 @@ body.printing .install-prompt {
   text-align: right;
 }
 
-/* Print-specific overrides */
+/* Print-specific overrides.
+   v6.5.3 — must out-specific the body.printing .printable-view rule
+   above (which uses position: fixed + overflow: auto for the on-screen
+   flash before the print dialog). Without these !important overrides,
+   the fixed positioning traps all worksheet content inside one
+   viewport's worth of paper, clipping rows 2-7 of the 26-letter grid. */
 @media print {
   body { background: white !important; }
+  body.printing .printable-view,
   body .printable-view {
     display: block !important;
-    position: static;
-    background: white;
-    padding: 8px;
-    z-index: auto;
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    background: white !important;
+    padding: 8px !important;
+    z-index: auto !important;
   }
   body #app,
   body .modal,
   body .sparkles,
-  body .install-prompt { display: none !important; }
-  .ws-trace-cell { page-break-inside: avoid; }
-  .ws-trace-grid { grid-template-columns: repeat(4, 1fr); }
+  body .install-prompt,
+  body .voice-banner,
+  body #companion,
+  body .today-adventure-card,
+  body .today-session-card { display: none !important; }
+  /* Avoid breaks inside a single tracing cell or alphabet row */
+  .ws-trace-cell { page-break-inside: avoid; break-inside: avoid; }
+  .ws-alpha-table tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Tighter grid on print — fits more rows per page without
+     orphaning a cell at the page break */
+  .ws-trace-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .ws-trace-cell { padding: 4px; }
+  .ws-trace-label { font-size: 12px; }
   @page { margin: 0.4in; }
 }
 

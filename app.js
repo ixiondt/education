@@ -4209,11 +4209,24 @@
     return rows.join('');
   }
 
-  function renderTracingWorksheet(paths, isLowercase = false) {
-    const title = isLowercase ? 'Lowercase letter tracing' : 'Uppercase letter tracing';
+  function renderTracingWorksheet(paths, kind = 'upper') {
+    // v6.5.3 — explicit kind ('upper' | 'lower' | 'numbers') so the
+    // numbers worksheet doesn't render with the letter title.
+    const titles = {
+      'upper':   'Uppercase letter tracing',
+      'lower':   'Lowercase letter tracing',
+      'numbers': 'Number tracing'
+    };
+    const intros = {
+      'upper':   'Trace each letter with a finger or pencil. Start at the dot.',
+      'lower':   'Trace each lowercase letter with a finger or pencil. Start at the dot.',
+      'numbers': 'Trace each number with a finger or pencil. Start at the dot.'
+    };
+    const title = titles[kind] || titles.upper;
+    const intro = intros[kind] || intros.upper;
     const items = Object.entries(paths);
     let html = `<h1 class="ws-h1">${title}</h1>`;
-    html += '<p class="ws-intro">Trace each letter with a finger or pencil. Start at the dot.</p>';
+    html += `<p class="ws-intro">${intro}</p>`;
     html += '<div class="ws-trace-grid">';
     items.forEach(([letter, strokes]) => {
       // Build SVG with dashed outline + start dot
@@ -4243,11 +4256,11 @@
     if (!el.printableContent) return;
     let html = '';
     if (kind === 'alphabet') html = renderAlphabetWorksheet();
-    else if (kind === 'trace-upper')   html = renderTracingWorksheet(LETTER_PATHS, false);
+    else if (kind === 'trace-upper')   html = renderTracingWorksheet(LETTER_PATHS, 'upper');
     else if (kind === 'trace-lower' && typeof LOWERCASE_LETTER_PATHS !== 'undefined') {
-      html = renderTracingWorksheet(LOWERCASE_LETTER_PATHS, true);
+      html = renderTracingWorksheet(LOWERCASE_LETTER_PATHS, 'lower');
     }
-    else if (kind === 'trace-numbers') html = renderTracingWorksheet(NUMBER_PATHS, false);
+    else if (kind === 'trace-numbers') html = renderTracingWorksheet(NUMBER_PATHS, 'numbers');
     el.printableContent.innerHTML = html;
     /* Toggle the body class so the print stylesheet shows only the
        printable view, then call window.print(). The browser dialog
