@@ -4150,13 +4150,18 @@ body.printing .install-prompt {
 }
 
 /* Print-specific overrides.
-   v6.5.3 — must out-specific the body.printing .printable-view rule
-   above (which uses position: fixed + overflow: auto for the on-screen
-   flash before the print dialog). Without these !important overrides,
-   the fixed positioning traps all worksheet content inside one
-   viewport's worth of paper, clipping rows 2-7 of the 26-letter grid. */
+   v6.5.4 — the deeper bug: the kid-app shell uses
+     html, body { height: 100%; overflow: hidden; }
+   to clip everything to a single viewport so games don't bounce-scroll.
+   In print, that same rule clips the worksheet content to one page-
+   worth of paper — silently. We have to lift both height AND
+   overflow at the html + body level too, not just on .printable-view. */
 @media print {
-  body { background: white !important; }
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
   body.printing .printable-view,
   body .printable-view {
     display: block !important;
