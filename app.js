@@ -1260,7 +1260,10 @@
       // v6.1 — Parent dashboard (cloud-aggregated)
       dashboard:      $('screen-dashboard'),
       // v6.2 — Adventure narrator (between-chapter framing screen)
-      adventureNarrator: $('screen-adventure-narrator')
+      adventureNarrator: $('screen-adventure-narrator'),
+      // v7.0 — Worlds-first navigation (Lingokids-style)
+      world:             $('screen-world'),
+      scene:             $('screen-scene')
     },
     homeBtn:       $('homeBtn'),
     settingsBtn:   $('settingsBtn'),
@@ -2129,6 +2132,7 @@
     refreshVoiceBanner();
     refreshTodaysAdventure();
     if (typeof Companion !== 'undefined') Companion.refresh();
+    if (typeof WorldUI !== 'undefined') WorldUI.paintWorldMap();
     showScreen('home');
   }
 
@@ -6061,6 +6065,7 @@
   refreshTodaySessionCard();
   if (typeof refreshTodaysAdventure === 'function') refreshTodaysAdventure();
   if (typeof Companion !== 'undefined') Companion.refresh();
+  if (typeof WorldUI !== 'undefined') WorldUI.paintWorldMap();
   showScreen(state.profiles.length === 0 ? 'welcome' : 'home');
   refreshRecordedKeys().then(() => refreshVoiceBanner()); // load IDB key index so speech can fast-path
 

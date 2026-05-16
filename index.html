@@ -96,6 +96,16 @@
         <span class="today-adventure-arrow" aria-hidden="true">▶</span>
       </button>
 
+      <!-- ▼ v7.0 — Worlds map. Replaces the flat 44-mode grid as the
+              primary navigation. The old grid lives below this block
+              behind a 'Classic view' visibility toggle so parents who
+              prefer the grid (or who use the mode-cards for skill
+              targeting) can still get to everything. -->
+      <div class="world-map-wrap">
+        <h2 class="world-map-title">Pick a world to play in</h2>
+        <div class="world-map" id="world-map" role="list"></div>
+      </div>
+
       <!-- ▼ v5.1 daily session — Norwegian-style 10-min mini-session of
               mixed activities. Click to start a guided sequence. -->
       <div class="today-session-card" id="today-session-card">
@@ -110,6 +120,12 @@
         <button class="btn btn-primary today-start" id="today-start">Start today's session</button>
       </div>
 
+      <!-- v7.0 — Classic mode-grid view, hidden by default behind a
+              Settings toggle. The Worlds layout above is the primary
+              navigation for kids; this grid is preserved so parents
+              can target a specific mode directly. -->
+      <details class="classic-view" id="classic-view">
+        <summary class="classic-view-toggle">Show all activities (classic grid)</summary>
       <div class="mode-grid">
         <button class="mode-card find-l"  data-mode="find-letters">
           <div class="icon">Aa</div>
@@ -342,6 +358,7 @@
           <span class="freeplay-sub">Tap and explore — no right or wrong</span>
         </span>
       </button>
+      </details>
 
       <button class="profile-chip" id="profile-chip" aria-label="Switch profile">
         <span class="profile-icon">👤</span>
@@ -450,6 +467,12 @@
 
     <!-- v6.2 — Adventure narrator screen (between-chapter framing) -->
     <section class="screen screen-adv-narrator" id="screen-adventure-narrator"></section>
+
+    <!-- v7.0 — Per-world screen (scene + activity rail) -->
+    <section class="screen screen-world" id="screen-world"></section>
+
+    <!-- v7.0 — Scene card (shown briefly before mode launch) -->
+    <section class="screen screen-scene" id="screen-scene"></section>
 
     <!-- ============ TRACE ============ -->
     <section class="screen" id="screen-trace">
@@ -1444,6 +1467,9 @@
   <script src="adventures.js"></script>
   <!-- v6.3 — Living companion (home-screen character) -->
   <script src="companion.js"></script>
+  <!-- v7.0 — Worlds + characters (Lingokids-style navigation reframe) -->
+  <script src="worlds.js"></script>
+  <script src="world-view.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
