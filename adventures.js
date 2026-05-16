@@ -83,7 +83,7 @@
       hook: "Snow is falling! What shall we do?",
       bands: ['yngre', 'eldre', 'skolestart'],
       chapters: [
-        { audioKey: 'adv-snowy-1', narration: "How does the cold make you feel?", mode: 'feelings' },
+        { audioKey: 'adv-snowy-1', narration: "Brrr, it's so cold! Tap how the snow makes you feel.", mode: 'feelings' },
         { audioKey: 'adv-snowy-2', narration: "Take a moment to breathe like snow drifting.", mode: 'calm-corner' },
         { audioKey: 'adv-snowy-3', narration: "What's the weather like today?", mode: 'weather' },
         { audioKey: 'adv-snowy-4', narration: "A peaceful snow day. Well done.", celebrate: true }
@@ -140,18 +140,18 @@
       chapters: [
         { audioKey: 'adv-birthday-1', narration: "Count the candles on the cake.", mode: 'count', params: { fixedCount: 4 } },
         { audioKey: 'adv-birthday-2', narration: "Spell P-A-R-T-Y!", mode: 'find-letters', params: { wordSequence: 'PARTY' } },
-        { audioKey: 'adv-birthday-3', narration: "How does the birthday feel?", mode: 'feelings' },
+        { audioKey: 'adv-birthday-3', narration: "Birthdays are so exciting! Tap the happy face.", mode: 'feelings' },
         { audioKey: 'adv-birthday-4', narration: "Happy birthday! What a great party.", celebrate: true }
       ]
     },
     {
       id: 'kindness-day', character: '❤️', title: "Kindness day",
-      hook: "Today, let's notice kindness.",
+      hook: "Someone needs help today. Can you be kind?",
       bands: ['eldre', 'skolestart'],
       chapters: [
-        { audioKey: 'adv-kindness-1', narration: "What kind choice would you make?", mode: 'empathy' },
-        { audioKey: 'adv-kindness-2', narration: "Who in your family are you grateful for?", mode: 'gratitude' },
-        { audioKey: 'adv-kindness-3', narration: "Send a kind feeling to someone you love.", mode: 'feelings' },
+        { audioKey: 'adv-kindness-1', narration: "A friend needs help. What would YOU do? Tap the kindest answer.", mode: 'empathy' },
+        { audioKey: 'adv-kindness-2', narration: "Now think about you. Who makes you feel cared for?", mode: 'gratitude' },
+        { audioKey: 'adv-kindness-3', narration: "What does kindness look like? Tap the happy face!", mode: 'feelings' },
         { audioKey: 'adv-kindness-4', narration: "Kindness is its own gift. Thank you for noticing.", celebrate: true }
       ]
     },
